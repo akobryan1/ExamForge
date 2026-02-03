@@ -1,37 +1,44 @@
+using ExamForge.SignalRServer.Hubs;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Optional Redis backplane
+var redisUrl = builder.Configuration["REDIS_URL"];
+var signalR = builder.Services.AddSignalR();
+if (!string.IsNullOrEmpty(redisUrl))
+{
+    signalR.AddStackExchangeRedis(redisUrl, options =>
+    {
+        options.Configuration.ChannelPrefix = "ExamForge";
+    });
+}
+
+// CORS for clients (WPF + browser)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyHeader()
+              .AllowAnyMethod()
+              .SetIsOriginAllowed(_ => true)
+              .AllowCredentials();
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+app.UseCors("AllowAll");
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+// Health endpoint
+app.MapGet("/", () => Results.Ok(new
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    status = "running",
+    service = "ExamForge SignalR Server",
+    timestamp = DateTime.UtcNow
+}));
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+// SignalR hub
+app.MapHub<SessionHub>("/sessionHub");
 
 app.Run();
 
