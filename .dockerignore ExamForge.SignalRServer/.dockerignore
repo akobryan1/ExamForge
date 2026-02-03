@@ -7,4 +7,3 @@ obj/
 .vscode/
 .vs/
 *.user
-<TargetFramework>net8.0</TargetFramework>
