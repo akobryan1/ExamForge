@@ -1,0 +1,64 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="ICONS\analytics_32white.png" />
+    <None Remove="ICONS\analytics_grey32.png" />
+    <None Remove="ICONS\dashboard_grey32.png" />
+    <None Remove="ICONS\dashboard_white32.png" />
+    <None Remove="ICONS\exam_grey32.png" />
+    <None Remove="ICONS\exam_white32.png" />
+    <None Remove="ICONS\foundry_grey32.png" />
+    <None Remove="ICONS\foundry_white32.png" />
+    <None Remove="ICONS\logout_grey32.png" />
+    <None Remove="ICONS\logout_white32.png" />
+    <None Remove="ICONS\setting_grey32.png" />
+    <None Remove="ICONS\setting_white32.png" />
+    <None Remove="ICONS\white_anvil64.png" />
+    <None Remove="white_anvil64.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="5.0.0" />
+    <PackageReference Include="Google.Cloud.Firestore" Version="3.8.0" />
+    <PackageReference Include="FirebaseAdmin" Version="3.0.1" />
+    <PackageReference Include="Google.Cloud.Storage.V1" Version="4.13.0" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="ICONS\analytics_32white.png" />
+    <Resource Include="ICONS\analytics_grey32.png" />
+    <Resource Include="ICONS\dashboard_grey32.png" />
+    <Resource Include="ICONS\dashboard_white32.png" />
+    <Resource Include="ICONS\exam_grey32.png" />
+    <Resource Include="ICONS\exam_white32.png" />
+    <Resource Include="ICONS\foundry_grey32.png" />
+    <Resource Include="ICONS\foundry_white32.png" />
+    <Resource Include="ICONS\logout_grey32.png" />
+    <Resource Include="ICONS\logout_white32.png" />
+    <Resource Include="ICONS\setting_grey32.png" />
+    <Resource Include="ICONS\setting_white32.png" />
+    <Resource Include="ICONS\white_anvil64.png" />
+  </ItemGroup>
+
+  <!-- ✅ THIS SECTION COPIES FILES TO OUTPUT DIRECTORY -->
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="firebase-adminsdk.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

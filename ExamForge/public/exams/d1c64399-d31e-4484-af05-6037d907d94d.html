@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dssaddasdas</title>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .exam-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .exam-header {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .exam-header h1 {
+            font-size: clamp(24px, 5vw, 36px);
+            margin-bottom: 15px;
+        }
+
+        .timer-container {
+            margin-top: 15px;
+        }
+
+        .timer {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-size: clamp(14px, 3vw, 18px);
+            font-weight: bold;
+        }
+
+        .exam-instructions {
+            background: #ecf0f1;
+            padding: 25px;
+            border-bottom: 3px solid #3498db;
+        }
+
+        .exam-instructions h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: clamp(18px, 4vw, 24px);
+        }
+
+        .exam-instructions ul {
+            list-style-position: inside;
+            color: #34495e;
+            line-height: 1.8;
+        }
+
+        .exam-instructions li {
+            font-size: clamp(14px, 2.5vw, 16px);
+        }
+
+        .question-container {
+            padding: 30px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .question-number {
+            font-weight: bold;
+            color: #3498db;
+            font-size: clamp(16px, 3vw, 20px);
+        }
+
+        .question-points {
+            background: #27ae60;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: clamp(12px, 2.5vw, 14px);
+            font-weight: bold;
+        }
+
+        .question-text {
+            font-size: clamp(14px, 3vw, 18px);
+            color: #2c3e50;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-label {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .option-label:hover {
+            background: #e9ecef;
+            border-color: #3498db;
+        }
+
+        .option-label input[type="radio"] {
+            margin-right: 12px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .option-label span {
+            font-size: clamp(14px, 2.5vw, 16px);
+            color: #2c3e50;
+        }
+
+        .text-answer {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: clamp(14px, 2.5vw, 16px);
+            font-family: inherit;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .text-answer:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .submit-container {
+            padding: 30px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+
+        .submit-button {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            color: white;
+            border: none;
+            padding: 15px 50px;
+            font-size: clamp(16px, 3vw, 20px);
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .submit-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .submit-button:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .exam-container {
+                border-radius: 10px;
+            }
+
+            .exam-header {
+                padding: 20px;
+            }
+
+            .exam-instructions {
+                padding: 20px;
+            }
+
+            .question-container {
+                padding: 20px;
+            }
+
+            .submit-container {
+                padding: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .question-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .submit-button {
+                padding: 12px 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="exam-container">
+        <div class="exam-header">
+            <h1>dssaddasdas</h1>
+            <div class="timer-container">
+                <div class="timer" id="timer">Time Remaining: <span id="time">00:00:00</span></div>
+            </div>
+        </div>
+        <div id="studentInfoSection" class="exam-instructions">
+            <h2>Student Information</h2>
+            <p>Please enter your details before starting the exam:</p>
+            <div style="margin: 20px 0;">
+                <input type="text" id="studentName" placeholder="Full Name" style="width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;" required>
+                <input type="email" id="studentEmail" placeholder="Email Address" style="width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;" required>
+                <button onclick="startExam()" style="width: 100%; padding: 15px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer;">Start Exam</button>
+            </div>
+        </div>
+        <div id="examSection" style="display: none;">
+        <div class="exam-instructions">
+            <h2>Instructions</h2>
+            <ul>
+                <li>Duration: 3 minutes</li>
+                <li>Answer all questions to the best of your ability</li>
+                <li>Click 'Submit Exam' when finished</li>
+                <li>Make sure to submit before the timer expires</li>
+            </ul>
+        </div>
+        <form id="examForm" onsubmit="submitExam(event)">
+            <div class="question-container">
+                <div class="question-header">
+                    <span class="question-number">Question 1</span>
+                    <span class="question-points">1 points</span>
+                </div>
+                <p class="question-text">asdsdasad</p>
+                <div class="options">
+                    <label class="option-label">
+                        <input type="radio" name="question1" value="True" id="q1_opt0" required>
+                        <span>True</span>
+                    </label>
+                    <label class="option-label">
+                        <input type="radio" name="question1" value="False" id="q1_opt1" required>
+                        <span>False</span>
+                    </label>
+                </div>
+            </div>
+            <div class="question-container">
+                <div class="question-header">
+                    <span class="question-number">Question 2</span>
+                    <span class="question-points">1 points</span>
+                </div>
+                <p class="question-text">dsasaddasasd</p>
+                <div class="options">
+                    <label class="option-label">
+                        <input type="radio" name="question2" value="True" id="q2_opt0" required>
+                        <span>True</span>
+                    </label>
+                    <label class="option-label">
+                        <input type="radio" name="question2" value="False" id="q2_opt1" required>
+                        <span>False</span>
+                    </label>
+                </div>
+            </div>
+            <div class="submit-container">
+                <button type="submit" class="submit-button">Submit Exam</button>
+            </div>
+        </form>
+        </div>
+    </div>
+    <script>
+
+        const EXAM_ID = 'd1c64399-d31e-4484-af05-6037d907d94d';
+        const START_TIME = new Date('2026-01-23T17:57:32');
+        const END_TIME = new Date('2026-01-23T18:57:34');
+        const DURATION_MINUTES = 3;
+        const API_ENDPOINT = 'https://examforge-api.braeanmay.workers.dev/api/submit';
+
+        let studentName = '';
+        let studentEmail = '';
+
+        function checkExamAccess() {
+            const now = new Date();
+            
+            if (now < START_TIME) {
+                document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: white; text-align: center; padding: 20px;">This exam has not started yet.<br>Please return at: ' + START_TIME.toLocaleString() + '</div>';
+                return false;
+            }
+            
+            if (now > END_TIME) {
+                document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px; color: white; text-align: center; padding: 20px;">This exam has ended and is no longer accessible.</div>';
+                return false;
+            }
+            
+            return true;
+        }
+
+        function startExam() {
+            const nameInput = document.getElementById('studentName');
+            const emailInput = document.getElementById('studentEmail');
+            
+            if (!nameInput.value.trim() || !emailInput.value.trim()) {
+                alert('Please enter your name and email address.');
+                return;
+            }
+            
+            studentName = nameInput.value.trim();
+            studentEmail = emailInput.value.trim();
+            
+            document.getElementById('studentInfoSection').style.display = 'none';
+            document.getElementById('examSection').style.display = 'block';
+            
+            startTimer();
+        }
+
+        let timeRemaining = DURATION_MINUTES * 60;
+        let timerInterval;
+
+        function updateTimer() {
+            const hours = Math.floor(timeRemaining / 3600);
+            const minutes = Math.floor((timeRemaining % 3600) / 60);
+            const seconds = timeRemaining % 60;
+            
+            document.getElementById('time').textContent = 
+                String(hours).padStart(2, '0') + ':' +
+                String(minutes).padStart(2, '0') + ':' +
+                String(seconds).padStart(2, '0');
+            
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                autoSubmitExam();
+            }
+            
+            if (timeRemaining === 300) {
+                alert('Warning: 5 minutes remaining!');
+            }
+            
+            timeRemaining--;
+        }
+
+        function startTimer() {
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function submitExam(event) {
+            event.preventDefault();
+            
+            if (!confirm('Are you sure you want to submit your exam? This action cannot be undone.')) {
+                return;
+            }
+            
+            clearInterval(timerInterval);
+            
+            const formData = new FormData(event.target);
+            const answers = {};
+            
+            for (let [key, value] of formData.entries()) {
+                answers[key] = value;
+            }
+            
+            sendToCloudflare(answers);
+        }
+
+        function autoSubmitExam() {
+            alert('Time is up! Your exam will be submitted automatically.');
+            const form = document.getElementById('examForm');
+            const formData = new FormData(form);
+            const answers = {};
+            
+            for (let [key, value] of formData.entries()) {
+                answers[key] = value;
+            }
+            
+            sendToCloudflare(answers);
+        }
+
+        async function sendToCloudflare(answers) {
+            const submission = {
+                examId: EXAM_ID,
+                answers: answers,
+                submittedAt: new Date().toISOString(),
+                timeSpent: (DURATION_MINUTES * 60 - timeRemaining),
+                studentEmail: studentEmail,
+                studentName: studentName
+            };
+            
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(submission)
+                });
+                
+                if (response.ok) {
+                    document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; text-align: center; padding: 20px;"><h1 style="font-size: clamp(24px, 5vw, 48px);">✓ Exam Submitted Successfully!</h1><p style="font-size: clamp(16px, 3vw, 24px); margin-top: 20px;">Thank you, ' + studentName + '!</p><p style="font-size: clamp(14px, 2.5vw, 18px); margin-top: 10px;">Your answers have been recorded.</p></div>';
+                } else {
+                    const error = await response.json();
+                    alert('Error submitting exam: ' + (error.message || 'Unknown error') + '. Please contact your instructor.');
+                    console.error('Submission error:', error);
+                }
+            } catch (error) {
+                console.error('Submission error:', error);
+                alert('Error submitting exam. Please contact your instructor.');
+            }
+        }
+
+        if (checkExamAccess()) {
+            document.getElementById('studentInfoSection').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

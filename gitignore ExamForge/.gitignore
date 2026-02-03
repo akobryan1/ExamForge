@@ -1,0 +1,18 @@
+﻿# Firebase credentials - ✅ CRITICAL: Never commit these!
+firebase-adminsdk.json
+*-firebase-adminsdk-*.json
+
+# App settings with potential secrets
+appsettings.json
+appsettings.*.json
+
+# Build results
+bin/
+obj/
+public/
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.sln.docstates

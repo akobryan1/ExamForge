@@ -1,0 +1,6 @@
+@ExamForge.SignalRServer_HostAddress = http://localhost:5102
+
+GET {{ExamForge.SignalRServer_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

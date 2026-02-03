@@ -1,0 +1,228 @@
+﻿<UserControl x:Class="ExamForge.datagrid_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ExamForge"
+             mc:Ignorable="d" 
+             d:DesignHeight="524.04" d:DesignWidth="712"
+             Margin="0"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch">
+    <UserControl.Resources>
+        <!-- TextBox Style -->
+        <Style x:Key="EditTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="8,0"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CaretBrush" Value="{StaticResource TextPrimary}"/>
+        </Style>
+    </UserControl.Resources>
+    
+    <Border CornerRadius="12"
+            Padding="0"
+            Margin="0"
+            Background="{StaticResource SurfaceDark}"
+            BorderBrush="{StaticResource BorderColor}"
+            BorderThickness="1">
+        
+        <DataGrid x:Name="exam_structure_datagridview"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  Background="{StaticResource SurfaceDark}"
+                  Foreground="{StaticResource TextPrimary}"
+                  HeadersVisibility="Column"
+                  GridLinesVisibility="All"
+                  BorderThickness="0"
+                  RowBackground="{StaticResource SurfaceDark}"
+                  AlternatingRowBackground="{StaticResource SurfaceLight}"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Auto">
+            <DataGrid.Resources>
+                <!-- Column Header Style -->
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="{StaticResource SurfaceLight}"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="FontSize" Value="13"/>
+                    <Setter Property="Padding" Value="12,10"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                    <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                </Style>
+
+                <!-- Cell Style -->
+                <Style TargetType="DataGridCell">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                    <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,1"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="DataGridCell">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        SnapsToDevicePixels="True">
+                                    <ContentPresenter VerticalAlignment="Center" Margin="8,0"/>
+                                </Border>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#6AA6FF" Opacity="0.15"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter Property="BorderBrush">
+                                <Setter.Value>
+                                    <SolidColorBrush Color="#6AA6FF" Opacity="0.35"/>
+                                </Setter.Value>
+                            </Setter>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+
+                <!-- Row Style -->
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource SurfaceLight}"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.Resources>
+
+            <DataGrid.Columns>
+                <!-- Test Group Column (TextBox) -->
+                <DataGridTemplateColumn Header="Test Group" Width="120">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding TestGroup, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource EditTextBoxStyle}"
+                                     MaxLength="10"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Test Type Column (ComboBox) -->
+                <DataGridTemplateColumn Header="Test Type" Width="180">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ComboBox ItemsSource="{Binding DataContext.TestTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                      SelectedItem="{Binding TestType, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                      Background="White"
+                                      Foreground="Black"
+                                      BorderBrush="{StaticResource BorderColor}"
+                                      BorderThickness="1"
+                                      Padding="6,4"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Start Column (TextBox) -->
+                <DataGridTemplateColumn Header="Start" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Start, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource EditTextBoxStyle}"
+                                     MaxLength="5"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- End Column (TextBox) -->
+                <DataGridTemplateColumn Header="End" Width="100">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding End, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource EditTextBoxStyle}"
+                                     MaxLength="5"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Points Column -->
+                <DataGridTemplateColumn Header="Points" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding Points, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     Style="{StaticResource EditTextBoxStyle}"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Actions Column -->
+                <DataGridTemplateColumn Header="Actions" Width="180">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <Button Content="Add Row"
+                                            Width="80"
+                                            Height="28"
+                                            Margin="0,0,5,0"
+                                            Background="{StaticResource AccentGoldGradient}"
+                                            Foreground="{StaticResource SurfaceDark}"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Click="AddRow_Click">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="6"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+                                    <Button Content="Remove"
+                                            Width="80"
+                                            Height="28"
+                                            Background="{StaticResource ErrorRed}"
+                                            Foreground="{StaticResource TextPrimary}"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            FontSize="11"
+                                            FontWeight="SemiBold"
+                                            Click="RemoveRow_Click">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="6"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Warning}"
+                                           Foreground="{StaticResource ErrorRed}"
+                                           FontSize="11"
+                                           Margin="0,6,0,0"
+                                           TextWrapping="Wrap">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Warning}" Value="">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Warning}" Value="{x:Null}">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Border>
+</UserControl>

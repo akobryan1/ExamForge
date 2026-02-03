@@ -1,0 +1,448 @@
+﻿<UserControl x:Class="ExamForge.published_exams_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="760" d:DesignWidth="1000"
+             Margin="0"
+             Background="{StaticResource BackgroundDark}">
+
+    <UserControl.Resources>
+        <!-- Tab Button Style -->
+        <Style x:Key="TabButtonStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Padding" Value="20,12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="0,0,0,2"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentGold}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Filter Chip Style -->
+        <Style x:Key="FilterChipStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="border"
+                                CornerRadius="999"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{StaticResource SurfaceLight}"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#3d3850"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentGoldGradient}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentGold}"/>
+                                <Setter Property="Foreground" Value="#1c192a"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Exam Card Style with Left Gold Gradient Border -->
+        <Style x:Key="ExamCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="20"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <!-- Action Button Style -->
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="14,6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{StaticResource SurfaceLight}"
+                                BorderBrush="{StaticResource BorderColor}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentBlue}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentBlue}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#4a7ab5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <!-- Premium Background -->
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" Padding="24,24,24,16">
+            <StackPanel>
+                <TextBlock Text="Published Exams and Student Analytics"
+                           FontSize="24"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimary}"/>
+                <TextBlock Text="Manage exam delivery, monitor live sessions, and analyze results"
+                           FontSize="13"
+                           Foreground="{StaticResource TextSecondary}"
+                           Margin="0,4,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab Navigation -->
+        <Border Grid.Row="1"
+                Background="{StaticResource SurfaceDark}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="0,1"
+                Margin="24,0">
+            <StackPanel Orientation="Horizontal">
+                <RadioButton x:Name="ScheduledTab"
+                             Content="📋 Scheduled Exams"
+                             Style="{StaticResource TabButtonStyle}"
+                             IsChecked="True"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="LiveTab"
+                             Content="🔴 Live Exams"
+                             Style="{StaticResource TabButtonStyle}"
+                             IsEnabled="False"
+                             Checked="Tab_Changed"
+                             ToolTip="Coming soon - requires real-time monitoring infrastructure"/>
+                <RadioButton x:Name="ClosedTab"
+                             Content="📊 Closed and Grading"
+                             Style="{StaticResource TabButtonStyle}"
+                             IsEnabled="False"
+                             Checked="Tab_Changed"
+                             ToolTip="Coming soon"/>
+                <RadioButton x:Name="ReportsTab"
+                             Content="📈 Reports"
+                             Style="{StaticResource TabButtonStyle}"
+                             IsEnabled="False"
+                             Checked="Tab_Changed"
+                             ToolTip="Coming soon"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <ScrollViewer Grid.Row="2"
+                      VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Padding="24,16,24,24">
+            <Grid>
+                <!-- Scheduled Exams Panel -->
+                <StackPanel x:Name="ScheduledPanel" Visibility="Visible">
+                    <!-- Filters and Search -->
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Filter Chips -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <RadioButton x:Name="FilterAll"
+                                         Content="All"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         IsChecked="True"
+                                         Checked="Filter_Changed"
+                                         GroupName="StatusFilter"/>
+                            <RadioButton x:Name="FilterUpcoming"
+                                         Content="Upcoming"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         Checked="Filter_Changed"
+                                         GroupName="StatusFilter"
+                                         Margin="8,0,0,0"/>
+                            <RadioButton x:Name="FilterActive"
+                                         Content="Active"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         Checked="Filter_Changed"
+                                         GroupName="StatusFilter"
+                                         Margin="8,0,0,0"/>
+                            <RadioButton x:Name="FilterCompleted"
+                                         Content="Completed"
+                                         Style="{StaticResource FilterChipStyle}"
+                                         Checked="Filter_Changed"
+                                         GroupName="StatusFilter"
+                                         Margin="8,0,0,0"/>
+                        </StackPanel>
+
+                        <!-- Search Box -->
+                        <TextBox x:Name="SearchBox"
+                                 Grid.Column="1"
+                                 Width="250"
+                                 Padding="10,8,10,8"
+                                 Background="{StaticResource SurfaceLight}"
+                                 Foreground="{StaticResource TextPrimary}"
+                                 BorderBrush="{StaticResource BorderColor}"
+                                 BorderThickness="1"
+                                 FontSize="13"
+                                 TextChanged="SearchBox_TextChanged">
+                            <TextBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="8"/>
+                                </Style>
+                            </TextBox.Resources>
+                        </TextBox>
+                    </Grid>
+
+                    <!-- Exam Cards List -->
+                    <ItemsControl x:Name="ExamCardsContainer">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <!-- Card + Hover overlay -->
+                                <Grid Margin="0,0,0,12">
+                                    <!-- Actual card: receives mouse events -->
+                                    <Border x:Name="CardBorder"
+                                            Style="{StaticResource ExamCardStyle}"
+                                            Background="{StaticResource SurfaceDark}">
+                                        <Border.Triggers>
+                                            <!-- MouseEnter -> fade in the gold gradient and increase thickness -->
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="1"
+                                                                         Duration="0:0:0.22"
+                                                                         AccelerationRatio="0.2"/>
+                                                        <ThicknessAnimation Storyboard.TargetName="HoverOverlay"
+                                                                            Storyboard.TargetProperty="BorderThickness"
+                                                                            To="2,2,2,2"
+                                                                            Duration="0:0:0.22"
+                                                                            AccelerationRatio="0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+
+                                            <!-- MouseLeave -> fade out the gold gradient and remove thickness -->
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <BeginStoryboard>
+                                                    <Storyboard>
+                                                        <DoubleAnimation Storyboard.TargetName="HoverOverlay"
+                                                                         Storyboard.TargetProperty="Opacity"
+                                                                         To="0"
+                                                                         Duration="0:0:0.25"
+                                                                         DecelerationRatio="0.2"/>
+                                                        <ThicknessAnimation Storyboard.TargetName="HoverOverlay"
+                                                                            Storyboard.TargetProperty="BorderThickness"
+                                                                            To="0,0,0,0"
+                                                                            Duration="0:0:0.25"
+                                                                            DecelerationRatio="0.2"/>
+                                                    </Storyboard>
+                                                </BeginStoryboard>
+                                            </EventTrigger>
+                                        </Border.Triggers>
+
+                                        <!-- Card content -->
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <!-- Title -->
+                                            <TextBlock Grid.Row="0"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{StaticResource TextPrimary}"
+                                                       Text="{Binding Title}"/>
+
+                                            <!-- Schedule Info -->
+                                            <Grid Grid.Row="1" Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,24,0">
+                                                    <TextBlock Text="📅 "
+                                                               FontSize="12"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding ScheduleText}"
+                                                               FontSize="12"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                </StackPanel>
+
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                                    <TextBlock Text="⏱️ "
+                                                               FontSize="12"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                    <TextBlock Text="{Binding DurationText}"
+                                                               FontSize="12"
+                                                               Foreground="{StaticResource TextSecondary}"/>
+                                                </StackPanel>
+                                            </Grid>
+
+                                            <!-- Status and Metadata -->
+                                            <Grid Grid.Row="2" Margin="0,8,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Grid.Column="0"
+                                                        Background="{Binding StatusColor}"
+                                                        CornerRadius="4"
+                                                        Padding="8,4">
+                                                    <TextBlock Text="{Binding Status}"
+                                                               FontSize="11"
+                                                               FontWeight="Medium"
+                                                               Foreground="#1c192a"/>
+                                                </Border>
+
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding CreatedByText}"
+                                                           FontSize="11"
+                                                           Foreground="{StaticResource TextMuted}"
+                                                           VerticalAlignment="Center"
+                                                           Margin="12,0,0,0"/>
+                                            </Grid>
+
+                                            <!-- Actions -->
+                                            <StackPanel Grid.Row="3"
+                                                        Orientation="Horizontal"
+                                                        Margin="0,12,0,0">
+                                                <Button Content="Open Preview"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Click="OpenPreview_Click"
+                                                        Tag="{Binding Id}"/>
+                                                <Button Content="Edit Schedule"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Click="EditSchedule_Click"
+                                                        Tag="{Binding Id}"
+                                                        Margin="8,0,0,0"/>
+                                                <Button Content="Copy URL"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Click="CopyUrl_Click"
+                                                        Tag="{Binding ExamUrl}"
+                                                        Margin="8,0,0,0"/>
+                                                <Button Content="Unpublish"
+                                                        Style="{StaticResource ActionButtonStyle}"
+                                                        Click="Unpublish_Click"
+                                                        Tag="{Binding Id}"
+                                                        Margin="8,0,0,0"
+                                                        Foreground="{StaticResource ErrorRed}"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Hover overlay (rendered above card) -->
+                                    <Border x:Name="HoverOverlay"
+                                            Background="Transparent"
+                                            BorderBrush="{StaticResource PremiumGoldHoverBrush}"
+                                            BorderThickness="0,0,0,0"
+                                            CornerRadius="12"
+                                            Opacity="0"
+                                            IsHitTestVisible="False"
+                                            Panel.ZIndex="2"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Empty State -->
+                    <Border x:Name="EmptyState"
+                            Background="{StaticResource SurfaceDark}"
+                            BorderBrush="{StaticResource BorderColor}"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="40"
+                            Visibility="Collapsed"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="0,60,0,0">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="📋"
+                                       FontSize="48"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,0,0,16"/>
+                            <TextBlock Text="No published exams yet"
+                                       FontSize="18"
+                                       FontWeight="Medium"
+                                       Foreground="{StaticResource TextPrimary}"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Create and publish your first exam to see it here"
+                                       FontSize="13"
+                                       Foreground="{StaticResource TextSecondary}"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Placeholder Panels -->
+                <StackPanel x:Name="LivePanel" Visibility="Collapsed">
+                    <TextBlock Text="Live Exams - Coming Soon"
+                               FontSize="20"
+                               Foreground="{StaticResource TextSecondary}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="ClosedPanel" Visibility="Collapsed">
+                    <TextBlock Text="Closed and Grading - Coming Soon"
+                               FontSize="20"
+                               Foreground="{StaticResource TextSecondary}"/>
+                </StackPanel>
+
+                <StackPanel x:Name="ReportsPanel" Visibility="Collapsed">
+                    <TextBlock Text="Reports - Coming Soon"
+                               FontSize="20"
+                               Foreground="{StaticResource TextSecondary}"/>
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

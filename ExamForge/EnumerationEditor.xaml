@@ -1,0 +1,81 @@
+<UserControl x:Class="ExamForge.EnumerationEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <StackPanel>
+        <TextBlock Text="Expected Answers"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="{StaticResource TextPrimary}"
+                   Margin="0,0,0,8"/>
+        <TextBlock Text="Enter each answer item. Students must provide all of these."
+                   FontSize="11"
+                   Foreground="{StaticResource TextSecondary}"
+                   Margin="0,0,0,12"/>
+
+        <!-- Answers List -->
+        <Border Background="{StaticResource SurfaceLight}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12"
+                Margin="0,0,0,12">
+            <StackPanel x:Name="AnswersPanel">
+                <!-- Answer items will be added dynamically -->
+            </StackPanel>
+        </Border>
+
+        <!-- Add Answer Button -->
+        <Button x:Name="AddAnswerButton"
+                Content="+ Add Answer"
+                Background="{StaticResource AccentGold}"
+                Foreground="#1a1a1a"
+                BorderThickness="0"
+                Padding="16,10"
+                FontWeight="SemiBold"
+                FontSize="12"
+                Cursor="Hand"
+                Click="AddAnswer_Click"
+                Margin="0,0,0,16">
+            <Button.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="CornerRadius" Value="8"/>
+                </Style>
+            </Button.Resources>
+        </Button>
+
+        <!-- Custom Points -->
+        <Border Background="{StaticResource SurfaceLight}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="120"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="Custom Points (optional)"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondary}"
+                           VerticalAlignment="Center"/>
+                <TextBox x:Name="CustomPointsTextBox"
+                         Grid.Column="1"
+                         Background="{StaticResource SurfaceDark}"
+                         Foreground="{StaticResource TextPrimary}"
+                         BorderBrush="{StaticResource BorderColor}"
+                         BorderThickness="1"
+                         Padding="8,6"
+                         TextAlignment="Center"
+                         TextChanged="CustomPoints_TextChanged">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
+            </Grid>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,361 @@
+﻿<UserControl x:Class="ExamForge.structure_builder_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ExamForge"
+             mc:Ignorable="d" 
+             d:DesignHeight="732.04" d:DesignWidth="764"
+             Margin="0"
+             HorizontalAlignment="Stretch"
+             VerticalAlignment="Stretch"
+             Background="{StaticResource BackgroundDark}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True"
+             TextOptions.TextFormattingMode="Display"
+             TextOptions.TextRenderingMode="ClearType">
+    <UserControl.Resources>
+        <!-- Animated Gold Button Style with Sharp Text -->
+        <Style x:Key="GoldButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="{StaticResource SurfaceDark}"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="UseLayoutRounding" Value="True"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid>
+                            <Border x:Name="shadowBorder" 
+                                    CornerRadius="8"
+                                    Background="Transparent"
+                                    Margin="0,2,0,0">
+                                <Border.Effect>
+                                    <DropShadowEffect x:Name="shadowEffect"
+                                                    Color="#D4AF7A" 
+                                                    BlurRadius="0" 
+                                                    ShadowDepth="0" 
+                                                    Opacity="0"/>
+                                </Border.Effect>
+                            </Border>
+                            
+                            <Border x:Name="border" 
+                                    CornerRadius="8"
+                                    Background="{StaticResource AccentGoldGradient}"
+                                    UseLayoutRounding="True"
+                                    SnapsToDevicePixels="True">
+                                <Border.RenderTransform>
+                                    <TranslateTransform x:Name="translateTransform" Y="0"/>
+                                </Border.RenderTransform>
+                                <ContentPresenter x:Name="contentPresenter"
+                                                HorizontalAlignment="Center" 
+                                                VerticalAlignment="Center"
+                                                Margin="0"
+                                                TextOptions.TextFormattingMode="Display"
+                                                TextOptions.TextRenderingMode="ClearType"
+                                                UseLayoutRounding="True"
+                                                SnapsToDevicePixels="True"/>
+                            </Border>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="translateTransform"
+                                                           Storyboard.TargetProperty="Y"
+                                                           To="-2"
+                                                           Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="BlurRadius"
+                                                           To="12"
+                                                           Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="ShadowDepth"
+                                                           To="4"
+                                                           Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="Opacity"
+                                                           To="0.4"
+                                                           Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Trigger.ExitActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="translateTransform"
+                                                           Storyboard.TargetProperty="Y"
+                                                           To="0"
+                                                           Duration="0:0:0.2">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut"/>
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="BlurRadius"
+                                                           To="0"
+                                                           Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="ShadowDepth"
+                                                           To="0"
+                                                           Duration="0:0:0.2"/>
+                                            <DoubleAnimation Storyboard.TargetName="shadowEffect"
+                                                           Storyboard.TargetProperty="Opacity"
+                                                           To="0"
+                                                           Duration="0:0:0.2"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.ExitActions>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentGoldHoverGradient}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentGoldPressedGradient}"/>
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="translateTransform"
+                                                           Storyboard.TargetProperty="Y"
+                                                           To="1"
+                                                           Duration="0:0:0.1"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top Input Bar -->
+        <Border Grid.Row="0"
+                CornerRadius="12"
+                Padding="20"
+                Margin="16"
+                Background="{StaticResource SurfaceDark}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                <!-- Exam Name -->
+                <Grid Width="260" Margin="0,0,10,0">
+                    <TextBox x:Name="exam_name_textbox"
+                             Height="40"
+                             Padding="12,10"
+                             FontSize="14"
+                             Background="{StaticResource SurfaceLight}"
+                             Foreground="{StaticResource TextPrimary}"
+                             VerticalContentAlignment="Center"
+                             BorderBrush="{StaticResource BorderColor}"
+                             BorderThickness="1"
+                             GotFocus="TextBox_GotFocus"
+                             LostFocus="TextBox_LostFocus"
+                             TextChanged="TextBox_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                    <TextBlock x:Name="exam_name_placeholder"
+                               Text="Exam Name"
+                               Foreground="{StaticResource TextTertiary}"
+                               FontSize="14"
+                               IsHitTestVisible="False"
+                               Padding="13,11"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=exam_name_textbox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Subject Name -->
+                <Grid Width="180" Margin="0,0,10,0">
+                    <TextBox x:Name="subject_name_textbox"
+                             Height="40"
+                             Padding="12,10"
+                             FontSize="14"
+                             Background="{StaticResource SurfaceLight}"
+                             Foreground="{StaticResource TextPrimary}"
+                             VerticalContentAlignment="Center"
+                             BorderBrush="{StaticResource BorderColor}"
+                             BorderThickness="1"
+                             GotFocus="TextBox_GotFocus"
+                             LostFocus="TextBox_LostFocus"
+                             TextChanged="TextBox_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                    <TextBlock x:Name="subject_name_placeholder"
+                               Text="Subject Name"
+                               Foreground="{StaticResource TextTertiary}"
+                               FontSize="14"
+                               IsHitTestVisible="False"
+                               Padding="13,11"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=subject_name_textbox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Number of Items -->
+                <Grid Width="120" Margin="0,0,10,0">
+                    <TextBox x:Name="item_number_textbox"
+                             Height="40"
+                             Padding="12,10"
+                             FontSize="14"
+                             Background="{StaticResource SurfaceLight}"
+                             Foreground="{StaticResource TextPrimary}"
+                             VerticalContentAlignment="Center"
+                             BorderBrush="{StaticResource BorderColor}"
+                             BorderThickness="1"
+                             PreviewTextInput="ItemNumber_PreviewTextInput"
+                             GotFocus="TextBox_GotFocus"
+                             LostFocus="TextBox_LostFocus"
+                             TextChanged="ItemNumber_TextChanged">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="8"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                    <TextBlock x:Name="item_number_placeholder"
+                               Text="# Items"
+                               Foreground="{StaticResource TextTertiary}"
+                               FontSize="14"
+                               IsHitTestVisible="False"
+                               Padding="13,11"
+                               VerticalAlignment="Center">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Text, ElementName=item_number_textbox}" Value="">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Grid>
+
+                <!-- Reset Button -->
+                <Button x:Name="reset_button"
+                        Content="Reset"
+                        Width="100"
+                        Height="40"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="Reset_Button_Click"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab Buttons with Full Width Spacing -->
+        <Border Grid.Row="1"
+                CornerRadius="12"
+                Padding="24,20"
+                Margin="16,0,16,12"
+                Background="{StaticResource SurfaceDark}"
+                BorderBrush="{StaticResource BorderColor}"
+                BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Exam Structure Button -->
+                <Button x:Name="exam_structure_button"
+                        Grid.Column="0"
+                        Content="Exam Structure"
+                        Height="44"
+                        Margin="0,0,8,0"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="ExamStructure_Button_Click"/>
+
+                <!-- Timing Button -->
+                <Button x:Name="timing_button"
+                        Grid.Column="1"
+                        Content="Timing"
+                        Height="44"
+                        Margin="4,0,4,0"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="Timing_Button_Click"/>
+
+                <!-- Anti-Cheat Button -->
+                <Button x:Name="anti_cheat_button"
+                        Grid.Column="2"
+                        Content="Anti-Cheat"
+                        Height="44"
+                        Margin="4,0,4,0"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="AntiCheat_Button_Click"/>
+
+                <!-- Login Configuration Button -->
+                <Button x:Name="login_config_button"
+                        Grid.Column="3"
+                        Content="Login Config"
+                        Height="44"
+                        Margin="8,0,0,0"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="LoginConfiguration_Button_Click"/>
+            </Grid>
+        </Border>
+
+        <!-- Content Host (where different UserControls load) -->
+        <Border Grid.Row="2" 
+                Background="{StaticResource BackgroundDark}"
+                Margin="16,0">
+            <ContentControl x:Name="ContentHost"/>
+        </Border>
+
+        <!-- Bottom Action Buttons WITHOUT Border -->
+        <Grid Grid.Row="3" Margin="16" Background="{StaticResource BackgroundDark}">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="next_button"
+                        Content="Proceed →"
+                        Width="130"
+                        Height="40"
+                        Style="{StaticResource GoldButtonStyle}"
+                        Click="Next_Button_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

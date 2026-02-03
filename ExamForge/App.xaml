@@ -1,0 +1,76 @@
+﻿<Application x:Class="ExamForge.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <!-- ✅ PREMIUM COLOR SCHEME (Deep Purple + Gold Accents) -->
+        
+        <!-- Background Colors -->
+        <SolidColorBrush x:Key="BackgroundDark" Color="#1c192a"/>
+        <SolidColorBrush x:Key="SurfaceDark" Color="#282538"/>
+        <SolidColorBrush x:Key="SurfaceLight" Color="#332f44"/>
+        
+        <!-- Accent Colors - Premium Gold -->
+        <SolidColorBrush x:Key="AccentBlue" Color="#5b8ec9"/>
+        <SolidColorBrush x:Key="AccentBlueLight" Color="#7ba6d6"/>
+        <SolidColorBrush x:Key="AccentGold" Color="#d4b896"/>
+        
+        <!-- Text Colors -->
+        <SolidColorBrush x:Key="TextPrimary" Color="#e8eaed"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#9ca3af"/>
+        <SolidColorBrush x:Key="TextMuted" Color="#6b7280"/>
+        <SolidColorBrush x:Key="TextTertiary" Color="#6b7280"/>
+
+        <!-- Border and Divider -->
+        <SolidColorBrush x:Key="BorderColor" Color="#332f44"/>
+        <SolidColorBrush x:Key="DividerColor" Color="#282538"/>
+        
+        <!-- Status Colors -->
+        <SolidColorBrush x:Key="SuccessGreen" Color="#4ade80"/>
+        <SolidColorBrush x:Key="WarningYellow" Color="#fbbf24"/>
+        <SolidColorBrush x:Key="ErrorRed" Color="#ef4444"/>
+        
+        <!-- Premium Gold Gradients -->
+        <LinearGradientBrush x:Key="AccentGoldGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#d4b896" Offset="0"/>
+            <GradientStop Color="#c09860" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="AccentGoldHoverGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#e0c8a8" Offset="0"/>
+            <GradientStop Color="#d4a878" Offset="1"/>
+        </LinearGradientBrush>
+
+        <LinearGradientBrush x:Key="AccentGoldPressedGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#c0a080" Offset="0"/>
+            <GradientStop Color="#a67845" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <LinearGradientBrush x:Key="AccentBlueGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#5b8ec9" Offset="0"/>
+            <GradientStop Color="#4a7ab5" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <!-- Subtle Background Gradient -->
+        <LinearGradientBrush x:Key="BackgroundGradient" StartPoint="0,0" EndPoint="1,1">
+            <GradientStop Color="#1c192a" Offset="0"/>
+            <GradientStop Color="#282538" Offset="1"/>
+        </LinearGradientBrush>
+        
+        <!-- Left Border Gold Gradient (Fades Top to Bottom) -->
+        <LinearGradientBrush x:Key="GoldBorderGradient" StartPoint="0,0" EndPoint="0,1">
+            <GradientStop Color="#d4b896" Offset="0"/>
+            <GradientStop Color="#c09860" Offset="0.3"/>
+            <GradientStop Color="Transparent" Offset="0.7"/>
+        </LinearGradientBrush>
+
+        <!-- Premium Gold Hover Brush (used by published_exams_usercontrol) -->
+        <LinearGradientBrush x:Key="PremiumGoldHoverBrush" StartPoint="0,0" EndPoint="1,0">
+            <GradientStop Color="Transparent" Offset="0.00"/>
+            <GradientStop Color="#d4b896" Offset="0.18"/>
+            <GradientStop Color="#c09860" Offset="0.50"/>
+            <GradientStop Color="#d4b896" Offset="0.82"/>
+            <GradientStop Color="Transparent" Offset="1.00"/>
+        </LinearGradientBrush>
+    </Application.Resources>
+</Application>
