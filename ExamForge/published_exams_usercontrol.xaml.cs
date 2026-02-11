@@ -406,11 +406,13 @@ public partial class published_exams_usercontrol : UserControl
             // Load grading queue items (one per essay/short-answer)
             _gradingQueueItems = await firestoreService.GetGradingQueueItemsAsync();
 
-            var gradingItems = _gradingQueueItems
+            var pendingItems = _gradingQueueItems
+                .Where(i => i.Status != "Graded")
                 .OrderByDescending(i => i.SubmittedAt)
                 .Select(item => new GradingQueueItemViewModel
                 {
                     Id = item.Id,
+                    ExamId = item.ExamId,
                     StudentName = item.StudentName,
                     ExamTitle = item.ExamTitle,
                     SubmittedAt = item.SubmittedAt,
@@ -425,11 +427,37 @@ public partial class published_exams_usercontrol : UserControl
                 })
                 .ToList();
 
-            if (GradingQueueGrid != null)
-                GradingQueueGrid.ItemsSource = gradingItems;
+            var gradedItems = _gradingQueueItems
+                .Where(i => i.Status == "Graded")
+                .OrderByDescending(i => i.GradedAt ?? i.SubmittedAt)
+                .Select(item => new GradingQueueItemViewModel
+                {
+                    Id = item.Id,
+                    ExamId = item.ExamId,
+                    StudentName = item.StudentName,
+                    ExamTitle = item.ExamTitle,
+                    SubmittedAt = item.SubmittedAt,
+                    AutoScore = item.PointsAwarded.HasValue ? $"{item.PointsAwarded}/{item.MaxPoints}" : $"0/{item.MaxPoints}",
+                    EssayCount = 1,
+                    Status = item.Status,
+                    SubmissionId = item.SubmissionId,
+                    QuestionNumber = item.QuestionNumber,
+                    QuestionText = item.QuestionText,
+                    StudentAnswer = item.StudentAnswer,
+                    MaxPoints = item.MaxPoints
+                })
+                .ToList();
 
-            var pendingCount = _gradingQueueItems.Count(i => i.Status != "Graded");
-            var gradedCount = _gradingQueueItems.Count(i => i.Status == "Graded");
+            var pendingGrid = GradingQueueGrid ?? this.FindName("GradingQueueGrid") as DataGrid;
+            var gradedGrid = this.FindName("GradedEssayGrid") as DataGrid;
+
+            if (pendingGrid != null)
+                pendingGrid.ItemsSource = pendingItems;
+            if (gradedGrid != null)
+                gradedGrid.ItemsSource = gradedItems;
+
+            var pendingCount = pendingItems.Count;
+            var gradedCount = gradedItems.Count;
 
             if (PendingReviewBadge != null)
                 PendingReviewBadge.Text = $"{pendingCount} Pending Review";
@@ -462,7 +490,7 @@ public partial class published_exams_usercontrol : UserControl
             }
 
             UpdateClosedTabMetrics(allSubmissions);
-            Debug.WriteLine($"📝 Loaded {gradingItems.Count} grading queue items");
+            Debug.WriteLine($"📝 Loaded {pendingItems.Count} pending and {gradedItems.Count} graded items");
         }
         catch (Exception ex)
         {
@@ -776,10 +804,31 @@ public partial class published_exams_usercontrol : UserControl
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void ExportGradebook_Click(object sender, RoutedEventArgs e)
+    private async void ExportGradebook_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Export Gradebook functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            // Use selected row from pending or graded grid
+            var pendingGrid = GradingQueueGrid ?? this.FindName("GradingQueueGrid") as DataGrid;
+            var gradedGrid = this.FindName("GradedEssayGrid") as DataGrid;
+
+            var vm = (pendingGrid?.SelectedItem as GradingQueueItemViewModel)
+                ?? (gradedGrid?.SelectedItem as GradingQueueItemViewModel);
+
+            if (vm == null)
+            {
+                ShowError("Select a submission row first to export the gradebook for that exam.");
+                return;
+            }
+
+            var exportService = new ExportService();
+            var path = await exportService.ExportGradesToExcelAsync(vm.ExamId, vm.ExamTitle);
+            MessageBox.Show($"Gradebook exported to: {path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to export gradebook: {ex.Message}");
+        }
     }
 
     // Published exam action handlers
@@ -908,12 +957,13 @@ public class ExamBankItem
 public class GradingQueueItemViewModel
 {
     public string Id { get; set; } = "";
+    public string ExamId { get; set; } = "";
     public string StudentName { get; set; } = "";
     public string ExamTitle { get; set; } = "";
     public DateTime SubmittedAt { get; set; }
     public string AutoScore { get; set; } = "";
     public int EssayCount { get; set; }
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = "Pending"; // Default status
     public string SubmissionId { get; set; } = "";
     public int QuestionNumber { get; set; }
     public string QuestionText { get; set; } = "";

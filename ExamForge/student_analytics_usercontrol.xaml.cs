@@ -866,10 +866,33 @@ namespace ExamForge
             }
         }
 
-        private void ExportItemAnalysis_Click(object sender, RoutedEventArgs e)
+        private async void ExportItemAnalysis_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Export Item Analysis functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                if (string.IsNullOrEmpty(_currentExamId))
+                {
+                    ShowError("Select an exam first.");
+                    return;
+                }
+
+                // Ensure there is data before exporting
+                var items = await new AnalyticsService().AnalyzeExamItemsAsync(_currentExamId);
+                if (items == null || !items.Any())
+                {
+                    MessageBox.Show("No item analysis data available to export.", "Info", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
+                var exportService = new ExportService();
+                var path = await exportService.ExportItemAnalysisAsync(_currentExamId, exam?.Title ?? "Exam");
+                MessageBox.Show($"Item analysis exported to: {path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to export item analysis: {ex.Message}");
+            }
         }
 
         private void ItemDetails_Click(object sender, RoutedEventArgs e)
@@ -1109,8 +1132,23 @@ namespace ExamForge
 
         private void ExportIntegrityTimeline_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Export Integrity Timeline functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                if (string.IsNullOrEmpty(_currentExamId))
+                {
+                    ShowError("Select an exam first.");
+                    return;
+                }
+
+                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
+                var exportService = new ExportService();
+                var path = exportService.ExportIntegrityReportAsync(_currentExamId, exam?.Title ?? "Exam").Result;
+                MessageBox.Show($"Integrity report exported to: {path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to export integrity report: {ex.Message}");
+            }
         }
 
         private void ReviewIncident_Click(object sender, RoutedEventArgs e)

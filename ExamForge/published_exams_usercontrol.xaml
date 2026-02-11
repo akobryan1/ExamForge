@@ -640,6 +640,27 @@
                                         </DataGridTemplateColumn>
                                     </DataGrid.Columns>
                                 </DataGrid>
+
+                                <!-- Graded Essays Archive -->
+                                <TextBlock Text="Graded Essays" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,20,0,8"/>
+                                <DataGrid x:Name="GradedEssayGrid"
+                                         Background="Transparent"
+                                         GridLinesVisibility="None"
+                                         HeadersVisibility="Column"
+                                         AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         SelectionMode="Single"
+                                         Height="180">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Student" Binding="{Binding StudentName}" Width="*"/>
+                                        <DataGridTextColumn Header="Exam" Binding="{Binding ExamTitle}" Width="*"/>
+                                        <DataGridTextColumn Header="Question #" Binding="{Binding QuestionNumber}" Width="90"/>
+                                        <DataGridTextColumn Header="Score" Binding="{Binding AutoScore}" Width="80"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </StackPanel>
                         </Border>
 

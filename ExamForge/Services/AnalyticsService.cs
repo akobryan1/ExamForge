@@ -23,17 +23,21 @@ namespace ExamForge.Services
             try
             {
                 var submissions = await _firestoreService.GetExamSubmissionsAsync(examId);
+                var exam = await _firestoreService.GetPublishedExamAsync(examId);
+
                 if (!submissions.Any())
                 {
                     return new ClassOverviewMetrics();
                 }
 
                 var totalStudents = submissions.Count;
+                var passingThreshold = exam?.PassingScorePercentage > 0 ? exam.PassingScorePercentage : 60;
+
                 var averageScore = submissions.Average(s => s.TotalPossiblePoints > 0 ? 
-                    (s.TotalScore / s.TotalPossiblePoints) * 100 : 0);
+                    (s.TotalScore / s.TotalPossiblePoints) * 100.0 : 0.0);
                 
                 var passedSubmissions = submissions.Count(s => s.TotalPossiblePoints > 0 && 
-                    (s.TotalScore / s.TotalPossiblePoints) * 100 >= 60);
+                    (s.TotalScore / s.TotalPossiblePoints) * 100.0 >= passingThreshold);
                 var passRate = totalStudents > 0 ? (passedSubmissions * 100.0) / totalStudents : 0;
 
                 // Count completed submissions (those with EndTime)
