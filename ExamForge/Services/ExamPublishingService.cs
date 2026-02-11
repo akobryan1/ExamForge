@@ -71,7 +71,7 @@ public class ExamPublishingService
                 CreatedBy = creatorEmail,
                 ExamUrl = "",
                 Status = "Active",
-                LoginConfig = examData.LoginConfig  // Add this line with proper comma
+                LoginConfig = examData.LoginConfig?.ToString() ?? ""
             };
             
             await _firestoreService.SavePublishedExamAsync(publishedExam);

@@ -156,21 +156,19 @@
                 <RadioButton x:Name="LiveTab"
                              Content="🔴 Live Exams"
                              Style="{StaticResource TabButtonStyle}"
-                             IsEnabled="False"
-                             Checked="Tab_Changed"
-                             ToolTip="Coming soon - requires real-time monitoring infrastructure"/>
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="ExamBankTab"
+                             Content="📚 Exam Bank"
+                             Style="{StaticResource TabButtonStyle}"
+                             Checked="Tab_Changed"/>
                 <RadioButton x:Name="ClosedTab"
                              Content="📊 Closed and Grading"
                              Style="{StaticResource TabButtonStyle}"
-                             IsEnabled="False"
-                             Checked="Tab_Changed"
-                             ToolTip="Coming soon"/>
+                             Checked="Tab_Changed"/>
                 <RadioButton x:Name="ReportsTab"
                              Content="📈 Reports"
                              Style="{StaticResource TabButtonStyle}"
-                             IsEnabled="False"
-                             Checked="Tab_Changed"
-                             ToolTip="Coming soon"/>
+                             Checked="Tab_Changed"/>
             </StackPanel>
         </Border>
 
@@ -424,23 +422,363 @@
                     </Border>
                 </StackPanel>
 
-                <!-- Placeholder Panels -->
+                <!-- Live Exams Panel -->
                 <StackPanel x:Name="LivePanel" Visibility="Collapsed">
-                    <TextBlock Text="Live Exams - Coming Soon"
-                               FontSize="20"
-                               Foreground="{StaticResource TextSecondary}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Live Roster Monitor -->
+                        <Border Grid.Column="0" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="0,0,12,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <TextBlock Text="🔴 Live Exam Monitor" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                                    <Border Background="#10B981" CornerRadius="4" Padding="8,4" Margin="12,0,0,0">
+                                        <TextBlock Text="3 Active Sessions" FontSize="11" FontWeight="Medium" Foreground="White"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Quick Stats -->
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <TextBlock Text="24" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Online" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock Text="2" FontSize="24" FontWeight="Bold" Foreground="{StaticResource ErrorRed}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Disconnected" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <TextBlock Text="67%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Avg Progress" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" HorizontalAlignment="Center">
+                                        <TextBlock Text="5" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Flags" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Student Roster -->
+                                <DataGrid x:Name="LiveRosterGrid" 
+                                         Background="Transparent"
+                                         GridLinesVisibility="None"
+                                         HeadersVisibility="Column"
+                                         AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         SelectionMode="Single">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Student" Binding="{Binding StudentName}" Width="*"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding ConnectionStatus}" Width="100"/>
+                                        <DataGridTextColumn Header="Progress" Binding="{Binding ProgressPercent}" Width="80"/>
+                                        <DataGridTextColumn Header="Time Left" Binding="{Binding TimeRemaining}" Width="90"/>
+                                        <DataGridTextColumn Header="Flags" Binding="{Binding FlagCount}" Width="60"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Incident Feed -->
+                        <Border Grid.Column="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="⚠️ Incident Feed" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
+                                
+                                <ScrollViewer Height="400" VerticalScrollBarVisibility="Auto">
+                                    <ItemsControl x:Name="IncidentFeedList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource SurfaceLight}" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                                    <StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                            <TextBlock Text="{Binding StudentName}" FontWeight="Medium" Foreground="{StaticResource TextPrimary}"/>
+                                                            <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm}'}" FontSize="10" Foreground="{StaticResource TextMuted}" Margin="8,0,0,0"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding EventType}" FontSize="12" Foreground="{StaticResource TextSecondary}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                
+                                <!-- Quick Actions -->
+                                <StackPanel Margin="0,16,0,0">
+                                    <Button Content="Broadcast Message" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="BroadcastMessage_Click"/>
+                                    <Button Content="Pause All Exams" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="PauseAllExams_Click"/>
+                                    <Button Content="Export Live Report" Style="{StaticResource ActionButtonStyle}" Click="ExportLiveReport_Click"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
 
+                <!-- Exam Bank Panel -->
+                <StackPanel x:Name="ExamBankPanel" Visibility="Collapsed">
+                    <Border Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                                <TextBlock Text="📚 Exam Bank" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                                <Button Content="+ Create Template" Style="{StaticResource ActionButtonStyle}" Margin="16,0,0,0" Click="CreateTemplate_Click"/>
+                            </StackPanel>
+
+                            <!-- Search and Filters -->
+                            <Grid Margin="0,0,0,20">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBox x:Name="BankSearchBox" Grid.Column="0" Text="Search exam bank..." Padding="10,8" Background="{StaticResource SurfaceLight}" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" FontSize="13" TextChanged="BankSearch_Changed" GotFocus="BankSearchBox_GotFocus" LostFocus="BankSearchBox_LostFocus"/>
+                                
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                                    <ComboBox x:Name="SubjectFilter" Width="120" Padding="8" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                                        <ComboBoxItem Content="All Subjects"/>
+                                        <ComboBoxItem Content="Mathematics"/>
+                                        <ComboBoxItem Content="Science"/>
+                                        <ComboBoxItem Content="History"/>
+                                    </ComboBox>
+                                    <ComboBox x:Name="DifficultyFilter" Width="120" Margin="8,0,0,0" Padding="8" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
+                                        <ComboBoxItem Content="All Levels"/>
+                                        <ComboBoxItem Content="Easy"/>
+                                        <ComboBoxItem Content="Medium"/>
+                                        <ComboBoxItem Content="Hard"/>
+                                    </ComboBox>
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- Exam Bank Grid -->
+                            <DataGrid x:Name="ExamBankGrid" 
+                                     Background="Transparent"
+                                     GridLinesVisibility="None"
+                                     HeadersVisibility="Column"
+                                     AutoGenerateColumns="False"
+                                     CanUserAddRows="False"
+                                     CanUserDeleteRows="False"
+                                     IsReadOnly="True"
+                                     SelectionMode="Single"
+                                     Height="400">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
+                                    <DataGridTextColumn Header="Subject" Binding="{Binding Subject}" Width="120"/>
+                                    <DataGridTextColumn Header="Questions" Binding="{Binding QuestionCount}" Width="80"/>
+                                    <DataGridTextColumn Header="Difficulty" Binding="{Binding Difficulty}" Width="80"/>
+                                    <DataGridTextColumn Header="Usage" Binding="{Binding TimesUsed}" Width="60"/>
+                                    <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='{}{0:MM/dd}'}" Width="80"/>
+                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Button Content="Clone" FontSize="10" Padding="6,3" Click="CloneExam_Click" Tag="{Binding Id}"/>
+                                                    <Button Content="Edit" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="EditBankExam_Click" Tag="{Binding Id}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Closed and Grading Panel -->
                 <StackPanel x:Name="ClosedPanel" Visibility="Collapsed">
-                    <TextBlock Text="Closed and Grading - Coming Soon"
-                               FontSize="20"
-                               Foreground="{StaticResource TextSecondary}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Grading Queue -->
+                        <Border Grid.Column="0" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="0,0,12,0">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                    <TextBlock Text="📊 Grading Queue" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
+                                    <Border Background="{StaticResource WarningYellow}" CornerRadius="4" Padding="8,4" Margin="12,0,0,0">
+                                        <TextBlock Text="12 Pending Review" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BackgroundDark}"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Quick Stats -->
+                                <Grid Margin="0,0,0,20">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                                        <TextBlock Text="145" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Auto-Graded" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Center">
+                                        <TextBlock Text="12" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Manual Review" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                                        <TextBlock Text="82%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Pass Rate" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Submissions requiring manual grading -->
+                                <DataGrid x:Name="GradingQueueGrid" 
+                                         Background="Transparent"
+                                         GridLinesVisibility="None"
+                                         HeadersVisibility="Column"
+                                         AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         SelectionMode="Single">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Student" Binding="{Binding StudentName}" Width="*"/>
+                                        <DataGridTextColumn Header="Exam" Binding="{Binding ExamTitle}" Width="*"/>
+                                        <DataGridTextColumn Header="Submitted" Binding="{Binding SubmittedAt, StringFormat='{}{0:MM/dd HH:mm}'}" Width="120"/>
+                                        <DataGridTextColumn Header="Auto Score" Binding="{Binding AutoScore}" Width="80"/>
+                                        <DataGridTextColumn Header="Essays" Binding="{Binding EssayCount}" Width="60"/>
+                                        <DataGridTemplateColumn Header="Action" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Review" Style="{StaticResource ActionButtonStyle}" Click="ReviewSubmission_Click" Tag="{Binding Id}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Quick Actions -->
+                        <Border Grid.Column="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="⚡ Quick Actions" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
+                                
+                                <Button Content="Bulk Finalize Grades" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="BulkFinalize_Click"/>
+                                <Button Content="Release Results" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ReleaseResults_Click"/>
+                                <Button Content="Reopen for Make-up" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ReopenMakeup_Click"/>
+                                <Button Content="Export Gradebook" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportGradebook_Click"/>
+                                
+                                <Border Background="{StaticResource SurfaceLight}" CornerRadius="8" Padding="12" Margin="0,16,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Grade Distribution" FontSize="14" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,8"/>
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="A: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
+                                                <Border Background="{StaticResource AccentGold}" Height="4" Width="60" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock Text=" 23%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="B: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
+                                                <Border Background="{StaticResource AccentBlue}" Height="4" Width="45" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock Text=" 18%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="C: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
+                                                <Border Background="{StaticResource WarningYellow}" Height="4" Width="35" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock Text=" 14%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="F: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
+                                                <Border Background="{StaticResource ErrorRed}" Height="4" Width="25" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock Text=" 10%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
 
+                <!-- Reports Panel -->
                 <StackPanel x:Name="ReportsPanel" Visibility="Collapsed">
-                    <TextBlock Text="Reports - Coming Soon"
-                               FontSize="20"
-                               Foreground="{StaticResource TextSecondary}"/>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Report Categories -->
+                        <Grid Grid.Row="0" Margin="0,0,0,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Grade Reports -->
+                            <Border Grid.Column="0" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="0,0,8,0">
+                                <StackPanel>
+                                    <TextBlock Text="📊 Grade Reports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
+                                    <Button Content="Export Grades (CSV)" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportGrades_Click"/>
+                                    <Button Content="Detailed Submissions" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportSubmissions_Click"/>
+                                    <Button Content="Class Summary" Style="{StaticResource ActionButtonStyle}" Click="ExportClassSummary_Click"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Analytics Reports -->
+                            <Border Grid.Column="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="4,0">
+                                <StackPanel>
+                                    <TextBlock Text="📈 Analytics" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
+                                    <Button Content="Item Analysis" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportItemAnalysis_Click"/>
+                                    <Button Content="Student Performance" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportStudentPerformance_Click"/>
+                                    <Button Content="Trends Over Time" Style="{StaticResource ActionButtonStyle}" Click="ExportTrends_Click"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Security Reports -->
+                            <Border Grid.Column="2" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="8,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="🔒 Security Reports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
+                                    <Button Content="Integrity Report" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportIntegrityReport_Click"/>
+                                    <Button Content="Audit Logs" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportAuditLogs_Click"/>
+                                    <Button Content="Session Events" Style="{StaticResource ActionButtonStyle}" Click="ExportSessionEvents_Click"/>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+
+                        <!-- Recent Exports -->
+                        <Border Grid.Row="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20">
+                            <StackPanel>
+                                <TextBlock Text="📄 Recent Exports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
+                                
+                                <DataGrid x:Name="RecentExportsGrid" 
+                                         Background="Transparent"
+                                         GridLinesVisibility="None"
+                                         HeadersVisibility="Column"
+                                         AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         SelectionMode="Single"
+                                         Height="300">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Export Type" Binding="{Binding ExportType}" Width="*"/>
+                                        <DataGridTextColumn Header="Exam" Binding="{Binding ExamTitle}" Width="*"/>
+                                        <DataGridTextColumn Header="Generated" Binding="{Binding GeneratedAt, StringFormat='{}{0:MM/dd/yyyy HH:mm}'}" Width="140"/>
+                                        <DataGridTextColumn Header="File Size" Binding="{Binding FileSize}" Width="80"/>
+                                        <DataGridTemplateColumn Header="Actions" Width="100">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="Open" Style="{StaticResource ActionButtonStyle}" Click="OpenExport_Click" Tag="{Binding FilePath}"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
             </Grid>
         </ScrollViewer>

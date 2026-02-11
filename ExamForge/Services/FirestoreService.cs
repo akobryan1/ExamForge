@@ -80,9 +80,45 @@ public class FirestoreService
             var collection = _firestoreDb.Collection("published_exams");
             var snapshot = await collection.GetSnapshotAsync();
             
-            return snapshot.Documents
-                .Select(doc => doc.ConvertTo<PublishedExam>())
-                .ToList();
+            var exams = new List<PublishedExam>();
+            
+            foreach (var doc in snapshot.Documents)
+            {
+                try
+                {
+                    var exam = doc.ConvertTo<PublishedExam>();
+                    exams.Add(exam);
+                }
+                catch (Exception docEx)
+                {
+                    // Log which specific document and field is causing issues
+                    System.Diagnostics.Debug.WriteLine($"❌ Failed to convert document {doc.Id}: {docEx.Message}");
+                    
+                    // Try to create a minimal PublishedExam with just basic fields
+                    var data = doc.ToDictionary();
+                    var fallbackExam = new PublishedExam
+                    {
+                        Id = doc.Id,
+                        Title = data.ContainsKey("Title") ? data["Title"]?.ToString() ?? "Unknown" : "Unknown",
+                        StartTime = data.ContainsKey("StartTime") && data["StartTime"] is Timestamp ts1 ? ts1.ToDateTime() : DateTime.Now,
+                        EndTime = data.ContainsKey("EndTime") && data["EndTime"] is Timestamp ts2 ? ts2.ToDateTime() : DateTime.Now.AddHours(1),
+                        ExamDuration = data.ContainsKey("ExamDuration") && int.TryParse(data["ExamDuration"]?.ToString(), out int duration) ? duration : 60,
+                        PublishedDate = data.ContainsKey("PublishedDate") && data["PublishedDate"] is Timestamp ts3 ? ts3.ToDateTime() : DateTime.Now,
+                        CreatedBy = data.ContainsKey("CreatedBy") ? data["CreatedBy"]?.ToString() ?? "Unknown" : "Unknown",
+                        ExamUrl = data.ContainsKey("ExamUrl") ? data["ExamUrl"]?.ToString() ?? "" : "",
+                        Status = data.ContainsKey("Status") ? data["Status"]?.ToString() ?? "Draft" : "Draft",
+                        LifecycleStatus = data.ContainsKey("LifecycleStatus") ? data["LifecycleStatus"]?.ToString() ?? "Draft" : "Draft",
+                        LoginConfig = data.ContainsKey("LoginConfig") ? data["LoginConfig"]?.ToString() ?? "" : "",
+                        // Skip complex objects for now to avoid serialization issues
+                        Structures = new List<ExamStructure>(),
+                        Contents = new List<ExamContent>()
+                    };
+                    exams.Add(fallbackExam);
+                    System.Diagnostics.Debug.WriteLine($"✅ Added fallback exam: {fallbackExam.Title}");
+                }
+            }
+            
+            return exams;
         }
         catch (Exception ex)
         {
@@ -280,6 +316,13 @@ public class FirestoreService
             throw new Exception($"Failed to search questions: {ex.Message}", ex);
         }
     }
+
+    public async Task<List<IntegrityIncident>> GetIntegrityIncidentsAsync(string examId)
+    {
+        // TODO: Implement Firestore query
+        return new List<IntegrityIncident>();
+    }
+
 
     #endregion
 }

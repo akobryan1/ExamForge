@@ -163,32 +163,44 @@ public partial class published_exams_usercontrol : UserControl
 
     private async void Tab_Changed(object sender, RoutedEventArgs e)
     {
-        if (ScheduledPanel == null || LivePanel == null || ClosedPanel == null || ReportsPanel == null)
-            return;
+        try
+        {
+            // Hide all panels safely
+            if (ScheduledPanel != null) ScheduledPanel.Visibility = Visibility.Collapsed;
+            if (LivePanel != null) LivePanel.Visibility = Visibility.Collapsed;
+            if (ExamBankPanel != null) ExamBankPanel.Visibility = Visibility.Collapsed;
+            if (ClosedPanel != null) ClosedPanel.Visibility = Visibility.Collapsed;
+            if (ReportsPanel != null) ReportsPanel.Visibility = Visibility.Collapsed;
 
-        // Hide all panels
-        ScheduledPanel.Visibility = Visibility.Collapsed;
-        LivePanel.Visibility = Visibility.Collapsed;
-        ClosedPanel.Visibility = Visibility.Collapsed;
-        ReportsPanel.Visibility = Visibility.Collapsed;
-
-        // Show selected panel
-        if (ScheduledTab.IsChecked == true)
-        {
-            ScheduledPanel.Visibility = Visibility.Visible;
+            // Show selected panel
+            if (ScheduledTab?.IsChecked == true && ScheduledPanel != null)
+            {
+                ScheduledPanel.Visibility = Visibility.Visible;
+            }
+            else if (LiveTab?.IsChecked == true && LivePanel != null)
+            {
+                LivePanel.Visibility = Visibility.Visible;
+                await InitializeLiveMonitoringAsync(); // Connect SignalR when Live tab is opened
+            }
+            else if (ExamBankTab?.IsChecked == true && ExamBankPanel != null)
+            {
+                ExamBankPanel.Visibility = Visibility.Visible;
+                LoadExamBank();
+            }
+            else if (ClosedTab?.IsChecked == true && ClosedPanel != null)
+            {
+                ClosedPanel.Visibility = Visibility.Visible;
+                LoadClosedExams();
+            }
+            else if (ReportsTab?.IsChecked == true && ReportsPanel != null)
+            {
+                ReportsPanel.Visibility = Visibility.Visible;
+                LoadRecentExports();
+            }
         }
-        else if (LiveTab.IsChecked == true)
+        catch (Exception ex)
         {
-            LivePanel.Visibility = Visibility.Visible;
-            await InitializeLiveMonitoringAsync(); // Connect SignalR when Live tab is opened
-        }
-        else if (ClosedTab.IsChecked == true)
-        {
-            ClosedPanel.Visibility = Visibility.Visible;
-        }
-        else if (ReportsTab.IsChecked == true)
-        {
-            ReportsPanel.Visibility = Visibility.Visible;
+            Debug.WriteLine($"Error in Tab_Changed: {ex.Message}");
         }
     }
 
@@ -331,6 +343,311 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
+    #region Live Exam Event Handlers
+
+    private void BroadcastMessage_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Broadcast Message functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void PauseAllExams_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Pause All Exams functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportLiveReport_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Live Report functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    #endregion
+
+    #region Exam Bank Event Handlers
+
+    private void LoadExamBank()
+    {
+        try
+        {
+            // TODO: Load exam bank data
+            var sampleData = new List<ExamBankItem>
+            {
+                new ExamBankItem { Id = "1", Title = "Algebra Basics", Subject = "Mathematics", QuestionCount = 25, Difficulty = "Medium", TimesUsed = 12, LastUsed = DateTime.Now.AddDays(-5) },
+                new ExamBankItem { Id = "2", Title = "Biology Cell Structure", Subject = "Science", QuestionCount = 30, Difficulty = "Hard", TimesUsed = 8, LastUsed = DateTime.Now.AddDays(-12) },
+                new ExamBankItem { Id = "3", Title = "World War II", Subject = "History", QuestionCount = 20, Difficulty = "Easy", TimesUsed = 15, LastUsed = DateTime.Now.AddDays(-3) }
+            };
+            
+            if (ExamBankGrid != null)
+                ExamBankGrid.ItemsSource = sampleData;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading exam bank: {ex.Message}");
+        }
+    }
+
+    private void CreateTemplate_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Create Template functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void BankSearch_Changed(object sender, TextChangedEventArgs e)
+    {
+        // TODO: Filter exam bank based on search
+    }
+
+    private void BankSearchBox_GotFocus(object sender, RoutedEventArgs e)
+    {
+        if (BankSearchBox.Text == "Search exam bank...")
+        {
+            BankSearchBox.Text = "";
+            BankSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)); // TextPrimary
+        }
+    }
+
+    private void BankSearchBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(BankSearchBox.Text))
+        {
+            BankSearchBox.Text = "Search exam bank...";
+            BankSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // TextSecondary
+        }
+    }
+
+    private void CloneExam_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string examId)
+        {
+            MessageBox.Show($"Clone exam {examId} functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void EditBankExam_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string examId)
+        {
+            MessageBox.Show($"Edit exam {examId} functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    #endregion
+
+    #region Closed & Grading Event Handlers
+
+    private void LoadClosedExams()
+    {
+        try
+        {
+            // TODO: Load closed exams and grading queue
+            var sampleGradingData = new List<GradingQueueItem>
+            {
+                new GradingQueueItem { Id = "1", StudentName = "John Doe", ExamTitle = "Midterm Exam", SubmittedAt = DateTime.Now.AddHours(-2), AutoScore = "85/100", EssayCount = 2 },
+                new GradingQueueItem { Id = "2", StudentName = "Jane Smith", ExamTitle = "Final Exam", SubmittedAt = DateTime.Now.AddHours(-1), AutoScore = "92/100", EssayCount = 1 },
+                new GradingQueueItem { Id = "3", StudentName = "Bob Johnson", ExamTitle = "Quiz 5", SubmittedAt = DateTime.Now.AddMinutes(-30), AutoScore = "78/100", EssayCount = 3 }
+            };
+            
+            if (GradingQueueGrid != null)
+                GradingQueueGrid.ItemsSource = sampleGradingData;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading closed exams: {ex.Message}");
+        }
+    }
+
+    private void ReviewSubmission_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string submissionId)
+        {
+            MessageBox.Show($"Review submission {submissionId} functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void BulkFinalize_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Bulk Finalize Grades functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ReleaseResults_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Release Results functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ReopenMakeup_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Reopen for Make-up functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    #endregion
+
+    #region Reports Event Handlers
+
+    private void LoadRecentExports()
+    {
+        try
+        {
+            // TODO: Load recent exports data
+            var sampleExports = new List<ExportItem>
+            {
+                new ExportItem { ExportType = "Grade Report", ExamTitle = "Midterm Exam", GeneratedAt = DateTime.Now.AddDays(-1), FileSize = "2.3 MB", FilePath = "C:\\Exports\\grades_midterm.csv" },
+                new ExportItem { ExportType = "Item Analysis", ExamTitle = "Quiz 5", GeneratedAt = DateTime.Now.AddDays(-3), FileSize = "1.8 MB", FilePath = "C:\\Exports\\analysis_quiz5.csv" },
+                new ExportItem { ExportType = "Integrity Report", ExamTitle = "Final Exam", GeneratedAt = DateTime.Now.AddDays(-7), FileSize = "945 KB", FilePath = "C:\\Exports\\integrity_final.csv" }
+            };
+            
+            if (RecentExportsGrid != null)
+                RecentExportsGrid.ItemsSource = sampleExports;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading recent exports: {ex.Message}");
+        }
+    }
+
+    private async void ExportGrades_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            // Get selected exam (for demo, use first available exam)
+            var exam = _allExams.FirstOrDefault();
+            if (exam == null)
+            {
+                MessageBox.Show("No exams available for export.", "Info", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var exportService = new ExportService();
+            var filePath = await exportService.ExportGradesToExcelAsync(exam.Id, exam.Title);
+            
+            MessageBox.Show($"Grades exported successfully!\nSaved to: {filePath}", "Success", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to export grades: {ex.Message}");
+        }
+    }
+
+    private async void ExportSubmissions_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var exam = _allExams.FirstOrDefault();
+            if (exam == null)
+            {
+                MessageBox.Show("No exams available for export.", "Info", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var exportService = new ExportService();
+            var filePath = await exportService.ExportSubmissionsAsync(exam.Id, exam.Title);
+            
+            MessageBox.Show($"Submissions exported successfully!\nSaved to: {filePath}", "Success", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to export submissions: {ex.Message}");
+        }
+    }
+
+    private void ExportClassSummary_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Class Summary functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportItemAnalysis_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Item Analysis functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportStudentPerformance_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Student Performance functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportTrends_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Trends Over Time functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private async void ExportIntegrityReport_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var exam = _allExams.FirstOrDefault();
+            if (exam == null)
+            {
+                MessageBox.Show("No exams available for export.", "Info", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var exportService = new ExportService();
+            var filePath = await exportService.ExportIntegrityReportAsync(exam.Id, exam.Title);
+            
+            MessageBox.Show($"Integrity report exported successfully!\nSaved to: {filePath}", "Success", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to export integrity report: {ex.Message}");
+        }
+    }
+
+    private void ExportAuditLogs_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Audit Logs functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportSessionEvents_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Session Events functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void ExportGradebook_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show("Export Gradebook functionality coming soon!", "Info", 
+            MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void OpenExport_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string filePath)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to open file: {ex.Message}");
+            }
+        }
+    }
+
+    #endregion
+
     private void ShowError(string message)
     {
         MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -374,4 +691,37 @@ public class IncidentItem
     public string Severity { get; set; } = "";
     public string Details { get; set; } = "";
     public DateTime Timestamp { get; set; }
+}
+
+// Exam Bank item
+public class ExamBankItem
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public int QuestionCount { get; set; }
+    public string Difficulty { get; set; } = "";
+    public int TimesUsed { get; set; }
+    public DateTime LastUsed { get; set; }
+}
+
+// Grading Queue item
+public class GradingQueueItem
+{
+    public string Id { get; set; } = "";
+    public string StudentName { get; set; } = "";
+    public string ExamTitle { get; set; } = "";
+    public DateTime SubmittedAt { get; set; }
+    public string AutoScore { get; set; } = "";
+    public int EssayCount { get; set; }
+}
+
+// Export item
+public class ExportItem
+{
+    public string ExportType { get; set; } = "";
+    public string ExamTitle { get; set; } = "";
+    public DateTime GeneratedAt { get; set; }
+    public string FileSize { get; set; } = "";
+    public string FilePath { get; set; } = "";
 }

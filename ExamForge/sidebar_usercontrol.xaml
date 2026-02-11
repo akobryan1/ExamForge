@@ -177,7 +177,8 @@
 
                 <!-- Analytics -->
                 <Button x:Name="analytics_button"
-                        Style="{StaticResource SidebarButtonStyle}">
+                        Style="{StaticResource SidebarButtonStyle}"
+                        Click="Analytics_Button_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="pack://application:,,,/ICONS/analytics_grey32.png"
                                Width="20" Height="20" Stretch="Uniform"/>

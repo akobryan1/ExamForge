@@ -56,5 +56,18 @@ namespace ExamForge
                 }
             }
         }
+
+        private void Analytics_Button_Click(object sender, RoutedEventArgs e)
+        {
+            // Analytics button clicked - load student analytics usercontrol
+            Window mainWindow = Window.GetWindow(this);
+            if (mainWindow is MainWindow main)
+            {
+                if (main.FindName("MainContentHost") is ContentControl contentHost)
+                {
+                    contentHost.Content = new student_analytics_usercontrol();
+                }
+            }
+        }
     }
 }

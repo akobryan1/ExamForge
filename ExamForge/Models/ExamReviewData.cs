@@ -31,41 +31,69 @@ public class LoginConfigState
     public bool RequireStudentNumber { get; set; }
 }
 
-    
+[FirestoreData]
+public class SubmissionResponse
+{
+    [FirestoreProperty]
+    public string QuestionId { get; set; } = "";
+
+    [FirestoreProperty]
+    public int QuestionNumber { get; set; }
+
+    [FirestoreProperty]
+    public string Answer { get; set; } = "";
+
+    [FirestoreProperty]
+    public double PointsEarned { get; set; }
+
+    [FirestoreProperty]
+    public double PointsPossible { get; set; }
+
+    [FirestoreProperty]
+    public bool IsCorrect { get; set; }
+}
 
 [FirestoreData]
 public class ExamSubmission
 {
     [FirestoreProperty]
     public string Id { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string ExamId { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentName { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentEmail { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentId { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string YearSection { get; set; } = "";
-    
+
     [FirestoreProperty]
     public DateTime SubmittedAt { get; set; }
-    
+
+    // ✅ REAL responses, not a dictionary
     [FirestoreProperty]
-    public Dictionary<string, string> Answers { get; set; } = new();
-    
+    public List<SubmissionResponse> Responses { get; set; } = new();
+
     [FirestoreProperty]
-    public int TotalScore { get; set; }
-    
+    public double TotalScore { get; set; }
+
     [FirestoreProperty]
-    public int MaxScore { get; set; }
-    
+    public double TotalPossiblePoints { get; set; }
+
     [FirestoreProperty]
     public string Status { get; set; } = "Submitted";
+
+    // ✅ Nullable because your logic treats them as optional
+    [FirestoreProperty]
+    public DateTime? StartTime { get; set; }
+
+    [FirestoreProperty]
+    public DateTime? EndTime { get; set; }
 }
