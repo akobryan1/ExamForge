@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using ExamForge.Models;
 
@@ -196,6 +197,46 @@ namespace ExamForge.Services
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Failed to export integrity report: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
+        /// Generic CSV export method
+        /// </summary>
+        public async Task<string> ExportToCsvAsync(List<Dictionary<string, string>> data, string fileName)
+        {
+            try
+            {
+                var exportsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ExamForge_Exports");
+                Directory.CreateDirectory(exportsDir);
+
+                var filePath = Path.Combine(exportsDir, fileName);
+
+                if (!data.Any())
+                {
+                    await File.WriteAllTextAsync(filePath, "No data available");
+                    return filePath;
+                }
+
+                var headers = data.First().Keys.ToList();
+                var csv = new StringBuilder();
+
+                // Add header row
+                csv.AppendLine(string.Join(",", headers.Select(h => $"\"{h}\"")));
+
+                // Add data rows
+                foreach (var row in data)
+                {
+                    var values = headers.Select(h => $"\"{row.GetValueOrDefault(h, "")?.Replace("\"", "\"\"")}\"");
+                    csv.AppendLine(string.Join(",", values));
+                }
+
+                await File.WriteAllTextAsync(filePath, csv.ToString());
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to export CSV: {ex.Message}", ex);
             }
         }
     }

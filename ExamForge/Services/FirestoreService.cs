@@ -2,6 +2,7 @@
 using FirebaseAdmin;
 using Google.Apis.Auth.OAuth2;
 using ExamForge.Models;
+using System.Diagnostics;
 
 namespace ExamForge.Services;
 
@@ -319,8 +320,58 @@ public class FirestoreService
 
     public async Task<List<IntegrityIncident>> GetIntegrityIncidentsAsync(string examId)
     {
-        // TODO: Implement Firestore query
-        return new List<IntegrityIncident>();
+        try
+        {
+            var query = _firestoreDb.Collection("integrity_incidents")
+                .WhereEqualTo("ExamId", examId)
+                .OrderByDescending("Timestamp");
+                
+            var snapshot = await query.GetSnapshotAsync();
+            return snapshot.Documents.Select(d => d.ConvertTo<IntegrityIncident>()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get integrity incidents: {ex.Message}");
+            return new List<IntegrityIncident>();
+        }
+    }
+
+    public async Task<List<ExamSession>> GetActiveExamSessionsAsync()
+    {
+        try
+        {
+            var query = _firestoreDb.Collection("exam_sessions")
+                .WhereEqualTo("IsActive", true)
+                .OrderBy("StartTime");
+                
+            var snapshot = await query.GetSnapshotAsync();
+            return snapshot.Documents.Select(d => d.ConvertTo<ExamSession>()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get active exam sessions: {ex.Message}");
+            return new List<ExamSession>();
+        }
+    }
+
+    public async Task<List<IntegrityIncident>> GetRecentIntegrityIncidentsAsync(TimeSpan timeSpan)
+    {
+        try
+        {
+            var cutoffTime = DateTime.UtcNow.Subtract(timeSpan);
+            var query = _firestoreDb.Collection("integrity_incidents")
+                .WhereGreaterThan("Timestamp", Timestamp.FromDateTime(cutoffTime))
+                .OrderByDescending("Timestamp")
+                .Limit(50);
+                
+            var snapshot = await query.GetSnapshotAsync();
+            return snapshot.Documents.Select(d => d.ConvertTo<IntegrityIncident>()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get recent integrity incidents: {ex.Message}");
+            return new List<IntegrityIncident>();
+        }
     }
 
 

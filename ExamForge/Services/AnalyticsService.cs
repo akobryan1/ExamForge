@@ -28,255 +28,174 @@ namespace ExamForge.Services
                     return new ClassOverviewMetrics();
                 }
 
-                var scores = submissions.Select(s => (double)s.TotalScore / s.TotalPossiblePoints * 100).ToList();
-                var completionRate = (double)submissions.Count / submissions.Count * 100; // This would need total enrolled students
-                var passRate = scores.Count(s => s >= 60) / (double)scores.Count * 100; // Assuming 60% pass threshold
+                var totalStudents = submissions.Count;
+                var averageScore = submissions.Average(s => s.TotalPossiblePoints > 0 ? 
+                    (s.TotalScore / s.TotalPossiblePoints) * 100 : 0);
+                
+                var passedSubmissions = submissions.Count(s => s.TotalPossiblePoints > 0 && 
+                    (s.TotalScore / s.TotalPossiblePoints) * 100 >= 60);
+                var passRate = totalStudents > 0 ? (passedSubmissions * 100.0) / totalStudents : 0;
+
+                // Count completed submissions (those with EndTime)
+                var completedSubmissions = submissions.Count(s => s.EndTime.HasValue);
+                var completionRate = totalStudents > 0 ? (completedSubmissions * 100.0) / totalStudents : 0;
 
                 return new ClassOverviewMetrics
                 {
-                    ClassAverage = scores.Average(),
+                    ClassAverage = averageScore,
                     PassRate = passRate,
                     CompletionRate = completionRate,
-                    TotalStudents = submissions.Count,
-                    PassingStudents = scores.Count(s => s >= 60),
-                    Mean = scores.Average(),
-                    Median = CalculateMedian(scores),
-                    StandardDeviation = CalculateStandardDeviation(scores),
-                    MinScore = scores.Min(),
-                    MaxScore = scores.Max()
+                    TotalStudents = totalStudents,
+                    PassingStudents = passedSubmissions
                 };
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to calculate class overview: {ex.Message}", ex);
+                System.Diagnostics.Debug.WriteLine($"Error calculating class overview: {ex.Message}");
+                return new ClassOverviewMetrics();
             }
         }
 
         /// <summary>
-        /// Analyze item difficulty and discrimination for exam questions
+        /// Analyze items/questions in an exam for quality metrics
         /// </summary>
         public async Task<List<ItemAnalysisResult>> AnalyzeExamItemsAsync(string examId)
         {
             try
             {
-                var exam = await _firestoreService.GetPublishedExamAsync(examId);
                 var submissions = await _firestoreService.GetExamSubmissionsAsync(examId);
-
-                if (exam == null || !submissions.Any())
+                var exam = await _firestoreService.GetPublishedExamAsync(examId);
+                
+                if (!submissions.Any() || exam?.Contents == null)
                 {
                     return new List<ItemAnalysisResult>();
                 }
 
-                var results = new List<ItemAnalysisResult>();
+                var itemResults = new List<ItemAnalysisResult>();
 
                 foreach (var question in exam.Contents)
                 {
-                    var responses = submissions
-                        .SelectMany(s => s.Responses ?? new List<SubmissionResponse>())
+                    var questionResponses = submissions
+                        .SelectMany(s => s.Responses)
                         .Where(r => r.QuestionId == question.Id)
                         .ToList();
 
-                    if (!responses.Any()) continue;
+                    if (!questionResponses.Any()) continue;
 
-                    var correctResponses = responses.Count(r => r.IsCorrect);
-                    var totalResponses = responses.Count;
-                    var difficultyPercent = (double)correctResponses / totalResponses * 100;
+                    var totalResponses = questionResponses.Count;
+                    var correctResponses = questionResponses.Count(r => r.IsCorrect);
+                    var difficultyPercent = totalResponses > 0 ? (correctResponses * 100.0) / totalResponses : 0;
 
-                    // Calculate discrimination index (simple version)
-                    var discrimination = CalculateDiscrimination(responses, submissions);
+                    // Calculate discrimination index (simplified)
+                    var discrimination = CalculateDiscrimination(questionResponses, submissions);
                     
-                    // Calculate point-biserial correlation
-                    var pointBiserial = CalculatePointBiserial(responses, submissions);
-
+                    // Point-biserial correlation (simplified approximation)
+                    var pointBiserial = CalculatePointBiserial(questionResponses, submissions);
+                    
                     // No response rate
                     var noResponseCount = submissions.Count - totalResponses;
-                    var noResponsePercent = (double)noResponseCount / submissions.Count * 100;
+                    var noResponsePercent = submissions.Count > 0 ? (noResponseCount * 100.0) / submissions.Count : 0;
 
-                    results.Add(new ItemAnalysisResult
+                    // Quality indicator based on discrimination and difficulty
+                    var qualityIndicator = GetQualityIndicator(discrimination, difficultyPercent);
+
+                    itemResults.Add(new ItemAnalysisResult
                     {
                         QuestionId = question.Id,
-                        QuestionNumber = question.Id, // Assuming ID contains question number
+                        QuestionNumber = (itemResults.Count + 1).ToString(),
                         QuestionType = question.QuestionType,
                         DifficultyPercent = difficultyPercent,
                         Discrimination = discrimination,
                         PointBiserial = pointBiserial,
                         NoResponsePercent = noResponsePercent,
-                        QualityIndicator = DetermineQualityIndicator(difficultyPercent, discrimination)
+                        QualityIndicator = qualityIndicator
                     });
                 }
 
-                return results.OrderBy(r => r.QuestionNumber).ToList();
+                return itemResults.OrderBy(r => int.Parse(r.QuestionNumber)).ToList();
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to analyze exam items: {ex.Message}", ex);
+                System.Diagnostics.Debug.WriteLine($"Error analyzing exam items: {ex.Message}");
+                return new List<ItemAnalysisResult>();
             }
         }
 
-        /// <summary>
-        /// Get detailed performance data for a specific student
-        /// </summary>
-        public async Task<StudentDetailedPerformance> GetStudentPerformanceAsync(string examId, string studentId)
-        {
-            try
-            {
-                var submissions = await _firestoreService.GetExamSubmissionsAsync(examId);
-                var studentSubmission = submissions.FirstOrDefault(s => s.StudentId == studentId);
-
-                if (studentSubmission == null)
-                {
-                    throw new InvalidOperationException("Student submission not found");
-                }
-
-                var allScores = submissions.Select(s => (double)s.TotalScore / s.TotalPossiblePoints * 100).OrderByDescending(s => s).ToList();
-                var studentScore = (double)studentSubmission.TotalScore / studentSubmission.TotalPossiblePoints * 100;
-                var rank = allScores.IndexOf(studentScore) + 1;
-
-                var masteryBreakdown = CalculateMasteryByTopic(studentSubmission);
-                var missedItems = GetMissedItems(studentSubmission);
-
-                return new StudentDetailedPerformance
-                {
-                    StudentId = studentId,
-                    StudentName = studentSubmission.StudentName,
-                    TotalScore = (int)studentSubmission.TotalScore,
-                    Percentage = studentScore,
-                    Rank = rank,
-                    TimeTaken = studentSubmission.EndTime.HasValue && studentSubmission.StartTime.HasValue 
-                        ? studentSubmission.EndTime.Value - studentSubmission.StartTime.Value 
-                        : TimeSpan.Zero,
-                    MasteryBreakdown = masteryBreakdown,
-                    MissedItems = missedItems
-                };
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to get student performance: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
-        /// Get integrity incidents for analysis
-        /// </summary>
-        public async Task<List<IntegrityIncident>> GetIntegrityIncidentsAsync(string examId)
-        {
-            try
-            {
-                return await _firestoreService.GetIntegrityIncidentsAsync(examId);
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to get integrity incidents: {ex.Message}", ex);
-            }
-        }
-
-        #region Helper Methods
-
-        private double CalculateMedian(List<double> scores)
-        {
-            var sortedScores = scores.OrderBy(s => s).ToList();
-            var count = sortedScores.Count;
-            
-            if (count % 2 == 0)
-            {
-                return (sortedScores[count / 2 - 1] + sortedScores[count / 2]) / 2;
-            }
-            else
-            {
-                return sortedScores[count / 2];
-            }
-        }
-
-        private double CalculateStandardDeviation(List<double> scores)
-        {
-            var mean = scores.Average();
-            var squaredDifferences = scores.Select(s => Math.Pow(s - mean, 2));
-            var variance = squaredDifferences.Average();
-            return Math.Sqrt(variance);
-        }
-
-        private double CalculateDiscrimination(List<SubmissionResponse> responses, List<ExamSubmission> allSubmissions)
+        private double CalculateDiscrimination(List<SubmissionResponse> questionResponses, List<ExamSubmission> allSubmissions)
         {
             // Simplified discrimination calculation
-            // In a real implementation, you'd compare high vs low performers
-            var correctRate = responses.Count(r => r.IsCorrect) / (double)responses.Count;
-            
-            // This is a placeholder - real discrimination would compare upper and lower groups
-            return Math.Min(correctRate * 2 - 1, 1.0);
-        }
-
-        private double CalculatePointBiserial(List<SubmissionResponse> responses, List<ExamSubmission> allSubmissions)
-        {
-            // Simplified point-biserial correlation
-            // In a real implementation, you'd calculate the actual correlation between item scores and total scores
-            var correctRate = responses.Count(r => r.IsCorrect) / (double)responses.Count;
-            return correctRate > 0.5 ? 0.4 + (correctRate - 0.5) : 0.2 + correctRate * 0.4;
-        }
-
-        private string DetermineQualityIndicator(double difficulty, double discrimination)
-        {
-            if (difficulty < 30 || difficulty > 90)
+            try
             {
-                return "Review";
+                // Get top 27% and bottom 27% performers
+                var sortedSubmissions = allSubmissions
+                    .OrderByDescending(s => s.TotalPossiblePoints > 0 ? (s.TotalScore / s.TotalPossiblePoints) * 100 : 0)
+                    .ToList();
+                
+                var topCount = Math.Max(1, (int)(sortedSubmissions.Count * 0.27));
+                var topPerformers = sortedSubmissions.Take(topCount).Select(s => s.Id).ToHashSet();
+                var bottomPerformers = sortedSubmissions.TakeLast(topCount).Select(s => s.Id).ToHashSet();
+
+                var topCorrect = questionResponses.Count(r => topPerformers.Contains(GetSubmissionIdFromResponse(r, allSubmissions)) && r.IsCorrect);
+                var bottomCorrect = questionResponses.Count(r => bottomPerformers.Contains(GetSubmissionIdFromResponse(r, allSubmissions)) && r.IsCorrect);
+
+                var discrimination = topCount > 0 ? ((double)(topCorrect - bottomCorrect)) / topCount : 0;
+                return Math.Max(-1, Math.Min(1, discrimination)); // Clamp between -1 and 1
             }
-            
-            if (discrimination > 0.4)
+            catch
             {
+                return 0;
+            }
+        }
+
+        private string GetSubmissionIdFromResponse(SubmissionResponse response, List<ExamSubmission> allSubmissions)
+        {
+            // Find the submission that contains this response
+            var submission = allSubmissions.FirstOrDefault(s => s.Responses.Any(r => r.QuestionId == response.QuestionId));
+            return submission?.Id ?? "";
+        }
+
+        private double CalculatePointBiserial(List<SubmissionResponse> questionResponses, List<ExamSubmission> allSubmissions)
+        {
+            // Simplified point-biserial correlation approximation
+            try
+            {
+                var correctCount = questionResponses.Count(r => r.IsCorrect);
+                var totalCount = questionResponses.Count;
+                
+                if (totalCount == 0) return 0;
+                
+                var proportion = (double)correctCount / totalCount;
+                
+                // Simplified calculation - in practice you'd need full statistical calculation
+                return Math.Max(-1, Math.Min(1, (proportion - 0.5) * 2));
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        private string GetQualityIndicator(double discrimination, double difficultyPercent)
+        {
+            if (discrimination >= 0.3 && difficultyPercent >= 20 && difficultyPercent <= 80)
                 return "Excellent";
-            }
-            else if (discrimination > 0.3)
-            {
+            else if (discrimination >= 0.2 && difficultyPercent >= 15 && difficultyPercent <= 85)
                 return "Good";
-            }
+            else if (discrimination >= 0.1 && difficultyPercent >= 10 && difficultyPercent <= 90)
+                return "Fair";
             else
-            {
-                return "Review";
-            }
+                return "Poor";
         }
-
-        private List<TopicMastery> CalculateMasteryByTopic(ExamSubmission submission)
-        {
-            // This would group responses by topic/tag and calculate mastery
-            // For now, returning sample data
-            return new List<TopicMastery>
-            {
-                new TopicMastery { Topic = "Algebra", Percentage = 85 },
-                new TopicMastery { Topic = "Geometry", Percentage = 75 },
-                new TopicMastery { Topic = "Statistics", Percentage = 60 }
-            };
-        }
-
-        private List<MissedItemDetail> GetMissedItems(ExamSubmission submission)
-        {
-            return submission.Responses?
-                .Where(r => !r.IsCorrect)
-                .Select(r => new MissedItemDetail
-                {
-                    QuestionId = r.QuestionId,
-                    QuestionNumber = r.QuestionNumber,
-                    StudentAnswer = r.Answer ?? "No answer",
-                    PointsLost = (int)(r.PointsPossible - r.PointsEarned)
-                })
-                .ToList() ?? new List<MissedItemDetail>();
-        }
-
-        #endregion
     }
 
-    #region Analytics Result Models
-
+    // Data models for analytics
     public class ClassOverviewMetrics
     {
-        public double ClassAverage { get; set; }
-        public double PassRate { get; set; }
-        public double CompletionRate { get; set; }
-        public int TotalStudents { get; set; }
-        public int PassingStudents { get; set; }
-        public double Mean { get; set; }
-        public double Median { get; set; }
-        public double StandardDeviation { get; set; }
-        public double MinScore { get; set; }
-        public double MaxScore { get; set; }
+        public double ClassAverage { get; set; } = 0;
+        public double PassRate { get; set; } = 0;
+        public double CompletionRate { get; set; } = 0;
+        public int TotalStudents { get; set; } = 0;
+        public int PassingStudents { get; set; } = 0;
     }
 
     public class ItemAnalysisResult
@@ -284,38 +203,10 @@ namespace ExamForge.Services
         public string QuestionId { get; set; } = "";
         public string QuestionNumber { get; set; } = "";
         public string QuestionType { get; set; } = "";
-        public double DifficultyPercent { get; set; }
-        public double Discrimination { get; set; }
-        public double PointBiserial { get; set; }
-        public double NoResponsePercent { get; set; }
+        public double DifficultyPercent { get; set; } = 0;
+        public double Discrimination { get; set; } = 0;
+        public double PointBiserial { get; set; } = 0;
+        public double NoResponsePercent { get; set; } = 0;
         public string QualityIndicator { get; set; } = "";
     }
-
-    public class StudentDetailedPerformance
-    {
-        public string StudentId { get; set; } = "";
-        public string StudentName { get; set; } = "";
-        public int TotalScore { get; set; }
-        public double Percentage { get; set; }
-        public int Rank { get; set; }
-        public TimeSpan TimeTaken { get; set; }
-        public List<TopicMastery> MasteryBreakdown { get; set; } = new();
-        public List<MissedItemDetail> MissedItems { get; set; } = new();
-    }
-
-    public class TopicMastery
-    {
-        public string Topic { get; set; } = "";
-        public double Percentage { get; set; }
-    }
-
-    public class MissedItemDetail
-    {
-        public string QuestionId { get; set; } = "";
-        public int QuestionNumber { get; set; }
-        public string StudentAnswer { get; set; } = "";
-        public int PointsLost { get; set; }
-    }
-
-    #endregion
 }

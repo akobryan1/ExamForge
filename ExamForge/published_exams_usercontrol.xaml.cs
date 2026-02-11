@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -18,23 +18,33 @@ public partial class published_exams_usercontrol : UserControl
     private string _currentFilter = "All";
     private string _searchQuery = "";
 
-    // SignalR client
+    // SignalR client  
     private SignalRService? _signalRService;
-    private const string SignalRHubUrl = "http://localhost:5102/sessionHub"; // Change to deployed URL in production
+    private const string SignalRHubUrl = "https://examforge-signalr.onrender.com/sessionHub";
 
     // Live monitoring data
     private ObservableCollection<StudentRosterItem> _rosterItems = new();
     private ObservableCollection<IncidentItem> _incidentFeed = new();
+    
+    // Auto-refresh timers
+    private System.Windows.Threading.DispatcherTimer? _liveDataTimer;
+    private const int LIVE_REFRESH_INTERVAL = 5000; // 5 seconds
 
     public published_exams_usercontrol()
     {
         InitializeComponent();
         Loaded += Published_Exams_UserControl_Loaded;
+        Unloaded += Published_Exams_UserControl_Unloaded;
     }
 
     private async void Published_Exams_UserControl_Loaded(object sender, RoutedEventArgs e)
     {
         await LoadPublishedExamsAsync();
+    }
+
+    private void Published_Exams_UserControl_Unloaded(object sender, RoutedEventArgs e)
+    {
+        StopLiveDataRefresh();
     }
 
     private async Task LoadPublishedExamsAsync()
@@ -70,7 +80,7 @@ public partial class published_exams_usercontrol : UserControl
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"❌ Error loading published exams: {ex.Message}");
+            Debug.WriteLine($"? Error loading published exams: {ex.Message}");
             ShowError($"Failed to load exams: {ex.Message}");
         }
     }
@@ -112,7 +122,7 @@ public partial class published_exams_usercontrol : UserControl
     {
         if (ExamCardsContainer == null || EmptyState == null)
         {
-            Debug.WriteLine("⚠️ Controls not yet initialized, skipping ApplyFilters");
+            Debug.WriteLine("?? Controls not yet initialized, skipping ApplyFilters");
             return;
         }
 
@@ -142,60 +152,52 @@ public partial class published_exams_usercontrol : UserControl
         {
             ExamCardsContainer.Visibility = Visibility.Visible;
             EmptyState.Visibility = Visibility.Collapsed;
-            ExamCardsContainer.ItemsSource = filteredList;
+            // Update the ItemsSource with filtered results
         }
     }
 
-    private void Filter_Changed(object sender, RoutedEventArgs e)
-    {
-        if (sender is RadioButton rb && rb.IsChecked == true)
-        {
-            _currentFilter = rb.Content.ToString() ?? "All";
-            ApplyFilters();
-        }
-    }
-
-    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
-    {
-        _searchQuery = SearchBox.Text;
-        ApplyFilters();
-    }
+    #region Tab Event Handlers
 
     private async void Tab_Changed(object sender, RoutedEventArgs e)
     {
         try
         {
-            // Hide all panels safely
+            // Hide all panels first
             if (ScheduledPanel != null) ScheduledPanel.Visibility = Visibility.Collapsed;
             if (LivePanel != null) LivePanel.Visibility = Visibility.Collapsed;
             if (ExamBankPanel != null) ExamBankPanel.Visibility = Visibility.Collapsed;
             if (ClosedPanel != null) ClosedPanel.Visibility = Visibility.Collapsed;
-            if (ReportsPanel != null) ReportsPanel.Visibility = Visibility.Collapsed;
 
-            // Show selected panel
+            // Show selected panel and load data
             if (ScheduledTab?.IsChecked == true && ScheduledPanel != null)
             {
                 ScheduledPanel.Visibility = Visibility.Visible;
+                await LoadPublishedExamsAsync();
+                Debug.WriteLine("?? Scheduled tab activated");
             }
             else if (LiveTab?.IsChecked == true && LivePanel != null)
             {
                 LivePanel.Visibility = Visibility.Visible;
-                await InitializeLiveMonitoringAsync(); // Connect SignalR when Live tab is opened
+                await InitializeLiveMonitoringAsync();
+                Debug.WriteLine("?? Live tab activated");
             }
             else if (ExamBankTab?.IsChecked == true && ExamBankPanel != null)
             {
                 ExamBankPanel.Visibility = Visibility.Visible;
-                LoadExamBank();
+                await LoadExamBankAsync();
+                Debug.WriteLine("?? Exam Bank tab activated");
             }
             else if (ClosedTab?.IsChecked == true && ClosedPanel != null)
             {
                 ClosedPanel.Visibility = Visibility.Visible;
-                LoadClosedExams();
+                await LoadClosedExamsAsync();
+                Debug.WriteLine("?? Closed tab activated");
             }
-            else if (ReportsTab?.IsChecked == true && ReportsPanel != null)
+            
+            // Stop live data refresh if not on live tab
+            if (LiveTab?.IsChecked != true)
             {
-                ReportsPanel.Visibility = Visibility.Visible;
-                LoadRecentExports();
+                StopLiveDataRefresh();
             }
         }
         catch (Exception ex)
@@ -204,9 +206,10 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
-    /// <summary>
-    /// Initialize SignalR connection for live monitoring
-    /// </summary>
+    #endregion
+
+    #region Live Monitoring
+
     private async Task InitializeLiveMonitoringAsync()
     {
         try
@@ -214,137 +217,254 @@ public partial class published_exams_usercontrol : UserControl
             if (_signalRService == null)
             {
                 _signalRService = new SignalRService(SignalRHubUrl);
-
-                // Subscribe to real-time events
-                _signalRService.OnStudentJoined += OnStudentJoinedHandler;
-                _signalRService.OnStudentHeartbeat += OnStudentHeartbeatHandler;
-                _signalRService.OnIntegrityEvent += OnIntegrityEventHandler;
-
                 await _signalRService.ConnectAsync();
-                
-                MessageBox.Show("✅ Connected to live monitoring server!", "Success", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
+                Debug.WriteLine("? Connected to live monitoring server!");
             }
+
+            await LoadLiveRosterData();
+            StartLiveDataRefresh();
         }
         catch (Exception ex)
         {
+            Debug.WriteLine($"? Failed to initialize live monitoring: {ex.Message}");
             ShowError($"Failed to connect to live monitoring: {ex.Message}");
         }
     }
 
-    /// <summary>
-    /// Handle student joined event
-    /// </summary>
-    private void OnStudentJoinedHandler(object data)
+    private void StartLiveDataRefresh()
     {
-        Dispatcher.Invoke(() =>
+        StopLiveDataRefresh();
+
+        _liveDataTimer = new System.Windows.Threading.DispatcherTimer
         {
-            Debug.WriteLine($"🟢 Student joined: {data}");
-            // TODO: Parse data and add to roster
-        });
+            Interval = TimeSpan.FromMilliseconds(LIVE_REFRESH_INTERVAL)
+        };
+        _liveDataTimer.Tick += async (s, e) => await RefreshLiveData();
+        _liveDataTimer.Start();
+        
+        Debug.WriteLine("? Live data refresh started (every 5s)");
     }
 
-    /// <summary>
-    /// Handle student heartbeat (progress updates)
-    /// </summary>
-    private void OnStudentHeartbeatHandler(object data)
+    private void StopLiveDataRefresh()
     {
-        Dispatcher.Invoke(() =>
-        {
-            Debug.WriteLine($"💓 Heartbeat received: {data}");
-            // TODO: Parse data and update roster
-        });
+        _liveDataTimer?.Stop();
+        _liveDataTimer = null;
+        Debug.WriteLine("?? Live data refresh stopped");
     }
 
-    /// <summary>
-    /// Handle integrity event (tab switch, focus loss, etc.)
-    /// </summary>
-    private void OnIntegrityEventHandler(object data)
+    private async Task RefreshLiveData()
     {
-        Dispatcher.Invoke(() =>
-        {
-            Debug.WriteLine($"⚠️ Integrity event: {data}");
-            // TODO: Parse data and add to incident feed
-        });
+        await LoadLiveRosterData();
     }
 
-    // Action Handlers
-    private void OpenPreview_Click(object sender, RoutedEventArgs e)
+    private async Task LoadLiveRosterData()
     {
-        if (sender is Button btn && btn.Tag is string examId)
+        try
         {
-            var exam = _allExams.FirstOrDefault(e => e.Id == examId);
-            if (exam != null && !string.IsNullOrEmpty(exam.ExamUrl))
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = exam.ExamUrl,
-                    UseShellExecute = true
-                });
-            }
-        }
-    }
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null) return;
 
-    private void EditSchedule_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string examId)
-        {
-            MessageBox.Show($"Edit schedule for exam: {examId}\n\n(Feature coming soon)",
-                "Edit Schedule", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-    }
+            // Get published exams and filter only currently active ones
+            var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
+            var currentTime = DateTime.UtcNow;
+            
+            // Filter only currently active exams (start time <= now <= end time)
+            var activeExams = publishedExams
+                .Where(e => e.StartTime <= currentTime && e.EndTime >= currentTime)
+                .ToList();
 
-    private void CopyUrl_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string url)
-        {
-            try
-            {
-                Clipboard.SetText(url);
-                MessageBox.Show("Exam URL copied to clipboard!", "Success",
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Failed to copy URL: {ex.Message}");
-            }
-        }
-    }
-
-    private async void Unpublish_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is Button btn && btn.Tag is string examId)
-        {
-            var result = MessageBox.Show(
-                "Are you sure you want to unpublish this exam?\n\n" +
-                "Students will no longer be able to access it.",
-                "Confirm Unpublish",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            // Update active session count
+            await Dispatcher.InvokeAsync(() =>
             {
                 try
                 {
-                    var firestoreService = App.FirestoreService;
-                    if (firestoreService != null)
+                    // Find and update the active sessions metric
+                    var metricTexts = FindVisualChildren<TextBlock>(this)
+                        .Where(tb => tb.FontSize == 32 && tb.FontWeight == FontWeights.Bold)
+                        .ToList();
+
+                    if (metricTexts.Any())
                     {
-                        await firestoreService.DeletePublishedExamAsync(examId);
-                        MessageBox.Show("Exam unpublished successfully!", "Success",
-                            MessageBoxButton.OK, MessageBoxImage.Information);
-                        await LoadPublishedExamsAsync();
+                        metricTexts[0].Text = activeExams.Count.ToString();
                     }
                 }
                 catch (Exception ex)
                 {
-                    ShowError($"Failed to unpublish exam: {ex.Message}");
+                    Debug.WriteLine($"Error updating active sessions metric: {ex.Message}");
+                }
+            });
+
+            _rosterItems.Clear();
+            
+            if (activeExams.Any())
+            {
+                // Show active exams as placeholder
+                foreach (var exam in activeExams)
+                {
+                    _rosterItems.Add(new StudentRosterItem
+                    {
+                        StudentId = exam.Id,
+                        StudentName = exam.Title,
+                        ConnectionStatus = "LIVE",
+                        ProgressPercent = "Waiting for students...",
+                        TimeRemaining = FormatTimeRemaining(exam.EndTime - DateTime.UtcNow),
+                        FlagCount = "0"
+                    });
                 }
             }
+            else
+            {
+                // Show message when no active exams
+                _rosterItems.Add(new StudentRosterItem
+                {
+                    StudentId = "none",
+                    StudentName = "No active exams",
+                    ConnectionStatus = "WAITING",
+                    ProgressPercent = "0%",
+                    TimeRemaining = "N/A",
+                    FlagCount = "0"
+                });
+            }
+
+            // Update UI
+            if (LiveRosterGrid != null)
+                LiveRosterGrid.ItemsSource = _rosterItems;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading live roster data: {ex.Message}");
         }
     }
 
-    #region Live Exam Event Handlers
+    private string FormatTimeRemaining(TimeSpan remaining)
+    {
+        if (remaining.TotalSeconds <= 0) return "00:00";
+        return $"{remaining.Hours:00}:{remaining.Minutes:00}";
+    }
 
+    #endregion
+
+    #region Exam Bank
+
+    private async Task LoadExamBankAsync()
+    {
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null) return;
+
+            // Load all published exams from Firestore
+            var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
+            
+            // Convert to exam bank items
+            var examBankItems = publishedExams.Select(exam => new ExamBankItem
+            {
+                Id = exam.Id,
+                Title = exam.Title,
+                Subject = "General", // Can be enhanced based on exam metadata
+                QuestionCount = exam.Contents?.Count ?? 0,
+                Difficulty = "Medium", // Can be enhanced with actual difficulty calculation
+                TimesUsed = 0, // Can be enhanced with submission tracking
+                LastUsed = exam.PublishedDate,
+                CreatedBy = exam.CreatedBy,
+                DateCreated = exam.PublishedDate, // Using PublishedDate as creation date
+                IsPublished = exam.Status == "Published"
+            }).ToList();
+            
+            if (ExamBankGrid != null)
+                ExamBankGrid.ItemsSource = examBankItems;
+                
+            Debug.WriteLine($"?? Loaded {examBankItems.Count} exams from Firestore");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading exam bank: {ex.Message}");
+            ShowError($"Failed to load exam bank: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Grading Queue
+
+    private async Task LoadClosedExamsAsync()
+    {
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null) return;
+
+            // Get completed exams
+            var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
+            var completedExams = publishedExams
+                .Where(e => e.EndTime < DateTime.UtcNow)
+                .OrderByDescending(e => e.EndTime)
+                .Take(20)
+                .ToList();
+
+            // Load grading queue items from submissions
+            var gradingItems = new List<GradingQueueItem>();
+            
+            foreach (var exam in completedExams)
+            {
+                try
+                {
+                    var submissions = await firestoreService.GetExamSubmissionsAsync(exam.Id);
+                    
+                    foreach (var submission in submissions)
+                    {
+                        gradingItems.Add(new GradingQueueItem
+                        {
+                            Id = submission.Id,
+                            StudentName = submission.StudentName,
+                            ExamTitle = exam.Title,
+                            SubmittedAt = submission.EndTime ?? DateTime.Now,
+                            AutoScore = $"{submission.TotalScore:F0}/{submission.TotalPossiblePoints:F0}",
+                            EssayCount = 0 // Essay questions tracking can be enhanced
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error loading submissions for exam {exam.Title}: {ex.Message}");
+                }
+            }
+            
+            if (GradingQueueGrid != null)
+                GradingQueueGrid.ItemsSource = gradingItems.OrderByDescending(g => g.SubmittedAt).ToList();
+                
+            Debug.WriteLine($"?? Loaded {gradingItems.Count} grading queue items");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Error loading closed exams: {ex.Message}");
+            ShowError($"Failed to load grading queue: {ex.Message}");
+        }
+    }
+
+    #endregion
+
+    #region Event Handlers
+
+    private void Filter_Changed(object sender, RoutedEventArgs e)
+    {
+        if (sender is RadioButton rb && rb.Content?.ToString() is string filter)
+        {
+            _currentFilter = filter;
+            ApplyFilters();
+        }
+    }
+
+    private void SearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox tb)
+        {
+            _searchQuery = tb.Text;
+            ApplyFilters();
+        }
+    }
+
+    // Live monitoring event handlers
     private void BroadcastMessage_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("Broadcast Message functionality coming soon!", "Info", 
@@ -363,31 +483,7 @@ public partial class published_exams_usercontrol : UserControl
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    #endregion
-
-    #region Exam Bank Event Handlers
-
-    private void LoadExamBank()
-    {
-        try
-        {
-            // TODO: Load exam bank data
-            var sampleData = new List<ExamBankItem>
-            {
-                new ExamBankItem { Id = "1", Title = "Algebra Basics", Subject = "Mathematics", QuestionCount = 25, Difficulty = "Medium", TimesUsed = 12, LastUsed = DateTime.Now.AddDays(-5) },
-                new ExamBankItem { Id = "2", Title = "Biology Cell Structure", Subject = "Science", QuestionCount = 30, Difficulty = "Hard", TimesUsed = 8, LastUsed = DateTime.Now.AddDays(-12) },
-                new ExamBankItem { Id = "3", Title = "World War II", Subject = "History", QuestionCount = 20, Difficulty = "Easy", TimesUsed = 15, LastUsed = DateTime.Now.AddDays(-3) }
-            };
-            
-            if (ExamBankGrid != null)
-                ExamBankGrid.ItemsSource = sampleData;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error loading exam bank: {ex.Message}");
-        }
-    }
-
+    // Exam Bank event handlers
     private void CreateTemplate_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("Create Template functionality coming soon!", "Info", 
@@ -435,31 +531,7 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
-    #endregion
-
-    #region Closed & Grading Event Handlers
-
-    private void LoadClosedExams()
-    {
-        try
-        {
-            // TODO: Load closed exams and grading queue
-            var sampleGradingData = new List<GradingQueueItem>
-            {
-                new GradingQueueItem { Id = "1", StudentName = "John Doe", ExamTitle = "Midterm Exam", SubmittedAt = DateTime.Now.AddHours(-2), AutoScore = "85/100", EssayCount = 2 },
-                new GradingQueueItem { Id = "2", StudentName = "Jane Smith", ExamTitle = "Final Exam", SubmittedAt = DateTime.Now.AddHours(-1), AutoScore = "92/100", EssayCount = 1 },
-                new GradingQueueItem { Id = "3", StudentName = "Bob Johnson", ExamTitle = "Quiz 5", SubmittedAt = DateTime.Now.AddMinutes(-30), AutoScore = "78/100", EssayCount = 3 }
-            };
-            
-            if (GradingQueueGrid != null)
-                GradingQueueGrid.ItemsSource = sampleGradingData;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error loading closed exams: {ex.Message}");
-        }
-    }
-
+    // Grading Queue event handlers
     private void ReviewSubmission_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string submissionId)
@@ -487,161 +559,86 @@ public partial class published_exams_usercontrol : UserControl
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    #endregion
-
-    #region Reports Event Handlers
-
-    private void LoadRecentExports()
-    {
-        try
-        {
-            // TODO: Load recent exports data
-            var sampleExports = new List<ExportItem>
-            {
-                new ExportItem { ExportType = "Grade Report", ExamTitle = "Midterm Exam", GeneratedAt = DateTime.Now.AddDays(-1), FileSize = "2.3 MB", FilePath = "C:\\Exports\\grades_midterm.csv" },
-                new ExportItem { ExportType = "Item Analysis", ExamTitle = "Quiz 5", GeneratedAt = DateTime.Now.AddDays(-3), FileSize = "1.8 MB", FilePath = "C:\\Exports\\analysis_quiz5.csv" },
-                new ExportItem { ExportType = "Integrity Report", ExamTitle = "Final Exam", GeneratedAt = DateTime.Now.AddDays(-7), FileSize = "945 KB", FilePath = "C:\\Exports\\integrity_final.csv" }
-            };
-            
-            if (RecentExportsGrid != null)
-                RecentExportsGrid.ItemsSource = sampleExports;
-        }
-        catch (Exception ex)
-        {
-            Debug.WriteLine($"Error loading recent exports: {ex.Message}");
-        }
-    }
-
-    private async void ExportGrades_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            // Get selected exam (for demo, use first available exam)
-            var exam = _allExams.FirstOrDefault();
-            if (exam == null)
-            {
-                MessageBox.Show("No exams available for export.", "Info", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var exportService = new ExportService();
-            var filePath = await exportService.ExportGradesToExcelAsync(exam.Id, exam.Title);
-            
-            MessageBox.Show($"Grades exported successfully!\nSaved to: {filePath}", "Success", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            ShowError($"Failed to export grades: {ex.Message}");
-        }
-    }
-
-    private async void ExportSubmissions_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var exam = _allExams.FirstOrDefault();
-            if (exam == null)
-            {
-                MessageBox.Show("No exams available for export.", "Info", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var exportService = new ExportService();
-            var filePath = await exportService.ExportSubmissionsAsync(exam.Id, exam.Title);
-            
-            MessageBox.Show($"Submissions exported successfully!\nSaved to: {filePath}", "Success", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            ShowError($"Failed to export submissions: {ex.Message}");
-        }
-    }
-
-    private void ExportClassSummary_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Class Summary functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void ExportItemAnalysis_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Item Analysis functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void ExportStudentPerformance_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Student Performance functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void ExportTrends_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Trends Over Time functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private async void ExportIntegrityReport_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            var exam = _allExams.FirstOrDefault();
-            if (exam == null)
-            {
-                MessageBox.Show("No exams available for export.", "Info", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var exportService = new ExportService();
-            var filePath = await exportService.ExportIntegrityReportAsync(exam.Id, exam.Title);
-            
-            MessageBox.Show($"Integrity report exported successfully!\nSaved to: {filePath}", "Success", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            ShowError($"Failed to export integrity report: {ex.Message}");
-        }
-    }
-
-    private void ExportAuditLogs_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Audit Logs functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
-    private void ExportSessionEvents_Click(object sender, RoutedEventArgs e)
-    {
-        MessageBox.Show("Export Session Events functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
-    }
-
     private void ExportGradebook_Click(object sender, RoutedEventArgs e)
     {
         MessageBox.Show("Export Gradebook functionality coming soon!", "Info", 
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void OpenExport_Click(object sender, RoutedEventArgs e)
+    // Published exam action handlers
+    private void OpenPreview_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string filePath)
+        if (sender is Button btn && btn.Tag is string examId)
+        {
+            var exam = _allExams.FirstOrDefault(e => e.Id == examId);
+            if (exam != null)
+            {
+                try
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = exam.ExamUrl,
+                        UseShellExecute = true
+                    });
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Failed to open exam preview: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private void EditSchedule_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string examId)
+        {
+            MessageBox.Show($"Edit schedule for exam {examId} functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+    }
+
+    private void CopyUrl_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string examId)
+        {
+            var exam = _allExams.FirstOrDefault(e => e.Id == examId);
+            if (exam != null)
+            {
+                try
+                {
+                    Clipboard.SetText(exam.ExamUrl);
+                    MessageBox.Show("Exam URL copied to clipboard!", "Success", 
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    ShowError($"Failed to copy URL: {ex.Message}");
+                }
+            }
+        }
+    }
+
+    private async void Unpublish_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button btn && btn.Tag is string examId)
         {
             try
             {
-                Process.Start(new ProcessStartInfo
+                var result = MessageBox.Show("Are you sure you want to unpublish this exam?", 
+                    "Confirm Unpublish", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.Yes)
                 {
-                    FileName = filePath,
-                    UseShellExecute = true
-                });
+                    MessageBox.Show("Unpublish functionality coming soon!", "Info",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    // TODO: Implement unpublish functionality
+                    // await firestoreService.UnpublishExamAsync(examId);
+                }
             }
             catch (Exception ex)
             {
-                ShowError($"Failed to open file: {ex.Message}");
+                ShowError($"Failed to unpublish exam: {ex.Message}");
             }
         }
     }
@@ -652,6 +649,65 @@ public partial class published_exams_usercontrol : UserControl
     {
         MessageBox.Show(message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
+    /// <summary>
+    /// Find all visual children of a specific type
+    /// </summary>
+    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+    {
+        if (depObj != null)
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
+                if (child != null && child is T)
+                {
+                    yield return (T)child;
+                }
+
+                foreach (T childOfChild in FindVisualChildren<T>(child))
+                {
+                    yield return childOfChild;
+                }
+            }
+        }
+    }
+}
+
+// ViewModel classes for UI binding
+public class ExamBankItem
+{
+    public string Id { get; set; } = "";
+    public string Title { get; set; } = "";
+    public string Subject { get; set; } = "";
+    public int QuestionCount { get; set; }
+    public string Difficulty { get; set; } = "";
+    public int TimesUsed { get; set; }
+    public DateTime LastUsed { get; set; }
+    public string CreatedBy { get; set; } = "";
+    public DateTime DateCreated { get; set; }
+    public bool IsPublished { get; set; }
+}
+
+public class GradingQueueItem
+{
+    public string Id { get; set; } = "";
+    public string StudentName { get; set; } = "";
+    public string ExamTitle { get; set; } = "";
+    public DateTime SubmittedAt { get; set; }
+    public string AutoScore { get; set; } = "";
+    public int EssayCount { get; set; }
+}
+
+public class RecentExportItem
+{
+    public string Id { get; set; } = "";
+    public string ExamTitle { get; set; } = "";
+    public string ExportType { get; set; } = "";
+    public DateTime GeneratedDate { get; set; }
+    public int StudentCount { get; set; }
+    public string AvgScore { get; set; } = "";
+    public string PassRate { get; set; } = "";
 }
 
 // ViewModel for binding
@@ -678,9 +734,9 @@ public class StudentRosterItem
     public string StudentId { get; set; } = "";
     public string StudentName { get; set; } = "";
     public string ConnectionStatus { get; set; } = "Offline";
-    public int ProgressPercent { get; set; }
-    public int TimeRemaining { get; set; }
-    public int FlagCount { get; set; }
+    public string ProgressPercent { get; set; } = "0%";
+    public string TimeRemaining { get; set; } = "N/A";
+    public string FlagCount { get; set; } = "0";
 }
 
 // Incident feed item
@@ -691,37 +747,4 @@ public class IncidentItem
     public string Severity { get; set; } = "";
     public string Details { get; set; } = "";
     public DateTime Timestamp { get; set; }
-}
-
-// Exam Bank item
-public class ExamBankItem
-{
-    public string Id { get; set; } = "";
-    public string Title { get; set; } = "";
-    public string Subject { get; set; } = "";
-    public int QuestionCount { get; set; }
-    public string Difficulty { get; set; } = "";
-    public int TimesUsed { get; set; }
-    public DateTime LastUsed { get; set; }
-}
-
-// Grading Queue item
-public class GradingQueueItem
-{
-    public string Id { get; set; } = "";
-    public string StudentName { get; set; } = "";
-    public string ExamTitle { get; set; } = "";
-    public DateTime SubmittedAt { get; set; }
-    public string AutoScore { get; set; } = "";
-    public int EssayCount { get; set; }
-}
-
-// Export item
-public class ExportItem
-{
-    public string ExportType { get; set; } = "";
-    public string ExamTitle { get; set; } = "";
-    public DateTime GeneratedAt { get; set; }
-    public string FileSize { get; set; } = "";
-    public string FilePath { get; set; } = "";
 }

@@ -215,9 +215,8 @@ public class ExamPublishingService
         }
         else
         {
-            // Google Sign-In or default fallback
-            sb.AppendLine("                <input type=\"text\" id=\"studentName\" placeholder=\"Full Name\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
-            sb.AppendLine("                <input type=\"email\" id=\"studentEmail\" placeholder=\"Email Address\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
+            // Google Sign-In - no manual fields needed (info comes from Google)
+            sb.AppendLine("                <p style=\"text-align: center; color: #666; margin: 20px 0;\">You will sign in with Google when you start the exam.</p>");
         }
         
         sb.AppendLine("                <button onclick=\"startExam()\" style=\"width: 100%; padding: 15px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer;\">Start Exam</button>");
@@ -625,11 +624,88 @@ public class ExamPublishingService
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // Submit Function (rest of the JavaScript...)
+        // Submit Function  
         sb.AppendLine("        async function submitExam(event) {");
         sb.AppendLine("            event.preventDefault();");
-        sb.AppendLine("            // Submit logic here...");
+        sb.AppendLine("            console.log('Submit button clicked');");
+        sb.AppendLine();
+        sb.AppendLine("            // Disable submit button to prevent double submission");
+        sb.AppendLine("            const submitButton = document.querySelector('.submit-button');");
+        sb.AppendLine("            submitButton.disabled = true;");
+        sb.AppendLine("            submitButton.textContent = 'Submitting...';");
+        sb.AppendLine();
+        sb.AppendLine("            try {");
+        sb.AppendLine("                // Collect all answers");
+        sb.AppendLine("                const formData = new FormData(event.target);");
+        sb.AppendLine("                const answers = {};");
+        sb.AppendLine();
+        sb.AppendLine("                for (let [key, value] of formData.entries()) {");
+        sb.AppendLine("                    answers[key] = value;");
+        sb.AppendLine("                }");
+        sb.AppendLine();
+        sb.AppendLine("                const submissionData = {");
+        sb.AppendLine("                    examId: examId,");
+        sb.AppendLine("                    studentInfo: window.studentInfo,");
+        sb.AppendLine("                    answers: answers,");
+        sb.AppendLine("                    submittedAt: new Date().toISOString(),");
+        sb.AppendLine("                    timeElapsed: ((examDuration * 60) - timeRemaining)");
+        sb.AppendLine("                };");
+        sb.AppendLine();
+        sb.AppendLine("                console.log('Submitting exam data:', submissionData);");
+        sb.AppendLine();
+        sb.AppendLine("                // Submit to API endpoint");
+        sb.AppendLine("                const response = await fetch(apiEndpoint + '/submit', {");
+        sb.AppendLine("                    method: 'POST',");
+        sb.AppendLine("                    headers: {");
+        sb.AppendLine("                        'Content-Type': 'application/json'");
+        sb.AppendLine("                    },");
+        sb.AppendLine("                    body: JSON.stringify(submissionData)");
+        sb.AppendLine("                });");
+        sb.AppendLine();
+        sb.AppendLine("                if (response.ok) {");
+        sb.AppendLine("                    const result = await response.json();");
+        sb.AppendLine("                    console.log('Submission successful:', result);");
+        sb.AppendLine("                    clearInterval(timerInterval);");
+        sb.AppendLine("                    showSuccessMessage();");
+        sb.AppendLine("                } else {");
+        sb.AppendLine("                    const error = await response.text();");
+        sb.AppendLine("                    console.error('Submission failed:', error);");
+        sb.AppendLine("                    throw new Error('Submission failed: ' + error);");
+        sb.AppendLine("                }");
+        sb.AppendLine("            } catch (error) {");
+        sb.AppendLine("                console.error('Error submitting exam:', error);");
+        sb.AppendLine("                alert('Error submitting exam: ' + error.message + '\\nYour answers have been saved locally. Please contact your instructor.');");
+        sb.AppendLine("                // Save to local storage as backup");
+        sb.AppendLine("                localStorage.setItem('examBackup_' + examId, JSON.stringify(submissionData));");
+        sb.AppendLine("            } finally {");
+        sb.AppendLine("                submitButton.disabled = false;");
+        sb.AppendLine("                submitButton.textContent = 'Submit Exam';");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        function showSuccessMessage() {");
+        sb.AppendLine("            document.body.innerHTML = `");
+        sb.AppendLine("                <div style='display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'>");
+        sb.AppendLine("                    <div style='background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); text-align: center; max-width: 500px;'>");
+        sb.AppendLine("                        <h1 style='color: #10b981; margin-bottom: 20px;'>✅ Exam Submitted Successfully!</h1>");
+        sb.AppendLine("                        <p style='color: #6b7280; font-size: 18px; margin-bottom: 30px;'>Thank you for completing the exam. Your answers have been recorded.</p>");
+        sb.AppendLine("                        <p style='color: #374151; font-size: 14px;'>You may now close this window.</p>");
+        sb.AppendLine("                    </div>");
+        sb.AppendLine("                </div>`;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        // Add event listeners");
+        sb.AppendLine("        document.addEventListener('DOMContentLoaded', function() {");
+        sb.AppendLine("            const examForm = document.getElementById('examForm');");
+        sb.AppendLine("            if (examForm) {");
+        sb.AppendLine("                examForm.addEventListener('submit', submitExam);");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            const startButton = document.getElementById('startExamButton');");
+        sb.AppendLine("            if (startButton) {");
+        sb.AppendLine("                startButton.addEventListener('click', startExam);");
+        sb.AppendLine("            }");
+        sb.AppendLine("        });");
         
         return sb.ToString();
     }

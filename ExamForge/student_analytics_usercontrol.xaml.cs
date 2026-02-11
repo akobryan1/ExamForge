@@ -1,4 +1,4 @@
-Ôªøusing System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,17 +21,92 @@ namespace ExamForge
         private List<PublishedExam> _availableExams = new();
         private string _currentExamId = "";
 
+        // Real-time update timers
+        private System.Windows.Threading.DispatcherTimer? _analyticsRefreshTimer;
+        private const int ANALYTICS_REFRESH_INTERVAL = 15000; // 15 seconds for analytics
+        private DateTime _lastDataRefresh = DateTime.MinValue;
+
         public student_analytics_usercontrol()
         {
             InitializeComponent();
             _firestoreService = App.FirestoreService ?? throw new InvalidOperationException("Firestore service not initialized");
             _analyticsService = new AnalyticsService();
             Loaded += StudentAnalytics_Loaded;
+            Unloaded += StudentAnalytics_Unloaded;
         }
 
         private async void StudentAnalytics_Loaded(object sender, RoutedEventArgs e)
         {
             await LoadAnalyticsDataAsync();
+            StartAnalyticsRefresh();
+        }
+
+        private void StudentAnalytics_Unloaded(object sender, RoutedEventArgs e)
+        {
+            StopAnalyticsRefresh();
+        }
+
+        private void StartAnalyticsRefresh()
+        {
+            StopAnalyticsRefresh(); // Ensure no duplicate timers
+
+            _analyticsRefreshTimer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(ANALYTICS_REFRESH_INTERVAL)
+            };
+            
+            _analyticsRefreshTimer.Tick += async (s, e) =>
+            {
+                // Only refresh if visible and data is stale
+                if (this.IsVisible && (DateTime.UtcNow - _lastDataRefresh).TotalSeconds > 10)
+                {
+                    await RefreshCurrentTabData();
+                }
+            };
+            
+            _analyticsRefreshTimer.Start();
+            Debug.WriteLine($"? Analytics auto-refresh started (every {ANALYTICS_REFRESH_INTERVAL/1000}s)");
+        }
+
+        private void StopAnalyticsRefresh()
+        {
+            _analyticsRefreshTimer?.Stop();
+            _analyticsRefreshTimer = null;
+            Debug.WriteLine("?? Analytics auto-refresh stopped");
+        }
+
+        private async Task RefreshCurrentTabData()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_currentExamId)) return;
+
+                // Determine which tab is active and refresh accordingly
+                if (ClassOverviewTab?.IsChecked == true)
+                {
+                    await LoadClassOverviewDataAsync();
+                }
+                else if (ItemAnalysisTab?.IsChecked == true)
+                {
+                    await LoadItemAnalysisDataAsync();
+                }
+                else if (StudentDrilldownTab?.IsChecked == true)
+                {
+                    await LoadStudentDataAsync();
+                    LoadStudentListAsync();
+                }
+                else if (IntegrityTab?.IsChecked == true)
+                {
+                    await LoadIntegrityDataAsync();
+                }
+
+                _lastDataRefresh = DateTime.UtcNow;
+                Debug.WriteLine($"?? Analytics data refreshed at {_lastDataRefresh:HH:mm:ss}");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error refreshing analytics data: {ex.Message}");
+            }
         }
 
         private async Task LoadAnalyticsDataAsync()
@@ -41,7 +116,7 @@ namespace ExamForge
                 // Load available exams first
                 await LoadAvailableExamsAsync();
                 
-                // Load data for the first available exam
+                // Load data for the first available exam or show demo data
                 if (_availableExams.Any())
                 {
                     _currentExamId = _availableExams.First().Id;
@@ -50,16 +125,103 @@ namespace ExamForge
                     await LoadStudentDataAsync();
                     await LoadIntegrityDataAsync();
                     DrawScoreHistogram();
+                    
+                    _lastDataRefresh = DateTime.UtcNow;
+                    Debug.WriteLine($"?? Initial analytics data loaded at {_lastDataRefresh:HH:mm:ss}");
                 }
                 else
                 {
-                    ShowInfo("No published exams found. Please publish some exams first to see analytics.");
+                    // Show demo data when no exams exist
+                    await LoadDemoDataAsync();
+                    ShowInfo("No published exams found. Showing demo data. Please publish some exams to see real analytics.");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"‚ùå Error loading analytics data: {ex.Message}");
-                ShowError($"Failed to load analytics: {ex.Message}");
+                Debug.WriteLine($"? Error loading analytics data: {ex.Message}");
+                // Show demo data on error
+                await LoadDemoDataAsync();
+                ShowError($"Failed to load analytics data. Showing demo data. Error: {ex.Message}");
+            }
+        }
+
+        private async Task LoadDemoDataAsync()
+        {
+            try
+            {
+                // Create demo published exam
+                _availableExams = new List<PublishedExam>
+                {
+                    new PublishedExam
+                    {
+                        Id = "demo-exam-001",
+                        Title = "Demo Mathematics Exam",
+                        PublishedDate = DateTime.Now.AddDays(-1),
+                        ExamUrl = "https://demo-exam.example.com"
+                    }
+                };
+                _currentExamId = "demo-exam-001";
+
+                // Update dropdown
+                if (ExamAnalyticsFilter != null)
+                {
+                    ExamAnalyticsFilter.Items.Clear();
+                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem { Content = "All Exams" });
+                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem 
+                    { 
+                        Content = "Demo Mathematics Exam",
+                        Tag = "demo-exam-001"
+                    });
+                    ExamAnalyticsFilter.SelectedIndex = 1;
+                }
+
+                // Load demo metrics
+                await LoadDemoClassOverview();
+                LoadDemoStudents();
+                
+                Debug.WriteLine("?? Demo data loaded successfully");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading demo data: {ex.Message}");
+            }
+        }
+
+        private async Task LoadDemoClassOverview()
+        {
+            try
+            {
+                var demoMetrics = new ExamForge.Services.ClassOverviewMetrics
+                {
+                    ClassAverage = 82.5,
+                    PassRate = 85.0,
+                    CompletionRate = 96.0,
+                    TotalStudents = 25,
+                    PassingStudents = 21
+                };
+
+                await UpdateClassMetricsDisplay(demoMetrics);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading demo class overview: {ex.Message}");
+            }
+        }
+
+        private void LoadDemoStudents()
+        {
+            try
+            {
+                _allStudents = new List<StudentPerformanceData>
+                {
+                    new StudentPerformanceData { Id = "demo1", Name = "Alice Johnson", Score = 95, Percentage = 95.0, Rank = 1, TimeTaken = TimeSpan.FromMinutes(45), FlagCount = 0 },
+                    new StudentPerformanceData { Id = "demo2", Name = "Bob Smith", Score = 87, Percentage = 87.0, Rank = 2, TimeTaken = TimeSpan.FromMinutes(52), FlagCount = 0 },
+                    new StudentPerformanceData { Id = "demo3", Name = "Carol Davis", Score = 78, Percentage = 78.0, Rank = 3, TimeTaken = TimeSpan.FromMinutes(48), FlagCount = 1 }
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading demo students: {ex.Message}");
             }
         }
 
@@ -109,30 +271,39 @@ namespace ExamForge
                 if (IntegrityPanel != null) IntegrityPanel.Visibility = Visibility.Collapsed;
                 if (TrendsPanel != null) TrendsPanel.Visibility = Visibility.Collapsed;
 
-                // Show selected panel
+                // Show selected panel and load fresh data
                 if (ClassOverviewTab?.IsChecked == true && ClassOverviewPanel != null)
                 {
                     ClassOverviewPanel.Visibility = Visibility.Visible;
+                    Task.Run(async () =>
+                    {
+                        await LoadClassOverviewDataAsync();
+                        Dispatcher.Invoke(() => DrawScoreHistogram());
+                    });
                 }
                 else if (ItemAnalysisTab?.IsChecked == true && ItemAnalysisPanel != null)
                 {
                     ItemAnalysisPanel.Visibility = Visibility.Visible;
-                    LoadItemAnalysisDataAsync();
+                    Task.Run(LoadItemAnalysisDataAsync);
                 }
                 else if (StudentDrilldownTab?.IsChecked == true && StudentDrilldownPanel != null)
                 {
                     StudentDrilldownPanel.Visibility = Visibility.Visible;
-                    LoadStudentListAsync();
+                    Task.Run(async () =>
+                    {
+                        await LoadStudentDataAsync();
+                        Dispatcher.Invoke(LoadStudentListAsync);
+                    });
                 }
                 else if (IntegrityTab?.IsChecked == true && IntegrityPanel != null)
                 {
                     IntegrityPanel.Visibility = Visibility.Visible;
-                    LoadIntegrityDataAsync();
+                    Task.Run(LoadIntegrityDataAsync);
                 }
                 else if (TrendsTab?.IsChecked == true && TrendsPanel != null)
                 {
                     TrendsPanel.Visibility = Visibility.Visible;
-                    DrawTrendChart();
+                    Dispatcher.BeginInvoke(new Action(DrawTrendChart));
                 }
             }
             catch (Exception ex)
@@ -162,48 +333,276 @@ namespace ExamForge
             {
                 Debug.WriteLine($"Error loading class overview: {ex.Message}");
                 // Fall back to default values if data unavailable
-                await UpdateClassMetricsDisplay(new ClassOverviewMetrics());
+                await UpdateClassMetricsDisplay(new ExamForge.Services.ClassOverviewMetrics());
             }
         }
 
-        private async Task UpdateClassMetricsDisplay(ClassOverviewMetrics metrics)
+        private async Task UpdateClassMetricsDisplay(ExamForge.Services.ClassOverviewMetrics metrics)
         {
             try
             {
-                // Update metric cards with real data
-                var metricCards = FindVisualChildren<TextBlock>(this)
-                    .Where(tb => tb.FontSize == 32 && tb.FontWeight == FontWeights.Bold)
-                    .ToList();
-
-                if (metricCards.Count >= 4)
+                // Ensure UI updates happen on UI thread
+                await Dispatcher.InvokeAsync(async () =>
                 {
-                    metricCards[0].Text = $"{metrics.ClassAverage:F1}%";
-                    metricCards[1].Text = $"{metrics.PassRate:F0}%";
-                    metricCards[2].Text = $"{metrics.CompletionRate:F0}%";
-                    
-                    // Get integrity incidents for flagged rate
-                    var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
-                    var flaggedRate = metrics.TotalStudents > 0 ? 
-                        (incidents.Count / (double)metrics.TotalStudents) * 100 : 0;
-                    metricCards[3].Text = $"{flaggedRate:F1}%";
-                }
+                    try
+                    {
+                        // Update metric cards with real data
+                        var metricCards = FindVisualChildren<TextBlock>(this)
+                            .Where(tb => tb.FontSize == 32 && tb.FontWeight == FontWeights.Bold)
+                            .ToList();
 
-                // Update sub-text with real data
-                var subTexts = FindVisualChildren<TextBlock>(this)
-                    .Where(tb => tb.FontSize == 10 && tb.Margin.Top == 4)
-                    .ToList();
+                        if (metricCards.Count >= 4)
+                        {
+                            metricCards[0].Text = $"{metrics.ClassAverage:F1}%";
+                            metricCards[1].Text = $"{metrics.PassRate:F0}%";
+                            metricCards[2].Text = $"{metrics.CompletionRate:F0}%";
+                            
+                            // Get integrity incidents for flagged rate
+                            try
+                            {
+                                var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
+                                var flaggedRate = metrics.TotalStudents > 0 ? 
+                                    (incidents.Count / (double)metrics.TotalStudents) * 100 : 0;
+                                metricCards[3].Text = $"{flaggedRate:F1}%";
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"Error getting integrity incidents: {ex.Message}");
+                                metricCards[3].Text = "0.0%";
+                            }
+                        }
 
-                if (subTexts.Count >= 3)
-                {
-                    // Calculate trend comparison (placeholder for now)
-                    subTexts[0].Text = "Based on current data";
-                    subTexts[1].Text = $"{metrics.PassingStudents} of {metrics.TotalStudents} students";
-                    subTexts[2].Text = $"{metrics.TotalStudents} students submitted";
-                }
+                        // Update Quick Insights with real data
+                        await UpdateQuickInsights();
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error updating UI on main thread: {ex.Message}");
+                    }
+                });
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error updating metrics display: {ex.Message}");
+            }
+        }
+
+        private async Task UpdateQuickInsights()
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_currentExamId)) return;
+
+                // Get real insights data
+                var insights = await GenerateQuickInsights(_currentExamId);
+
+                // Find Quick Insights panel and update content
+                var quickInsightsPanel = QuickInsightsPanel;
+
+                if (quickInsightsPanel != null)
+                {
+                    // Clear existing content except title
+                    quickInsightsPanel.Children.Clear();
+
+                    // Add title
+                    var titleBlock = new TextBlock
+                    {
+                        Text = "?? Quick Insights",
+                        FontSize = 18,
+                        FontWeight = FontWeights.SemiBold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)),
+                        Margin = new Thickness(0, 0, 0, 16)
+                    };
+                    quickInsightsPanel.Children.Add(titleBlock);
+
+                    // Most Missed Items
+                    if (insights.MostMissedItems.Any())
+                    {
+                        var missedBorder = new Border
+                        {
+                            Background = new SolidColorBrush(Color.FromRgb(40, 37, 56)), // SurfaceLight
+                            CornerRadius = new CornerRadius(8),
+                            Padding = new Thickness(12),
+                            Margin = new Thickness(0, 0, 0, 12)
+                        };
+
+                        var missedPanel = new StackPanel();
+                        
+                        var missedTitle = new TextBlock
+                        {
+                            Text = "Most Missed Items",
+                            FontSize = 14,
+                            FontWeight = FontWeights.Medium,
+                            Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)),
+                            Margin = new Thickness(0, 0, 0, 8)
+                        };
+                        missedPanel.Children.Add(missedTitle);
+
+                        foreach (var item in insights.MostMissedItems.Take(3))
+                        {
+                            var itemText = new TextBlock
+                            {
+                                Text = $"Q{item.QuestionNumber}: {item.Topic} ({item.CorrectPercentage:F0}% correct)",
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(239, 68, 68)), // ErrorRed
+                                Margin = new Thickness(0, 0, 0, 4)
+                            };
+                            missedPanel.Children.Add(itemText);
+                        }
+
+                        missedBorder.Child = missedPanel;
+                        quickInsightsPanel.Children.Add(missedBorder);
+                    }
+
+                    // Easiest Items
+                    if (insights.EasiestItems.Any())
+                    {
+                        var easiestBorder = new Border
+                        {
+                            Background = new SolidColorBrush(Color.FromRgb(40, 37, 56)), // SurfaceLight
+                            CornerRadius = new CornerRadius(8),
+                            Padding = new Thickness(12),
+                            Margin = new Thickness(0, 0, 0, 12)
+                        };
+
+                        var easiestPanel = new StackPanel();
+                        
+                        var easiestTitle = new TextBlock
+                        {
+                            Text = "Easiest Items",
+                            FontSize = 14,
+                            FontWeight = FontWeights.Medium,
+                            Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)),
+                            Margin = new Thickness(0, 0, 0, 8)
+                        };
+                        easiestPanel.Children.Add(easiestTitle);
+
+                        foreach (var item in insights.EasiestItems.Take(3))
+                        {
+                            var itemText = new TextBlock
+                            {
+                                Text = $"Q{item.QuestionNumber}: {item.Topic} ({item.CorrectPercentage:F0}% correct)",
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(16, 185, 129)), // SuccessGreen
+                                Margin = new Thickness(0, 0, 0, 4)
+                            };
+                            easiestPanel.Children.Add(itemText);
+                        }
+
+                        easiestBorder.Child = easiestPanel;
+                        quickInsightsPanel.Children.Add(easiestBorder);
+                    }
+
+                    // At-Risk Students
+                    if (insights.AtRiskStudents.Any())
+                    {
+                        var riskBorder = new Border
+                        {
+                            Background = new SolidColorBrush(Color.FromRgb(40, 37, 56)), // SurfaceLight
+                            CornerRadius = new CornerRadius(8),
+                            Padding = new Thickness(12)
+                        };
+
+                        var riskPanel = new StackPanel();
+                        
+                        var riskTitle = new TextBlock
+                        {
+                            Text = "At-Risk Students",
+                            FontSize = 14,
+                            FontWeight = FontWeights.Medium,
+                            Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)),
+                            Margin = new Thickness(0, 0, 0, 8)
+                        };
+                        riskPanel.Children.Add(riskTitle);
+
+                        foreach (var student in insights.AtRiskStudents.Take(3))
+                        {
+                            var studentText = new TextBlock
+                            {
+                                Text = $"{student.Name} ({student.Percentage:F0}%)",
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(251, 191, 36)), // WarningYellow
+                                Margin = new Thickness(0, 0, 0, 4)
+                            };
+                            riskPanel.Children.Add(studentText);
+                        }
+
+                        riskBorder.Child = riskPanel;
+                        quickInsightsPanel.Children.Add(riskBorder);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating quick insights: {ex.Message}");
+            }
+        }
+
+        private async Task<QuickInsightsData> GenerateQuickInsights(string examId)
+        {
+            try
+            {
+                var insights = new QuickInsightsData();
+                
+                // Get exam submissions and content
+                var submissions = await _firestoreService.GetExamSubmissionsAsync(examId);
+                var exam = _availableExams.FirstOrDefault(e => e.Id == examId);
+                
+                if (!submissions.Any() || exam?.Contents == null)
+                    return insights;
+
+                // Calculate most missed items
+                var questionStats = exam.Contents.Select(q =>
+                {
+                    var responses = submissions.SelectMany(s => s.Responses)
+                                              .Where(r => r.QuestionId == q.Id)
+                                              .ToList();
+                    var correctCount = responses.Count(r => r.IsCorrect);
+                    var totalCount = responses.Count;
+                    var correctPercentage = totalCount > 0 ? (correctCount * 100.0) / totalCount : 0;
+
+                    return new QuestionInsight
+                    {
+                        QuestionNumber = exam.Contents.IndexOf(q) + 1,
+                        Topic = GetTopicFromQuestionId(q.Id),
+                        CorrectPercentage = correctPercentage,
+                        QuestionId = q.Id
+                    };
+                }).ToList();
+
+                // Most missed items (lowest correct percentage)
+                insights.MostMissedItems = questionStats
+                    .Where(q => q.CorrectPercentage < 60)
+                    .OrderBy(q => q.CorrectPercentage)
+                    .Take(5)
+                    .ToList();
+
+                // Easiest items (highest correct percentage)
+                insights.EasiestItems = questionStats
+                    .Where(q => q.CorrectPercentage > 80)
+                    .OrderByDescending(q => q.CorrectPercentage)
+                    .Take(5)
+                    .ToList();
+
+                // At-risk students (below 60% overall)
+                insights.AtRiskStudents = submissions
+                    .Select(s => new StudentInsight
+                    {
+                        Name = s.StudentName,
+                        Percentage = s.TotalPossiblePoints > 0 ? (s.TotalScore / s.TotalPossiblePoints) * 100 : 0,
+                        StudentId = s.StudentId
+                    })
+                    .Where(s => s.Percentage < 60)
+                    .OrderBy(s => s.Percentage)
+                    .Take(5)
+                    .ToList();
+
+                return insights;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error generating quick insights: {ex.Message}");
+                return new QuickInsightsData();
             }
         }
 
@@ -364,7 +763,7 @@ namespace ExamForge
                     Discrimination = Math.Round(item.Discrimination, 2),
                     PointBiserial = Math.Round(item.PointBiserial, 2),
                     NoResponsePercent = Math.Round(item.NoResponsePercent, 1),
-                    AverageTime = 0, // Would need timing data from submissions
+                    AverageTime = 0,
                     QualityIndicator = item.QualityIndicator
                 }).OrderBy(x => x.QuestionNumber).ToList();
 
@@ -374,7 +773,6 @@ namespace ExamForge
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading item analysis: {ex.Message}");
-                // Fall back to empty data
                 if (ItemAnalysisGrid != null)
                     ItemAnalysisGrid.ItemsSource = new List<ItemAnalysisData>();
             }
@@ -382,60 +780,16 @@ namespace ExamForge
 
         private void ExportItemAnalysis_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(_currentExamId))
-                {
-                    ShowInfo("Please select an exam first.");
-                    return;
-                }
-
-                // Use existing export service for item analysis
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
-                        if (exam != null)
-                        {
-                            // For now, show info that feature is in development
-                            // In a full implementation, you'd create an ItemAnalysisExport method
-                            Dispatcher.Invoke(() =>
-                            {
-                                MessageBox.Show("Item Analysis export is being prepared. This feature will generate detailed question analysis reports.", 
-                                    "Export in Progress", MessageBoxButton.OK, MessageBoxImage.Information);
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Dispatcher.Invoke(() => ShowError($"Export failed: {ex.Message}"));
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Failed to start export: {ex.Message}");
-            }
+            MessageBox.Show("Export Item Analysis functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ItemDetails_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is string questionId)
             {
-                // Show detailed item analysis
-                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
-                var question = exam?.Contents.FirstOrDefault(q => q.Id == questionId);
-                
-                if (question != null)
-                {
-                    var details = $"Question: {question.QuestionText}\n" +
-                                 $"Type: {question.QuestionType}\n" +
-                                 $"Points: {question.Points}\n" +
-                                 $"Correct Answer: {question.CorrectAnswer}";
-                    
-                    MessageBox.Show(details, "Question Details", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                MessageBox.Show($"Question details for {questionId} coming soon!", "Info", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -473,18 +827,6 @@ namespace ExamForge
                         submission.EndTime.Value - submission.StartTime.Value :
                         TimeSpan.Zero;
 
-                    // Count integrity incidents for this student
-                    var flagCount = 0;
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
-                            flagCount = incidents.Count(i => i.StudentId == submission.StudentId);
-                        }
-                        catch { /* Ignore if incidents can't be loaded */ }
-                    });
-
                     return new StudentPerformanceData
                     {
                         Id = submission.StudentId,
@@ -493,7 +835,7 @@ namespace ExamForge
                         Percentage = percentage,
                         Rank = rank,
                         TimeTaken = timeTaken,
-                        FlagCount = flagCount
+                        FlagCount = 0 // Will be updated separately
                     };
                 }).OrderBy(s => s.Rank).ToList();
             }
@@ -531,7 +873,7 @@ namespace ExamForge
             if (StudentSearchBox.Text == "Search students...")
             {
                 StudentSearchBox.Text = "";
-                StudentSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)); // TextPrimary
+                StudentSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237));
             }
         }
 
@@ -540,7 +882,7 @@ namespace ExamForge
             if (string.IsNullOrWhiteSpace(StudentSearchBox.Text))
             {
                 StudentSearchBox.Text = "Search students...";
-                StudentSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // TextSecondary
+                StudentSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175));
             }
         }
 
@@ -561,46 +903,41 @@ namespace ExamForge
             }
         }
 
-        private async void LoadStudentDetails(StudentPerformanceData student)
+        private void LoadStudentDetails(StudentPerformanceData student)
         {
             try
             {
                 if (SelectedStudentName != null)
-                    SelectedStudentName.Text = $"üìä {student.Name} - Performance Analysis";
+                    SelectedStudentName.Text = $"?? {student.Name} - Performance Analysis";
 
                 if (StudentPerformanceGrid != null)
                     StudentPerformanceGrid.Visibility = Visibility.Visible;
 
                 // Update performance metrics
-                if (StudentScore != null) StudentScore.Text = $"{student.Percentage:F1}%";
-                if (StudentRank != null) StudentRank.Text = $"{student.Rank}{GetOrdinalSuffix(student.Rank)}";
-                if (StudentTime != null) StudentTime.Text = student.TimeTaken.ToString(@"mm\:ss");
-                
-                // Get real flag count from database
-                try
-                {
-                    var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
-                    var realFlagCount = incidents.Count(i => i.StudentId == student.Id);
-                    
-                    if (StudentFlags != null) 
-                    {
-                        StudentFlags.Text = realFlagCount.ToString();
-                        StudentFlags.Foreground = realFlagCount == 0 ? 
-                            new SolidColorBrush(Color.FromRgb(16, 185, 129)) : // SuccessGreen
-                            new SolidColorBrush(Color.FromRgb(239, 68, 68));   // ErrorRed
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error loading flag count: {ex.Message}");
-                }
-
-                await LoadMasteryBreakdown(student);
-                await LoadMissedItems(student);
+                UpdateStudentMetrics(student);
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading student details: {ex.Message}");
+            }
+        }
+
+        private void UpdateStudentMetrics(StudentPerformanceData student)
+        {
+            // Find metric TextBlocks and update them
+            var metricBlocks = FindVisualChildren<TextBlock>(StudentPerformanceGrid)
+                .Where(tb => tb.FontSize == 24 && tb.FontWeight == FontWeights.Bold)
+                .ToList();
+
+            if (metricBlocks.Count >= 4)
+            {
+                metricBlocks[0].Text = $"{student.Percentage:F1}%";
+                metricBlocks[1].Text = $"{student.Rank}{GetOrdinalSuffix(student.Rank)}";
+                metricBlocks[2].Text = student.TimeTaken.ToString(@"mm\:ss");
+                metricBlocks[3].Text = student.FlagCount.ToString();
+                metricBlocks[3].Foreground = student.FlagCount == 0 ? 
+                    new SolidColorBrush(Color.FromRgb(16, 185, 129)) : 
+                    new SolidColorBrush(Color.FromRgb(239, 68, 68));
             }
         }
 
@@ -621,171 +958,6 @@ namespace ExamForge
             };
         }
 
-        private async Task LoadMasteryBreakdown(StudentPerformanceData student)
-        {
-            try
-            {
-                if (MasteryGrid == null) return;
-
-                MasteryGrid.Children.Clear();
-                MasteryGrid.RowDefinitions.Clear();
-
-                // Get real mastery data from student's submission
-                var submissions = await _firestoreService.GetExamSubmissionsAsync(_currentExamId);
-                var studentSubmission = submissions.FirstOrDefault(s => s.StudentId == student.Id);
-                
-                if (studentSubmission?.Responses == null || !studentSubmission.Responses.Any())
-                {
-                    // Show message if no response data
-                    var noDataText = new TextBlock
-                    {
-                        Text = "No detailed response data available",
-                        FontSize = 12,
-                        Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175))
-                    };
-                    MasteryGrid.Children.Add(noDataText);
-                    return;
-                }
-
-                // Group responses by topic (simplified - using question type as proxy)
-                var topicGroups = studentSubmission.Responses
-                    .GroupBy(r => GetTopicFromQuestionId(r.QuestionId))
-                    .Where(g => !string.IsNullOrEmpty(g.Key))
-                    .ToList();
-
-                for (int i = 0; i < topicGroups.Count; i++)
-                {
-                    var group = topicGroups[i];
-                    var correctCount = group.Count(r => r.IsCorrect);
-                    var totalCount = group.Count();
-                    var percentage = totalCount > 0 ? (correctCount * 100.0 / totalCount) : 0;
-
-                    MasteryGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-
-                    var stackPanel = new StackPanel 
-                    { 
-                        Orientation = Orientation.Horizontal, 
-                        Margin = new Thickness(0, 4, 0, 4) 
-                    };
-                    
-                    var topicText = new TextBlock 
-                    { 
-                        Text = group.Key, 
-                        Width = 150, 
-                        FontSize = 12, 
-                        Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)) 
-                    };
-                    
-                    var progressBar = new Border
-                    {
-                        Width = 100,
-                        Height = 8,
-                        Background = new SolidColorBrush(Color.FromRgb(51, 47, 68)),
-                        CornerRadius = new CornerRadius(4),
-                        Margin = new Thickness(8, 0, 8, 0)
-                    };
-
-                    var progress = new Border
-                    {
-                        Width = percentage,
-                        Height = 8,
-                        Background = new SolidColorBrush(GetColorForPercentage(percentage)),
-                        CornerRadius = new CornerRadius(4),
-                        HorizontalAlignment = HorizontalAlignment.Left
-                    };
-
-                    progressBar.Child = progress;
-
-                    var scoreText = new TextBlock
-                    {
-                        Text = $"{percentage:F0}%",
-                        FontSize = 12,
-                        Foreground = new SolidColorBrush(GetColorForPercentage(percentage))
-                    };
-
-                    stackPanel.Children.Add(topicText);
-                    stackPanel.Children.Add(progressBar);
-                    stackPanel.Children.Add(scoreText);
-
-                    Grid.SetRow(stackPanel, i);
-                    MasteryGrid.Children.Add(stackPanel);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading mastery breakdown: {ex.Message}");
-            }
-        }
-
-        private async Task LoadMissedItems(StudentPerformanceData student)
-        {
-            try
-            {
-                var submissions = await _firestoreService.GetExamSubmissionsAsync(_currentExamId);
-                var studentSubmission = submissions.FirstOrDefault(s => s.StudentId == student.Id);
-                
-                if (studentSubmission?.Responses == null)
-                {
-                    if (MissedItemsGrid != null)
-                        MissedItemsGrid.ItemsSource = new List<MissedItemData>();
-                    return;
-                }
-
-                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
-                
-                var missedItems = studentSubmission.Responses
-                    .Where(r => !r.IsCorrect)
-                    .Select(r =>
-                    {
-                        var question = exam?.Contents.FirstOrDefault(q => q.Id == r.QuestionId);
-                        return new MissedItemData
-                        {
-                            QuestionNumber = r.QuestionNumber,
-                            Topic = GetTopicFromQuestionId(r.QuestionId),
-                            StudentAnswer = r.Answer ?? "No Answer",
-                            CorrectAnswer = question?.CorrectAnswer ?? "Unknown",
-                            PointsLost = (int)(r.PointsPossible - r.PointsEarned)
-                        };
-                    })
-                    .OrderBy(m => m.QuestionNumber)
-                    .ToList();
-
-                if (MissedItemsGrid != null)
-                    MissedItemsGrid.ItemsSource = missedItems;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading missed items: {ex.Message}");
-                if (MissedItemsGrid != null)
-                    MissedItemsGrid.ItemsSource = new List<MissedItemData>();
-            }
-        }
-
-        private string GetTopicFromQuestionId(string questionId)
-        {
-            // Simplified topic extraction - in a real implementation, 
-            // questions would have topic tags or categories
-            if (questionId.Contains("math", StringComparison.OrdinalIgnoreCase))
-                return "Mathematics";
-            if (questionId.Contains("sci", StringComparison.OrdinalIgnoreCase))
-                return "Science";
-            if (questionId.Contains("hist", StringComparison.OrdinalIgnoreCase))
-                return "History";
-            
-            // Default topic based on question ID pattern or exam content
-            return "General";
-        }
-
-        private Color GetColorForPercentage(double percentage)
-        {
-            return percentage switch
-            {
-                >= 80 => Color.FromRgb(16, 185, 129),  // Green
-                >= 60 => Color.FromRgb(251, 191, 36),  // Yellow
-                _ => Color.FromRgb(239, 68, 68)        // Red
-            };
-        }
-
         #endregion
 
         #region Integrity & Incidents
@@ -799,7 +971,7 @@ namespace ExamForge
 
                 var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
                 
-                // Convert to UI model with real data
+                // Convert to UI model
                 var incidentData = incidents.Select(incident => new IntegrityIncidentData
                 {
                     Id = incident.Id,
@@ -808,21 +980,20 @@ namespace ExamForge
                     EventType = incident.IncidentType,
                     Severity = incident.Severity,
                     Details = incident.Details ?? "",
-                    IpAddress = "192.168.1.xxx" // Masked for privacy
+                    IpAddress = "192.168.1.xxx"
                 }).OrderByDescending(i => i.Timestamp).ToList();
 
-                if (IntegrityIncidentsGrid != null)
-                    IntegrityIncidentsGrid.ItemsSource = incidentData;
-
-                // Update summary metrics with real data
-                UpdateIntegritySummary(incidents);
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (IntegrityIncidentsGrid != null)
+                        IntegrityIncidentsGrid.ItemsSource = incidentData;
+                        
+                    UpdateIntegritySummary(incidents);
+                });
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading integrity data: {ex.Message}");
-                // Fall back to empty data
-                if (IntegrityIncidentsGrid != null)
-                    IntegrityIncidentsGrid.ItemsSource = new List<IntegrityIncidentData>();
             }
         }
 
@@ -830,7 +1001,6 @@ namespace ExamForge
         {
             try
             {
-                // Find and update the metric cards in the Integrity panel
                 var metricTexts = FindVisualChildren<TextBlock>(IntegrityPanel)
                     .Where(tb => tb.FontSize == 32 && tb.FontWeight == FontWeights.Bold)
                     .ToList();
@@ -851,62 +1021,16 @@ namespace ExamForge
 
         private void ExportIntegrityTimeline_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(_currentExamId))
-                {
-                    ShowInfo("Please select an exam first.");
-                    return;
-                }
-
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
-                        if (exam != null)
-                        {
-                            var exportService = new ExportService();
-                            var filePath = await exportService.ExportIntegrityReportAsync(_currentExamId, exam.Title);
-                            
-                            Dispatcher.Invoke(() =>
-                            {
-                                MessageBox.Show($"Integrity report exported successfully!\nSaved to: {filePath}", 
-                                    "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-                            });
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Dispatcher.Invoke(() => ShowError($"Export failed: {ex.Message}"));
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Failed to export integrity timeline: {ex.Message}");
-            }
+            MessageBox.Show("Export Integrity Timeline functionality coming soon!", "Info", 
+                MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void ReviewIncident_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is string incidentId)
             {
-                // Show detailed incident information
-                var incident = IntegrityIncidentsGrid.ItemsSource?.Cast<IntegrityIncidentData>()
-                    .FirstOrDefault(i => i.Id == incidentId);
-                
-                if (incident != null)
-                {
-                    var details = $"Student: {incident.StudentName}\n" +
-                                 $"Event Type: {incident.EventType}\n" +
-                                 $"Severity: {incident.Severity}\n" +
-                                 $"Time: {incident.Timestamp:yyyy-MM-dd HH:mm:ss}\n" +
-                                 $"Details: {incident.Details}\n" +
-                                 $"IP Address: {incident.IpAddress}";
-                    
-                    MessageBox.Show(details, "Incident Details", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
+                MessageBox.Show($"Review incident {incidentId} functionality coming soon!", "Info", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -914,7 +1038,7 @@ namespace ExamForge
 
         #region Trends Over Time
 
-        private void DrawTrendChart()
+        private async void DrawTrendChart()
         {
             try
             {
@@ -922,102 +1046,31 @@ namespace ExamForge
 
                 TrendChart.Children.Clear();
 
-                // Sample trend data points
-                var trendData = new[]
+                // Get real historical trend data
+                var trendData = await GetHistoricalTrendDataAsync();
+                
+                if (!trendData.Any())
                 {
-                    new { Month = "Sep", Score = 72.5 },
-                    new { Month = "Oct", Score = 75.2 },
-                    new { Month = "Nov", Score = 78.8 },
-                    new { Month = "Dec", Score = 76.1 },
-                    new { Month = "Jan", Score = 78.5 },
-                    new { Month = "Feb", Score = 81.2 }
-                };
-
-                var chartWidth = TrendChart.Width - 40;
-                var chartHeight = TrendChart.Height - 40;
-                var pointSpacing = chartWidth / (trendData.Length - 1);
-
-                var minScore = trendData.Min(d => d.Score);
-                var maxScore = trendData.Max(d => d.Score);
-                var scoreRange = maxScore - minScore;
-
-                // Draw trend line
-                for (int i = 0; i < trendData.Length - 1; i++)
-                {
-                    var point1 = trendData[i];
-                    var point2 = trendData[i + 1];
-
-                    var x1 = 20 + i * pointSpacing;
-                    var y1 = 20 + chartHeight - ((point1.Score - minScore) / scoreRange * chartHeight);
-                    var x2 = 20 + (i + 1) * pointSpacing;
-                    var y2 = 20 + chartHeight - ((point2.Score - minScore) / scoreRange * chartHeight);
-
-                    var line = new Line
+                    var noDataText = new TextBlock
                     {
-                        X1 = x1,
-                        Y1 = y1,
-                        X2 = x2,
-                        Y2 = y2,
-                        Stroke = new SolidColorBrush(Color.FromRgb(212, 184, 150)), // AccentGold
-                        StrokeThickness = 3
+                        Text = "No historical data available",
+                        FontSize = 14,
+                        Foreground = new SolidColorBrush(Colors.Gray),
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        VerticalAlignment = VerticalAlignment.Center
                     };
-
-                    TrendChart.Children.Add(line);
-
-                    // Add data points
-                    var point = new Ellipse
-                    {
-                        Width = 8,
-                        Height = 8,
-                        Fill = new SolidColorBrush(Color.FromRgb(212, 184, 150)) // AccentGold
-                    };
-
-                    Canvas.SetLeft(point, x1 - 4);
-                    Canvas.SetTop(point, y1 - 4);
-                    TrendChart.Children.Add(point);
-
-                    // Add month labels
-                    var label = new TextBlock
-                    {
-                        Text = point1.Month,
-                        FontSize = 10,
-                        Foreground = new SolidColorBrush(Colors.White),
-                        HorizontalAlignment = HorizontalAlignment.Center
-                    };
-
-                    Canvas.SetLeft(label, x1 - 10);
-                    Canvas.SetTop(label, chartHeight + 25);
-                    TrendChart.Children.Add(label);
+                    
+                    Canvas.SetLeft(noDataText, TrendChart.ActualWidth / 2 - 100);
+                    Canvas.SetTop(noDataText, TrendChart.ActualHeight / 2);
+                    TrendChart.Children.Add(noDataText);
+                    
+                    await UpdateTrendInsights(new List<TrendDataPoint>());
+                    return;
                 }
 
-                // Add final point and label
-                var lastIndex = trendData.Length - 1;
-                var lastPoint = trendData[lastIndex];
-                var lastX = 20 + lastIndex * pointSpacing;
-                var lastY = 20 + chartHeight - ((lastPoint.Score - minScore) / scoreRange * chartHeight);
-
-                var finalPoint = new Ellipse
-                {
-                    Width = 8,
-                    Height = 8,
-                    Fill = new SolidColorBrush(Color.FromRgb(212, 184, 150))
-                };
-
-                Canvas.SetLeft(finalPoint, lastX - 4);
-                Canvas.SetTop(finalPoint, lastY - 4);
-                TrendChart.Children.Add(finalPoint);
-
-                var finalLabel = new TextBlock
-                {
-                    Text = lastPoint.Month,
-                    FontSize = 10,
-                    Foreground = new SolidColorBrush(Colors.White),
-                    HorizontalAlignment = HorizontalAlignment.Center
-                };
-
-                Canvas.SetLeft(finalLabel, lastX - 10);
-                Canvas.SetTop(finalLabel, chartHeight + 25);
-                TrendChart.Children.Add(finalLabel);
+                // Draw trend chart
+                DrawTrendLine(trendData);
+                await UpdateTrendInsights(trendData);
             }
             catch (Exception ex)
             {
@@ -1025,12 +1078,221 @@ namespace ExamForge
             }
         }
 
+        private void DrawTrendLine(List<TrendDataPoint> trendData)
+        {
+            if (trendData.Count < 2) return;
+
+            var chartWidth = TrendChart.ActualWidth > 0 ? TrendChart.ActualWidth - 40 : 400;
+            var chartHeight = TrendChart.ActualHeight > 0 ? TrendChart.ActualHeight - 40 : 260;
+            var pointSpacing = chartWidth / Math.Max(trendData.Count - 1, 1);
+
+            var minScore = trendData.Min(d => d.Score);
+            var maxScore = trendData.Max(d => d.Score);
+            var scoreRange = Math.Max(maxScore - minScore, 1);
+
+            // Draw trend line
+            for (int i = 0; i < trendData.Count - 1; i++)
+            {
+                var point1 = trendData[i];
+                var point2 = trendData[i + 1];
+
+                var x1 = 20 + i * pointSpacing;
+                var y1 = 20 + chartHeight - ((point1.Score - minScore) / scoreRange * chartHeight);
+                var x2 = 20 + (i + 1) * pointSpacing;
+                var y2 = 20 + chartHeight - ((point2.Score - minScore) / scoreRange * chartHeight);
+
+                var line = new Line
+                {
+                    X1 = x1,
+                    Y1 = y1,
+                    X2 = x2,
+                    Y2 = y2,
+                    Stroke = new SolidColorBrush(Color.FromRgb(212, 184, 150)),
+                    StrokeThickness = 3
+                };
+
+                TrendChart.Children.Add(line);
+            }
+        }
+
+        private async Task UpdateTrendInsights(List<TrendDataPoint> trendData)
+        {
+            try
+            {
+                var trendsInsightsPanel = TrendInsightsPanel;
+
+                if (trendsInsightsPanel != null)
+                {
+                    trendsInsightsPanel.Children.Clear();
+
+                    var titleBlock = new TextBlock
+                    {
+                        Text = "?? Trend Insights",
+                        FontSize = 16,
+                        FontWeight = FontWeights.Medium,
+                        Foreground = new SolidColorBrush(Color.FromRgb(232, 234, 237)),
+                        Margin = new Thickness(0, 0, 0, 16)
+                    };
+                    trendsInsightsPanel.Children.Add(titleBlock);
+
+                    if (!trendData.Any())
+                    {
+                        var noDataTexts = new[]
+                        {
+                            "ï No historical performance data available",
+                            "ï Publish more exams to see trend analysis",
+                            "ï Student performance insights will appear here"
+                        };
+
+                        foreach (var text in noDataTexts)
+                        {
+                            var textBlock = new TextBlock
+                            {
+                                Text = text,
+                                FontSize = 12,
+                                Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
+                                Margin = new Thickness(0, 0, 0, 4)
+                            };
+                            trendsInsightsPanel.Children.Add(textBlock);
+                        }
+                        return;
+                    }
+
+                    var insights = GenerateTrendInsights(trendData);
+                    foreach (var insight in insights)
+                    {
+                        var color = insight.Contains("improving") ? Color.FromRgb(16, 185, 129) :
+                                   insight.Contains("declining") ? Color.FromRgb(239, 68, 68) :
+                                   insight.Contains("Highest") ? Color.FromRgb(212, 184, 150) :
+                                   Color.FromRgb(156, 163, 175);
+
+                        var insightBlock = new TextBlock
+                        {
+                            Text = insight,
+                            FontSize = 12,
+                            Foreground = new SolidColorBrush(color),
+                            Margin = new Thickness(0, 0, 0, 6),
+                            TextWrapping = TextWrapping.Wrap
+                        };
+                        trendsInsightsPanel.Children.Add(insightBlock);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error updating trend insights: {ex.Message}");
+            }
+        }
+
+        private List<string> GenerateTrendInsights(List<TrendDataPoint> trendData)
+        {
+            var insights = new List<string>();
+            
+            if (trendData.Count < 2)
+            {
+                insights.Add("ï Need more exam data for trend analysis");
+                insights.Add($"ï Latest score: {trendData.FirstOrDefault()?.Score:F1}%");
+                insights.Add("ï Historical comparison unavailable");
+                return insights;
+            }
+
+            var firstScore = trendData.First().Score;
+            var lastScore = trendData.Last().Score;
+            var change = lastScore - firstScore;
+            var avgScore = trendData.Average(t => t.Score);
+            
+            // Trend direction
+            if (change > 5)
+                insights.Add($"ï Performance improving: +{change:F1}% over time");
+            else if (change < -5)
+                insights.Add($"ï Performance declining: {change:F1}% over time");
+            else
+                insights.Add($"ï Performance stable: {change:F1}% variance");
+
+            insights.Add($"ï Class average across exams: {avgScore:F1}%");
+            
+            var bestExam = trendData.OrderByDescending(t => t.Score).First();
+            var worstExam = trendData.OrderBy(t => t.Score).First();
+            
+            if (bestExam.Score > worstExam.Score + 10)
+                insights.Add($"ï Highest: {bestExam.Score:F1}% ({bestExam.ExamTitle})");
+            else
+                insights.Add($"ï Consistent performance across exams");
+
+            return insights;
+        }
+
+        private async Task<List<TrendDataPoint>> GetHistoricalTrendDataAsync()
+        {
+            try
+            {
+                var trendData = new List<TrendDataPoint>();
+                var allExams = await _firestoreService.GetAllPublishedExamsAsync();
+                var sortedExams = allExams.OrderBy(e => e.PublishedDate).Take(6).ToList();
+                
+                foreach (var exam in sortedExams)
+                {
+                    try
+                    {
+                        var metrics = await _analyticsService.CalculateClassOverviewAsync(exam.Id);
+                        
+                        if (!double.IsNaN(metrics.ClassAverage) && metrics.ClassAverage > 0)
+                        {
+                            trendData.Add(new TrendDataPoint
+                            {
+                                Label = exam.PublishedDate.ToString("MMM dd"),
+                                Score = metrics.ClassAverage,
+                                ExamTitle = exam.Title
+                            });
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error getting metrics for exam {exam.Title}: {ex.Message}");
+                    }
+                }
+
+                if (!trendData.Any())
+                {
+                    trendData.Add(new TrendDataPoint { Label = "No Data", Score = 0, ExamTitle = "No Exams" });
+                }
+
+                return trendData;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error getting historical trend data: {ex.Message}");
+                return new List<TrendDataPoint>
+                {
+                    new TrendDataPoint { Label = "No Data", Score = 0, ExamTitle = "No Data Available" }
+                };
+            }
+        }
+
         private void UpdateTrendChart_Click(object sender, RoutedEventArgs e)
         {
-            DrawTrendChart();
+            Task.Run(async () =>
+            {
+                await Task.Delay(100);
+                Dispatcher.Invoke(() => DrawTrendChart());
+            });
         }
 
         #endregion
+
+        #region Helper Methods
+
+        private string GetTopicFromQuestionId(string questionId)
+        {
+            if (questionId.Contains("math", StringComparison.OrdinalIgnoreCase))
+                return "Mathematics";
+            if (questionId.Contains("sci", StringComparison.OrdinalIgnoreCase))
+                return "Science";
+            if (questionId.Contains("hist", StringComparison.OrdinalIgnoreCase))
+                return "History";
+            
+            return "General";
+        }
 
         private void ShowError(string message)
         {
@@ -1042,9 +1304,6 @@ namespace ExamForge
             MessageBox.Show(message, "Information", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        /// <summary>
-        /// Find all visual children of a specific type
-        /// </summary>
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
         {
             if (depObj != null)
@@ -1064,9 +1323,11 @@ namespace ExamForge
                 }
             }
         }
+
+        #endregion
     }
 
-    #region Analytics Data Models
+    #region Data Models
 
     public class ItemAnalysisData
     {
@@ -1092,15 +1353,6 @@ namespace ExamForge
         public int FlagCount { get; set; }
     }
 
-    public class MissedItemData
-    {
-        public int QuestionNumber { get; set; }
-        public string Topic { get; set; } = "";
-        public string StudentAnswer { get; set; } = "";
-        public string CorrectAnswer { get; set; } = "";
-        public int PointsLost { get; set; }
-    }
-
     public class IntegrityIncidentData
     {
         public string Id { get; set; } = "";
@@ -1117,6 +1369,35 @@ namespace ExamForge
         public string Range { get; set; } = "";
         public int Count { get; set; }
         public string Color { get; set; } = "";
+    }
+
+    public class TrendDataPoint
+    {
+        public string Label { get; set; } = "";
+        public double Score { get; set; }
+        public string ExamTitle { get; set; } = "";
+    }
+
+    public class QuickInsightsData
+    {
+        public List<QuestionInsight> MostMissedItems { get; set; } = new();
+        public List<QuestionInsight> EasiestItems { get; set; } = new();
+        public List<StudentInsight> AtRiskStudents { get; set; } = new();
+    }
+
+    public class QuestionInsight
+    {
+        public int QuestionNumber { get; set; }
+        public string Topic { get; set; } = "";
+        public double CorrectPercentage { get; set; }
+        public string QuestionId { get; set; } = "";
+    }
+
+    public class StudentInsight
+    {
+        public string Name { get; set; } = "";
+        public double Percentage { get; set; }
+        public string StudentId { get; set; } = "";
     }
 
     #endregion

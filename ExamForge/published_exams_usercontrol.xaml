@@ -165,10 +165,6 @@
                              Content="📊 Closed and Grading"
                              Style="{StaticResource TabButtonStyle}"
                              Checked="Tab_Changed"/>
-                <RadioButton x:Name="ReportsTab"
-                             Content="📈 Reports"
-                             Style="{StaticResource TabButtonStyle}"
-                             Checked="Tab_Changed"/>
             </StackPanel>
         </Border>
 
@@ -701,85 +697,6 @@
                 </StackPanel>
 
                 <!-- Reports Panel -->
-                <StackPanel x:Name="ReportsPanel" Visibility="Collapsed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Report Categories -->
-                        <Grid Grid.Row="0" Margin="0,0,0,20">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <!-- Grade Reports -->
-                            <Border Grid.Column="0" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="0,0,8,0">
-                                <StackPanel>
-                                    <TextBlock Text="📊 Grade Reports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                    <Button Content="Export Grades (CSV)" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportGrades_Click"/>
-                                    <Button Content="Detailed Submissions" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportSubmissions_Click"/>
-                                    <Button Content="Class Summary" Style="{StaticResource ActionButtonStyle}" Click="ExportClassSummary_Click"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Analytics Reports -->
-                            <Border Grid.Column="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="4,0">
-                                <StackPanel>
-                                    <TextBlock Text="📈 Analytics" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                    <Button Content="Item Analysis" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportItemAnalysis_Click"/>
-                                    <Button Content="Student Performance" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportStudentPerformance_Click"/>
-                                    <Button Content="Trends Over Time" Style="{StaticResource ActionButtonStyle}" Click="ExportTrends_Click"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Security Reports -->
-                            <Border Grid.Column="2" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20" Margin="8,0,0,0">
-                                <StackPanel>
-                                    <TextBlock Text="🔒 Security Reports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                    <Button Content="Integrity Report" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportIntegrityReport_Click"/>
-                                    <Button Content="Audit Logs" Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8" Click="ExportAuditLogs_Click"/>
-                                    <Button Content="Session Events" Style="{StaticResource ActionButtonStyle}" Click="ExportSessionEvents_Click"/>
-                                </StackPanel>
-                            </Border>
-                        </Grid>
-
-                        <!-- Recent Exports -->
-                        <Border Grid.Row="1" Background="{StaticResource SurfaceDark}" CornerRadius="12" Padding="20">
-                            <StackPanel>
-                                <TextBlock Text="📄 Recent Exports" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
-                                
-                                <DataGrid x:Name="RecentExportsGrid" 
-                                         Background="Transparent"
-                                         GridLinesVisibility="None"
-                                         HeadersVisibility="Column"
-                                         AutoGenerateColumns="False"
-                                         CanUserAddRows="False"
-                                         CanUserDeleteRows="False"
-                                         IsReadOnly="True"
-                                         SelectionMode="Single"
-                                         Height="300">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="Export Type" Binding="{Binding ExportType}" Width="*"/>
-                                        <DataGridTextColumn Header="Exam" Binding="{Binding ExamTitle}" Width="*"/>
-                                        <DataGridTextColumn Header="Generated" Binding="{Binding GeneratedAt, StringFormat='{}{0:MM/dd/yyyy HH:mm}'}" Width="140"/>
-                                        <DataGridTextColumn Header="File Size" Binding="{Binding FileSize}" Width="80"/>
-                                        <DataGridTemplateColumn Header="Actions" Width="100">
-                                            <DataGridTemplateColumn.CellTemplate>
-                                                <DataTemplate>
-                                                    <Button Content="Open" Style="{StaticResource ActionButtonStyle}" Click="OpenExport_Click" Tag="{Binding FilePath}"/>
-                                                </DataTemplate>
-                                            </DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-                </StackPanel>
             </Grid>
         </ScrollViewer>
     </Grid>
