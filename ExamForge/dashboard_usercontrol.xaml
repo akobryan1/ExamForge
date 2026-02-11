@@ -350,6 +350,7 @@
                                                 <TextBlock Text="{Binding ExamTitle}" Foreground="{StaticResource TextPrimary}"/>
                                                 <TextBlock Text="{Binding Student}" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
                                                 <TextBlock Text="{Binding Due}" Foreground="{StaticResource WarningYellow}" FontSize="11"/>
+                                                <Button Content="Grade" Width="70" Height="26" Margin="0,4,0,0" Style="{StaticResource GoldButton}" Tag="{Binding Id}" Click="GradeQueueItem_Click"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

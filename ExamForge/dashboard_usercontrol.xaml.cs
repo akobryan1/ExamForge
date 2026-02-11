@@ -21,6 +21,7 @@ namespace ExamForge
         private List<ExamSession> _liveSessions = new();
         private List<IntegrityIncident> _recentIncidents = new();
         private List<GradingQueueItem> _gradingQueue = new();
+        private bool _signalrSubscribed = false;
 
         private string _selectedYear = "All Years";
         private string _selectedSubject = "All Subjects";
@@ -58,10 +59,86 @@ namespace ExamForge
 
                 PopulateFilters();
                 ApplyFilters();
+                await EnsureSignalRAsync();
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to load dashboard: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async Task EnsureSignalRAsync()
+        {
+            if (_signalRService == null || _signalrSubscribed)
+                return;
+
+            try
+            {
+                if (!_signalRService.IsConnected)
+                {
+                    await _signalRService.ConnectAsync();
+                }
+
+                _signalRService.OnStudentJoined += HandleLiveSignal;
+                _signalRService.OnStudentHeartbeat += HandleLiveSignal;
+                _signalRService.OnIntegrityEvent += HandleLiveSignal;
+
+                foreach (var session in _liveSessions)
+                {
+                    try
+                    {
+                        await _signalRService.MonitorSessionAsync(session.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"MonitorSession failed: {ex.Message}");
+                    }
+                }
+
+                _signalrSubscribed = true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SignalR connect failed: {ex.Message}");
+            }
+        }
+
+        private async void HandleLiveSignal(object? _)
+        {
+            await RefreshLiveDataAsync();
+        }
+
+        private async Task RefreshLiveDataAsync()
+        {
+            try
+            {
+                var sessionsTask = _firestoreService.GetActiveExamSessionsAsync();
+                var incidentsTask = _firestoreService.GetRecentIntegrityIncidentsAsync(TimeSpan.FromDays(7));
+                await Task.WhenAll(sessionsTask, incidentsTask);
+
+                _liveSessions = sessionsTask.Result ?? new();
+                _recentIncidents = incidentsTask.Result ?? new();
+
+                await Dispatcher.InvokeAsync(() => ApplyFilters());
+
+                if (_signalRService != null && _signalRService.IsConnected)
+                {
+                    foreach (var session in _liveSessions)
+                    {
+                        try
+                        {
+                            await _signalRService.MonitorSessionAsync(session.Id);
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"MonitorSession refresh failed: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RefreshLiveData failed: {ex.Message}");
             }
         }
 
@@ -206,10 +283,15 @@ namespace ExamForge
         {
             var items = _gradingQueue.Take(5).Select(g => new GradingDisplayItem
             {
+                Id = g.Id,
                 ExamId = g.ExamId,
                 ExamTitle = g.ExamTitle,
                 Student = $"{g.StudentName} • Q{g.QuestionNumber} ({g.QuestionType})",
-                Due = g.SubmittedAt == default ? "Submitted" : $"Submitted {g.SubmittedAt:g}"
+                Due = g.SubmittedAt == default ? "Submitted" : $"Submitted {g.SubmittedAt:g}",
+                QuestionNumber = g.QuestionNumber,
+                QuestionText = g.QuestionText,
+                StudentAnswer = g.StudentAnswer,
+                MaxPoints = g.MaxPoints
             }).ToList();
 
             GradingQueueList.ItemsSource = items;
@@ -358,6 +440,45 @@ namespace ExamForge
             NavigateToGrading();
         }
 
+        private async void GradeQueueItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn || btn.Tag is not string id)
+                return;
+
+            var gradingItem = _gradingQueue.FirstOrDefault(g => g.Id == id);
+            if (gradingItem == null)
+            {
+                MessageBox.Show("Grading item not found.", "Grading", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new Views.GradingDialog(
+                gradingItem.Id,
+                gradingItem.StudentName,
+                gradingItem.QuestionNumber,
+                gradingItem.QuestionText,
+                gradingItem.StudentAnswer,
+                gradingItem.MaxPoints)
+            {
+                Owner = Window.GetWindow(this)
+            };
+
+            var result = dialog.ShowDialog();
+            if (result == true && dialog.PointsAwarded.HasValue)
+            {
+                try
+                {
+                    await _firestoreService.UpdateGradingQueueItemAsync(gradingItem.Id, dialog.PointsAwarded.Value, dialog.Feedback, "Instructor");
+                    await RefreshGradingQueueAsync();
+                    MessageBox.Show("Grade saved.", "Grading", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to save grade: {ex.Message}", "Grading", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
         private async void ExtendTime_Click(object sender, RoutedEventArgs e)
         {
             if (!_liveSessions.Any())
@@ -444,6 +565,19 @@ namespace ExamForge
             }
         }
 
+        private async Task RefreshGradingQueueAsync()
+        {
+            try
+            {
+                _gradingQueue = await _firestoreService.GetGradingQueueItemsAsync();
+                ApplyFilters();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RefreshGradingQueue failed: {ex.Message}");
+            }
+        }
+
         private void ToggleFilters_Click(object sender, RoutedEventArgs e)
         {
             _filtersCollapsed = !_filtersCollapsed;
@@ -505,10 +639,15 @@ namespace ExamForge
 
         private class GradingDisplayItem
         {
+            public string Id { get; set; } = string.Empty;
             public string ExamId { get; set; } = string.Empty;
             public string ExamTitle { get; set; } = string.Empty;
             public string Student { get; set; } = string.Empty;
             public string Due { get; set; } = string.Empty;
+            public int QuestionNumber { get; set; }
+            public string QuestionText { get; set; } = string.Empty;
+            public string StudentAnswer { get; set; } = string.Empty;
+            public int MaxPoints { get; set; }
         }
 
         private class MasteryDisplay
