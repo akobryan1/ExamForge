@@ -52,6 +52,15 @@ public partial class published_exams_usercontrol : UserControl
         StopLiveDataRefresh();
     }
 
+    public void ShowClosedTab()
+    {
+        if (ClosedTab != null)
+        {
+            ClosedTab.IsChecked = true;
+            Tab_Changed(ClosedTab, new RoutedEventArgs());
+        }
+    }
+
     private async Task LoadPublishedExamsAsync()
     {
         try

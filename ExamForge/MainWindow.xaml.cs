@@ -29,6 +29,12 @@ public partial class MainWindow : Window
     {
         // Get reference to sidebar
         _sidebar = this.FindName("Sidebar") as sidebar_usercontrol;
+
+        // Default to dashboard on launch
+        if (MainContentHost.Content == null)
+        {
+            MainContentHost.Content = new dashboard_usercontrol();
+        }
     }
 
     private void sidebar_usercontrol_Loaded(object sender, RoutedEventArgs e)

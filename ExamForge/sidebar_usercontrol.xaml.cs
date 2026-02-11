@@ -16,7 +16,14 @@ namespace ExamForge
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             // Dashboard button clicked
-            // TODO: Navigate to dashboard
+            Window mainWindow = Window.GetWindow(this);
+            if (mainWindow is MainWindow main)
+            {
+                if (main.FindName("MainContentHost") is ContentControl contentHost)
+                {
+                    contentHost.Content = new dashboard_usercontrol();
+                }
+            }
         }
 
         private void Create_Button_Click(object sender, RoutedEventArgs e)

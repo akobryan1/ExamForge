@@ -1,0 +1,550 @@
+<UserControl x:Class="ExamForge.dashboard_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource BackgroundDark}"
+             FontFamily="Inter"
+             Loaded="Dashboard_usercontrol_Loaded">
+    <UserControl.Resources>
+        <FontFamily x:Key="InterFont">Inter</FontFamily>
+        <Style x:Key="CardBaseStyle" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
+            <Setter Property="CornerRadius" Value="10"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+
+        <!-- Non-clickable panels (no hover animation) -->
+        <Style x:Key="GoldCardStyle" TargetType="Border" BasedOn="{StaticResource CardBaseStyle}" />
+
+        <!-- Clickable/interactive cards with hover animation -->
+        <Style x:Key="HoverCardStyle" TargetType="Border" BasedOn="{StaticResource CardBaseStyle}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Trigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ThicknessAnimation Storyboard.TargetProperty="BorderThickness"
+                                                   To="2,2,2,2"
+                                                   Duration="0:0:0.15"/>
+                                <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="#d4b896"
+                                                Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.EnterActions>
+                    <Trigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <ThicknessAnimation Storyboard.TargetProperty="BorderThickness"
+                                                   To="1,1,1,1"
+                                                   Duration="0:0:0.15"/>
+                                <ColorAnimation Storyboard.TargetProperty="(Border.BorderBrush).(SolidColorBrush.Color)"
+                                                To="#332f44"
+                                                Duration="0:0:0.15"/>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </Trigger.ExitActions>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="KpiCardStyle" TargetType="Border" BasedOn="{StaticResource HoverCardStyle}">
+            <Setter Property="Padding" Value="12"/>
+        </Style>
+
+        <!-- Premium Gold inputs and buttons -->
+        <Style TargetType="ComboBox" x:Key="GoldComboBox">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="#1f1b2f"/>
+            <Setter Property="BorderBrush" Value="{StaticResource GoldBorderGradient}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Height" Value="34"/>
+            <Setter Property="FontFamily" Value="{StaticResource InterFont}"/>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                        <Setter Property="Background" Value="#1f1b2f"/>
+                        <Setter Property="Padding" Value="8,4"/>
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="SnapsToDevicePixels" Value="True"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#262040"/>
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#30284f"/>
+                                        </Trigger>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" SnapsToDevicePixels="True">
+                                <DockPanel Margin="6,0" VerticalAlignment="Center">
+                                    <ContentPresenter Margin="0" HorizontalAlignment="Left" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                                    <ToggleButton x:Name="ToggleButton" DockPanel.Dock="Right" Focusable="False" IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" ClickMode="Press" Background="Transparent" BorderThickness="0" Padding="6,0">
+                                        <Path Data="M 0 0 L 4 4 L 8 0 Z" Fill="{StaticResource TextSecondary}" Width="8" Height="4" Stretch="Uniform"/>
+                                    </ToggleButton>
+                                </DockPanel>
+                            </Border>
+                            <Popup x:Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+                                <Border Margin="0,4,0,0" Background="#1f1b2f" BorderBrush="{StaticResource GoldBorderGradient}" BorderThickness="1" CornerRadius="8" SnapsToDevicePixels="True">
+                                    <ScrollViewer Margin="0" SnapsToDevicePixels="True">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#d4b896"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#d4b896"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="Popup" Property="MinHeight" Value="0"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Button" x:Key="GoldButton">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="Background" Value="#1f1b2f"/>
+            <Setter Property="BorderBrush" Value="{StaticResource GoldBorderGradient}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontFamily" Value="{StaticResource InterFont}"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" SnapsToDevicePixels="True">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Trigger.EnterActions>
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <ThicknessAnimation Storyboard.TargetName="Bd" Storyboard.TargetProperty="BorderThickness" To="2" Duration="0:0:0.15"/>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </Trigger.EnterActions>
+                                <Setter TargetName="Bd" Property="Background" Value="#262040"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="False">
+                                <Setter TargetName="Bd" Property="BorderThickness" Value="1"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#30284f"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#d4b896"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="LabelSmall">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="ValueLarge">
+            <Setter Property="FontSize" Value="22"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="SectionTitle">
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource BackgroundDark}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+                <!-- Layer A: Global Filters -->
+        <Border Style="{StaticResource GoldCardStyle}" Background="{StaticResource SurfaceLight}" Grid.Row="0" Padding="12">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="3" Background="{StaticResource GoldBorderGradient}"/>
+                        <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                            <TextBlock Text="Global Filters" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                    <UniformGrid x:Name="GlobalFiltersPanel" Columns="4" Rows="1" VerticalAlignment="Center" HorizontalAlignment="Stretch" Visibility="Visible">
+                                <ComboBox x:Name="SchoolYearFilter" SelectionChanged="Filters_Changed" Style="{StaticResource GoldComboBox}"/>
+                                <ComboBox x:Name="SubjectFilter" SelectionChanged="Filters_Changed" Style="{StaticResource GoldComboBox}"/>
+                                <ComboBox x:Name="SectionFilter" SelectionChanged="Filters_Changed" Style="{StaticResource GoldComboBox}"/>
+                                <ComboBox x:Name="ExamFilter" SelectionChanged="Filters_Changed" Style="{StaticResource GoldComboBox}"/>
+                            </UniformGrid>
+                        </StackPanel>
+                <Button Grid.Column="2" Content="Hide" Width="64" Height="28" Margin="8,0,0,0" Style="{StaticResource GoldButton}" Click="ToggleFilters_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- Layer B: KPI Row -->
+        <UniformGrid Grid.Row="1" Columns="4" Margin="0,8,0,0" HorizontalAlignment="Stretch">
+                    <Border Style="{StaticResource KpiCardStyle}" MouseLeftButtonUp="UpcomingCard_Click">
+                        <Grid>
+                            <Border Width="3" Background="{StaticResource GoldBorderGradient}" HorizontalAlignment="Left"/>
+                            <StackPanel Margin="8,4,4,4">
+                                <TextBlock Text="Upcoming Exams (7d)" Style="{StaticResource LabelSmall}"/>
+                                <TextBlock x:Name="UpcomingCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                <TextBlock x:Name="UpcomingSubtitle" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource KpiCardStyle}" MouseLeftButtonUp="LiveCard_Click">
+                        <Grid>
+                            <Border Width="3" Background="{StaticResource GoldBorderGradient}" HorizontalAlignment="Left"/>
+                            <StackPanel Margin="8,4,4,4">
+                                <TextBlock Text="Live Now" Style="{StaticResource LabelSmall}"/>
+                                <TextBlock x:Name="LiveCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                <TextBlock x:Name="LiveSubtitle" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource KpiCardStyle}" MouseLeftButtonUp="GradingCard_Click">
+                        <Grid>
+                            <Border Width="3" Background="{StaticResource GoldBorderGradient}" HorizontalAlignment="Left"/>
+                            <StackPanel Margin="8,4,4,4">
+                                <TextBlock Text="Pending Grading" Style="{StaticResource LabelSmall}"/>
+                                <TextBlock x:Name="GradingCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                <TextBlock x:Name="GradingSubtitle" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    <Border Style="{StaticResource KpiCardStyle}" MouseLeftButtonUp="FlagsCard_Click">
+                        <Grid>
+                            <Border Width="3" Background="{StaticResource GoldBorderGradient}" HorizontalAlignment="Left"/>
+                            <StackPanel Margin="8,4,4,4">
+                                <TextBlock Text="Flags / Incidents" Style="{StaticResource LabelSmall}"/>
+                                <TextBlock x:Name="FlagsCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                <TextBlock x:Name="FlagsSubtitle" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </UniformGrid>
+
+                <!-- Layer C: Operational Panels -->
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Grid.Column="0" Style="{StaticResource GoldCardStyle}" Margin="0,0,8,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource GoldBorderGradient}"/>
+                            <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Today's Schedule / Live Monitor" Style="{StaticResource SectionTitle}" DockPanel.Dock="Left"/>
+                                    <Button Content="Send Reminder" Width="120" Height="28" HorizontalAlignment="Right" Click="SendReminder_Click" Style="{StaticResource GoldButton}"/>
+                                </DockPanel>
+                                <ScrollViewer VerticalScrollBarVisibility="Auto" Height="240">
+                                    <ItemsControl x:Name="TodayScheduleList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{StaticResource SurfaceLight}" CornerRadius="8" Padding="10" Margin="0,0,0,8">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Title}" Foreground="{StaticResource TextPrimary}" FontWeight="SemiBold"/>
+                                                        <TextBlock Text="{Binding Schedule}" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                                                        <TextBlock Text="{Binding Meta}" Foreground="{StaticResource TextMuted}" FontSize="11"/>
+                                                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                            <Button Content="Edit" Width="60" Height="26" Click="EditExam_Click" Tag="{Binding ExamId}" Margin="0,0,8,0" Style="{StaticResource GoldButton}"/>
+                                                            <Button Content="Duplicate" Width="80" Height="26" Click="DuplicateExam_Click" Tag="{Binding ExamId}" Margin="0,0,8,0" Style="{StaticResource GoldButton}"/>
+                                                            <Button Content="View Monitor" Width="110" Height="26" Click="ViewMonitor_Click" Tag="{Binding ExamId}" Style="{StaticResource GoldButton}"/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                        <ItemsControl.Style>
+                                            <Style TargetType="ItemsControl">
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ItemsControl">
+                                                            <ItemsPresenter/>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ItemsControl.Style>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <TextBlock x:Name="TodayEmptyState" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Visibility="Collapsed" Text="No scheduled exams today."/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="0" Grid.Column="1" Style="{StaticResource GoldCardStyle}" Margin="8,0,0,8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource GoldBorderGradient}"/>
+                            <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Grading Queue" Style="{StaticResource SectionTitle}" DockPanel.Dock="Left"/>
+                                    <Button Content="Open" Width="80" Height="28" Click="OpenGrading_Click" HorizontalAlignment="Right" Style="{StaticResource GoldButton}"/>
+                                </DockPanel>
+                                <ItemsControl x:Name="GradingQueueList" Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Margin="0,0,0,6">
+                                                <TextBlock Text="{Binding ExamTitle}" Foreground="{StaticResource TextPrimary}"/>
+                                                <TextBlock Text="{Binding Student}" Foreground="{StaticResource TextSecondary}" FontSize="12"/>
+                                                <TextBlock Text="{Binding Due}" Foreground="{StaticResource WarningYellow}" FontSize="11"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="GradingEmpty" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Visibility="Collapsed" Text="No submissions waiting."/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource GoldCardStyle}" Margin="0,8,8,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource GoldBorderGradient}"/>
+                            <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Live Exam Monitor" Style="{StaticResource SectionTitle}" DockPanel.Dock="Left"/>
+                                    <Button Content="Extend Time" Width="100" Height="28" Click="ExtendTime_Click" HorizontalAlignment="Right" Style="{StaticResource GoldButton}"/>
+                                </DockPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Started" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="StartedCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Submitted" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="SubmittedCountText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,16,0">
+                                        <TextBlock Text="Avg Progress" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="AvgProgressText" Style="{StaticResource ValueLarge}" Text="0%"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Last Activity" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="LastActivityText" Style="{StaticResource ValueLarge}" Text="--"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <TextBlock x:Name="LiveEmpty" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Margin="0,6,0,0" Visibility="Collapsed" Text="No live sessions."/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource GoldCardStyle}" Margin="8,8,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource GoldBorderGradient}"/>
+                            <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                <TextBlock Text="Submissions Health" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                                <UniformGrid Columns="2" Rows="2" Margin="0,4,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Not Started" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="NotStartedText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="In Progress" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="InProgressText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Submitted" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="SubmittedHealthText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Missing" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="MissingText" Style="{StaticResource ValueLarge}" Text="0"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Insights Panels -->
+                <Grid Grid.Row="3" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="2*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <Border Grid.Column="0" Style="{StaticResource GoldCardStyle}" Margin="0,0,8,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="3"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Border Background="{StaticResource GoldBorderGradient}"/>
+                            <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                <DockPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Performance Snapshot" Style="{StaticResource SectionTitle}" DockPanel.Dock="Left"/>
+                                    <Button Content="Open Analytics" Width="120" Height="28" HorizontalAlignment="Right" Click="OpenAnalytics_Click" Style="{StaticResource GoldButton}"/>
+                                </DockPanel>
+                                <UniformGrid Columns="4" Rows="1" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <TextBlock Text="Mean" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="MeanScoreText" Style="{StaticResource ValueLarge}" Text="--"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Median" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="MedianScoreText" Style="{StaticResource ValueLarge}" Text="--"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Pass Rate" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="PassRateText" Style="{StaticResource ValueLarge}" Text="--"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Mastery" Style="{StaticResource LabelSmall}"/>
+                                        <TextBlock x:Name="MasteryText" Style="{StaticResource ValueLarge}" Text="--"/>
+                                    </StackPanel>
+                                </UniformGrid>
+                                <ItemsControl x:Name="TopMissedList" Margin="0,6,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,4"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="PerformanceEmpty" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Visibility="Collapsed" Text="No performance data yet."/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Column="1" Orientation="Vertical">
+                        <Border Style="{StaticResource GoldCardStyle}" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="{StaticResource GoldBorderGradient}"/>
+                                <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                    <TextBlock Text="Mastery by Test Group" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                                    <ItemsControl x:Name="MasteryList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextPrimary}" Width="140"/>
+                                                    <ProgressBar Value="{Binding Percent}" Height="10" Width="120" Foreground="{StaticResource AccentGold}" Background="{StaticResource SurfaceLight}"/>
+                                                    <TextBlock Text="{Binding PercentText}" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource GoldCardStyle}" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="{StaticResource GoldBorderGradient}"/>
+                                <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                    <TextBlock Text="At-Risk Students" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                                    <ItemsControl x:Name="AtRiskList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                    <TextBlock Text="{Binding Name}" Foreground="{StaticResource WarningYellow}" Width="140"/>
+                                                    <TextBlock Text="{Binding Percentage}" Foreground="{StaticResource TextPrimary}"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock x:Name="AtRiskEmpty" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Visibility="Collapsed" Text="No at-risk students detected."/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+
+                        <Border Style="{StaticResource GoldCardStyle}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="3"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="{StaticResource GoldBorderGradient}"/>
+                                <StackPanel Grid.Column="1" Margin="8,10,12,10">
+                                    <TextBlock Text="Integrity Signals" Style="{StaticResource SectionTitle}" Margin="0,0,0,8"/>
+                                    <ItemsControl x:Name="IntegrityList">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding}" Foreground="{StaticResource TextSecondary}" FontSize="12" Margin="0,0,0,4"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock x:Name="IntegrityEmpty" Foreground="{StaticResource TextSecondary}" FontStyle="Italic" FontSize="12" Visibility="Collapsed" Text="No integrity signals."/>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+    </Grid>
+</UserControl>

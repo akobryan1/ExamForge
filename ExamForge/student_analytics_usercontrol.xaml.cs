@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -191,7 +191,7 @@ namespace ExamForge
                     DrawScoreHistogram();
                     
                     _lastDataRefresh = DateTime.UtcNow;
-                    Debug.WriteLine($"? Initial analytics data loaded at {_lastDataRefresh:HH:mm:ss}");
+                    Debug.WriteLine($"‚úÖ Initial analytics data loaded at {_lastDataRefresh:HH:mm:ss}");
                 }
                 else
                 {
@@ -202,7 +202,7 @@ namespace ExamForge
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"? Error loading analytics data: {ex.Message}");
+                Debug.WriteLine($"‚ùå Error loading analytics data: {ex.Message}");
                 // Show demo data on error
                 await LoadDemoDataAsync();
                 ShowError($"Failed to load analytics data. Showing demo data. Error: {ex.Message}");
@@ -215,7 +215,7 @@ namespace ExamForge
             {
                 _availableExams = await _firestoreService.GetAllPublishedExamsAsync();
                 await PopulateFiltersAsync();
-                Debug.WriteLine($"? Loaded {_availableExams.Count} exams for analytics");
+                Debug.WriteLine($"‚úÖ Loaded {_availableExams.Count} exams for analytics");
             }
             catch (Exception ex)
             {
@@ -1265,9 +1265,9 @@ namespace ExamForge
                     {
                         var noDataTexts = new[]
                         {
-                            "ï No historical performance data available",
-                            "ï Publish more exams to see trend analysis",
-                            "ï Student performance insights will appear here"
+                            "‚Ä¢ No historical performance data available",
+                            "‚Ä¢ Publish more exams to see trend analysis",
+                            "‚Ä¢ Student performance insights will appear here"
                         };
 
                         foreach (var text in noDataTexts)
@@ -1316,9 +1316,9 @@ namespace ExamForge
             
             if (trendData.Count < 2)
             {
-                insights.Add("ï Need more exam data for trend analysis");
-                insights.Add($"ï Latest score: {trendData.FirstOrDefault()?.Score:F1}%");
-                insights.Add("ï Historical comparison unavailable");
+                insights.Add("‚Ä¢ Need more exam data for trend analysis");
+                insights.Add($"‚Ä¢ Latest score: {trendData.FirstOrDefault()?.Score:F1}%");
+                insights.Add("‚Ä¢ Historical comparison unavailable");
                 return insights;
             }
 
@@ -1329,21 +1329,21 @@ namespace ExamForge
             
             // Trend direction
             if (change > 5)
-                insights.Add($"ï Performance improving: +{change:F1}% over time");
+                insights.Add($"‚Ä¢ Performance improving: +{change:F1}% over time");
             else if (change < -5)
-                insights.Add($"ï Performance declining: {change:F1}% over time");
+                insights.Add($"‚Ä¢ Performance declining: {change:F1}% over time");
             else
-                insights.Add($"ï Performance stable: {change:F1}% variance");
+                insights.Add($"‚Ä¢ Performance stable: {change:F1}% variance");
 
-            insights.Add($"ï Class average across exams: {avgScore:F1}%");
+            insights.Add($"‚Ä¢ Class average across exams: {avgScore:F1}%");
             
             var bestExam = trendData.OrderByDescending(t => t.Score).First();
             var worstExam = trendData.OrderBy(t => t.Score).First();
             
             if (bestExam.Score > worstExam.Score + 10)
-                insights.Add($"ï Highest: {bestExam.Score:F1}% ({bestExam.ExamTitle})");
+                insights.Add($"‚Ä¢ Highest: {bestExam.Score:F1}% ({bestExam.ExamTitle})");
             else
-                insights.Add($"ï Consistent performance across exams");
+                insights.Add($"‚Ä¢ Consistent performance across exams");
 
             return insights;
         }
