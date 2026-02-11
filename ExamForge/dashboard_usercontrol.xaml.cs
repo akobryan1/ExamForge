@@ -226,10 +226,10 @@ namespace ExamForge
             var pendingGrading = _gradingQueue.Count(g => !g.PointsAwarded.HasValue);
             var flags = _recentIncidents.Count;
 
-            UpcomingCountText.Text = upcoming.ToString();
-            LiveCountText.Text = liveCount.ToString();
-            GradingCountText.Text = pendingGrading.ToString();
-            FlagsCountText.Text = flags.ToString();
+            UpcomingCountText.Text = upcoming > 0 ? upcoming.ToString() : "–";
+            LiveCountText.Text = liveCount > 0 ? liveCount.ToString() : "–";
+            GradingCountText.Text = pendingGrading > 0 ? pendingGrading.ToString() : "–";
+            FlagsCountText.Text = flags > 0 ? flags.ToString() : "–";
 
             UpcomingSubtitle.Text = upcoming > 0 ? "Scheduled this week" : "Nothing scheduled";
             LiveSubtitle.Text = liveCount > 0 ? "Monitoring active" : "No live exams";
@@ -261,10 +261,11 @@ namespace ExamForge
             if (!_liveSessions.Any())
             {
                 LiveEmpty.Visibility = Visibility.Visible;
-                StartedCountText.Text = "0";
-                SubmittedCountText.Text = "0";
-                AvgProgressText.Text = "0%";
-                LastActivityText.Text = "--";
+                LiveEmpty.Text = "? No exams running right now. Start one to see live stats!";
+                StartedCountText.Text = "–";
+                SubmittedCountText.Text = "–";
+                AvgProgressText.Text = "–";
+                LastActivityText.Text = "–";
                 return;
             }
 
@@ -295,7 +296,15 @@ namespace ExamForge
             }).ToList();
 
             GradingQueueList.ItemsSource = items;
-            GradingEmpty.Visibility = items.Any() ? Visibility.Collapsed : Visibility.Visible;
+            if (!items.Any())
+            {
+                GradingEmpty.Visibility = Visibility.Visible;
+                GradingEmpty.Text = "?? All caught up! No grading needed.";
+            }
+            else
+            {
+                GradingEmpty.Visibility = Visibility.Collapsed;
+            }
         }
 
         private async Task UpdateSubmissionsHealthAsync()
@@ -587,6 +596,10 @@ namespace ExamForge
                 btn.Content = _filtersCollapsed ? "Show" : "Hide";
             }
         }
+
+        
+
+        
 
         
 
