@@ -30,6 +30,10 @@ namespace ExamForge.Models
         
         [FirestoreProperty]
         public string ExamUrl { get; set; } = "";
+
+        // Subject/category for filtering and analytics
+        [FirestoreProperty]
+        public string Subject { get; set; } = "General";
         
         [FirestoreProperty]
         public List<ExamStructure> Structures { get; set; } = new();
@@ -50,9 +54,9 @@ namespace ExamForge.Models
         [FirestoreProperty]
         public double PassRate { get; set; }
         
-        // LoginConfig is a string representing JSON or config state
+        // LoginConfig is a structured object
         [FirestoreProperty]
-        public string LoginConfig { get; set; } = "";
+        public LoginConfigState? LoginConfig { get; set; }
         
         // LifecycleStatus is a string, not an object
         [FirestoreProperty]
@@ -83,6 +87,7 @@ namespace ExamForge.Models
         public double PassRate { get; set; }
         public string LoginConfig { get; set; } = "";
         public string LifecycleStatus { get; set; } = "";
+        public string Subject { get; set; } = "General";
     }
 
     public class StudentRosterItem

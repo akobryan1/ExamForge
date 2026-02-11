@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -17,6 +17,9 @@ public partial class published_exams_usercontrol : UserControl
     private List<PublishedExamViewModel> _allExams = new();
     private string _currentFilter = "All";
     private string _searchQuery = "";
+    private List<ExamBankItem> _examBankItems = new();
+    private string _examBankSearch = "";
+    private string _examBankSubject = "All Subjects";
 
     // SignalR client  
     private SignalRService? _signalRService;
@@ -69,6 +72,7 @@ public partial class published_exams_usercontrol : UserControl
                 PublishedDate = exam.PublishedDate,
                 CreatedBy = exam.CreatedBy,
                 ExamUrl = exam.ExamUrl,
+                    Subject = exam.Subject,
                 Status = DetermineStatus(exam),
                 ScheduleText = FormatSchedule(exam.StartTime, exam.EndTime),
                 DurationText = $"{exam.ExamDuration} minutes",
@@ -261,74 +265,68 @@ public partial class published_exams_usercontrol : UserControl
     {
         try
         {
-            var firestoreService = App.FirestoreService;
-            if (firestoreService == null) return;
+                var firestoreService = App.FirestoreService;
+                if (firestoreService == null) return;
 
-            // Get published exams and filter only currently active ones
-            var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
-            var currentTime = DateTime.UtcNow;
-            
-            // Filter only currently active exams (start time <= now <= end time)
-            var activeExams = publishedExams
-                .Where(e => e.StartTime <= currentTime && e.EndTime >= currentTime)
-                .ToList();
+                var sessions = await firestoreService.GetRunningSessionsAsync();
 
-            // Update active session count
-            await Dispatcher.InvokeAsync(() =>
-            {
-                try
+                var participants = new List<StudentRosterItem>();
+                int online = 0, disconnected = 0, flags = 0, progressSum = 0, progressCount = 0;
+
+                foreach (var session in sessions)
                 {
-                    // Find and update the active sessions metric
-                    var metricTexts = FindVisualChildren<TextBlock>(this)
-                        .Where(tb => tb.FontSize == 32 && tb.FontWeight == FontWeights.Bold)
-                        .ToList();
-
-                    if (metricTexts.Any())
+                    foreach (var participant in session.Participants.Values)
                     {
-                        metricTexts[0].Text = activeExams.Count.ToString();
+                        participants.Add(new StudentRosterItem
+                        {
+                            StudentId = participant.StudentId,
+                            StudentName = participant.StudentName,
+                            ConnectionStatus = participant.ConnectionStatus,
+                            ProgressPercent = $"{participant.ProgressPercent}%",
+                            TimeRemaining = FormatTimeRemaining(TimeSpan.FromSeconds(participant.TimeRemaining)),
+                            FlagCount = participant.FlagCount.ToString()
+                        });
+
+                        if (participant.ConnectionStatus?.Equals("Online", StringComparison.OrdinalIgnoreCase) == true)
+                            online++;
+                        else
+                            disconnected++;
+
+                        flags += participant.FlagCount;
+                        progressSum += participant.ProgressPercent;
+                        progressCount++;
                     }
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Error updating active sessions metric: {ex.Message}");
-                }
-            });
 
-            _rosterItems.Clear();
-            
-            if (activeExams.Any())
-            {
-                // Show active exams as placeholder
-                foreach (var exam in activeExams)
+                var avgProgress = progressCount > 0 ? Math.Round(progressSum / (double)progressCount) : 0;
+
+                if (!participants.Any())
                 {
-                    _rosterItems.Add(new StudentRosterItem
+                    participants.Add(new StudentRosterItem
                     {
-                        StudentId = exam.Id,
-                        StudentName = exam.Title,
-                        ConnectionStatus = "LIVE",
-                        ProgressPercent = "Waiting for students...",
-                        TimeRemaining = FormatTimeRemaining(exam.EndTime - DateTime.UtcNow),
+                        StudentId = "none",
+                        StudentName = "No active sessions",
+                        ConnectionStatus = "WAITING",
+                        ProgressPercent = "0%",
+                        TimeRemaining = "N/A",
                         FlagCount = "0"
                     });
                 }
-            }
-            else
-            {
-                // Show message when no active exams
-                _rosterItems.Add(new StudentRosterItem
-                {
-                    StudentId = "none",
-                    StudentName = "No active exams",
-                    ConnectionStatus = "WAITING",
-                    ProgressPercent = "0%",
-                    TimeRemaining = "N/A",
-                    FlagCount = "0"
-                });
-            }
 
-            // Update UI
-            if (LiveRosterGrid != null)
-                LiveRosterGrid.ItemsSource = _rosterItems;
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    _rosterItems.Clear();
+                    foreach (var p in participants) _rosterItems.Add(p);
+
+                    if (LiveRosterGrid != null)
+                        LiveRosterGrid.ItemsSource = _rosterItems;
+
+                    if (ActiveSessionsText != null) ActiveSessionsText.Text = $"{sessions.Count} Active Sessions";
+                    if (LiveOnlineValue != null) LiveOnlineValue.Text = online.ToString();
+                    if (LiveDisconnectedValue != null) LiveDisconnectedValue.Text = disconnected.ToString();
+                    if (LiveProgressValue != null) LiveProgressValue.Text = $"{avgProgress}%";
+                    if (LiveFlagsValue != null) LiveFlagsValue.Text = flags.ToString();
+                });
         }
         catch (Exception ex)
         {
@@ -357,24 +355,33 @@ public partial class published_exams_usercontrol : UserControl
             var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
             
             // Convert to exam bank items
-            var examBankItems = publishedExams.Select(exam => new ExamBankItem
+            _examBankItems = publishedExams.Select(exam => new ExamBankItem
             {
                 Id = exam.Id,
                 Title = exam.Title,
-                Subject = "General", // Can be enhanced based on exam metadata
+                Subject = string.IsNullOrWhiteSpace(exam.Subject) ? "General" : exam.Subject,
                 QuestionCount = exam.Contents?.Count ?? 0,
-                Difficulty = "Medium", // Can be enhanced with actual difficulty calculation
-                TimesUsed = 0, // Can be enhanced with submission tracking
+                TimesUsed = exam.TimesUsed,
                 LastUsed = exam.PublishedDate,
                 CreatedBy = exam.CreatedBy,
-                DateCreated = exam.PublishedDate, // Using PublishedDate as creation date
+                DateCreated = exam.PublishedDate,
                 IsPublished = exam.Status == "Published"
             }).ToList();
-            
-            if (ExamBankGrid != null)
-                ExamBankGrid.ItemsSource = examBankItems;
-                
-            Debug.WriteLine($"?? Loaded {examBankItems.Count} exams from Firestore");
+
+            // Populate subject filter dynamically
+            if (SubjectFilter != null)
+            {
+                SubjectFilter.Items.Clear();
+                SubjectFilter.Items.Add(new ComboBoxItem { Content = "All Subjects" });
+                foreach (var subj in _examBankItems.Select(i => i.Subject).Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().OrderBy(s => s))
+                {
+                    SubjectFilter.Items.Add(new ComboBoxItem { Content = subj });
+                }
+                SubjectFilter.SelectedIndex = 0;
+            }
+
+            ApplyExamBankFilters();
+            Debug.WriteLine($"?? Loaded {_examBankItems.Count} exams from Firestore");
         }
         catch (Exception ex)
         {
@@ -404,12 +411,14 @@ public partial class published_exams_usercontrol : UserControl
 
             // Load grading queue items from submissions
             var gradingItems = new List<GradingQueueItem>();
+            var allSubmissions = new List<ExamSubmission>();
             
             foreach (var exam in completedExams)
             {
                 try
                 {
                     var submissions = await firestoreService.GetExamSubmissionsAsync(exam.Id);
+                    allSubmissions.AddRange(submissions);
                     
                     foreach (var submission in submissions)
                     {
@@ -432,8 +441,9 @@ public partial class published_exams_usercontrol : UserControl
             
             if (GradingQueueGrid != null)
                 GradingQueueGrid.ItemsSource = gradingItems.OrderByDescending(g => g.SubmittedAt).ToList();
-                
-            Debug.WriteLine($"?? Loaded {gradingItems.Count} grading queue items");
+
+            UpdateClosedTabMetrics(allSubmissions);
+            Debug.WriteLine($"📝 Loaded {gradingItems.Count} grading queue items");
         }
         catch (Exception ex)
         {
@@ -490,11 +500,6 @@ public partial class published_exams_usercontrol : UserControl
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void BankSearch_Changed(object sender, TextChangedEventArgs e)
-    {
-        // TODO: Filter exam bank based on search
-    }
-
     private void BankSearchBox_GotFocus(object sender, RoutedEventArgs e)
     {
         if (BankSearchBox.Text == "Search exam bank...")
@@ -511,6 +516,95 @@ public partial class published_exams_usercontrol : UserControl
             BankSearchBox.Text = "Search exam bank...";
             BankSearchBox.Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)); // TextSecondary
         }
+    }
+
+    private void BankSearch_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (BankSearchBox.Text == "Search exam bank...") return;
+        _examBankSearch = BankSearchBox.Text ?? "";
+        ApplyExamBankFilters();
+    }
+
+    private void SubjectFilter_Changed(object sender, SelectionChangedEventArgs e)
+    {
+        if (SubjectFilter?.SelectedItem is ComboBoxItem item)
+            _examBankSubject = item.Content?.ToString() ?? "All Subjects";
+        ApplyExamBankFilters();
+    }
+
+    private void ApplyExamBankFilters()
+    {
+        if (_examBankItems == null || !_examBankItems.Any())
+        {
+            if (ExamBankGrid != null) ExamBankGrid.ItemsSource = new List<ExamBankItem>();
+            return;
+        }
+
+        var filtered = _examBankItems.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_examBankSearch))
+        {
+            var query = _examBankSearch.ToLower();
+            filtered = filtered.Where(i =>
+                i.Title.ToLower().Contains(query) ||
+                (i.Subject ?? "").ToLower().Contains(query));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_examBankSubject) && _examBankSubject != "All Subjects")
+        {
+            filtered = filtered.Where(i => string.Equals(i.Subject, _examBankSubject, StringComparison.OrdinalIgnoreCase));
+        }
+
+        var list = filtered.ToList();
+        if (ExamBankGrid != null)
+            ExamBankGrid.ItemsSource = list;
+    }
+
+    private void UpdateClosedTabMetrics(List<ExamSubmission> submissions)
+    {
+        if (AutoGradedValue == null || ManualReviewValue == null || PassRateValue == null || PendingReviewBadge == null || GradeABar == null)
+            return;
+
+        var total = submissions.Count;
+        var manual = submissions.Count(s => s.Status?.Contains("manual", StringComparison.OrdinalIgnoreCase) == true);
+        var auto = total - manual;
+
+        double passRate = 0;
+        if (total > 0)
+        {
+            var passing = submissions.Count(s => s.TotalPossiblePoints > 0 && (s.TotalScore / s.TotalPossiblePoints) * 100 >= 60);
+            passRate = (passing * 100.0) / total;
+        }
+
+        AutoGradedValue.Text = auto.ToString();
+        ManualReviewValue.Text = manual.ToString();
+        PassRateValue.Text = $"{passRate:F0}%";
+        PendingReviewBadge.Text = $"{manual} Pending Review";
+
+        // Grade distribution
+        if (total == 0)
+        {
+            GradeAValue.Text = " 0%"; GradeBValue.Text = " 0%"; GradeCValue.Text = " 0%"; GradeFValue.Text = " 0%";
+            GradeABar.Width = GradeBBar.Width = GradeCBar.Width = GradeFBar.Width = 0;
+            return;
+        }
+
+        var percents = submissions.Select(s => s.TotalPossiblePoints > 0 ? (s.TotalScore / s.TotalPossiblePoints) * 100 : 0).ToList();
+        double aPct = percents.Count(p => p >= 90) * 100.0 / total;
+        double bPct = percents.Count(p => p >= 80 && p < 90) * 100.0 / total;
+        double cPct = percents.Count(p => p >= 70 && p < 80) * 100.0 / total;
+        double fPct = percents.Count(p => p < 70) * 100.0 / total;
+
+        GradeAValue.Text = $" {aPct:F0}%";
+        GradeBValue.Text = $" {bPct:F0}%";
+        GradeCValue.Text = $" {cPct:F0}%";
+        GradeFValue.Text = $" {fPct:F0}%";
+
+        const double barBase = 80;
+        GradeABar.Width = aPct > 0 ? Math.Max(5, barBase * aPct / 100) : 0;
+        GradeBBar.Width = bPct > 0 ? Math.Max(5, barBase * bPct / 100) : 0;
+        GradeCBar.Width = cPct > 0 ? Math.Max(5, barBase * cPct / 100) : 0;
+        GradeFBar.Width = fPct > 0 ? Math.Max(5, barBase * fPct / 100) : 0;
     }
 
     private void CloneExam_Click(object sender, RoutedEventArgs e)
@@ -681,7 +775,6 @@ public class ExamBankItem
     public string Title { get; set; } = "";
     public string Subject { get; set; } = "";
     public int QuestionCount { get; set; }
-    public string Difficulty { get; set; } = "";
     public int TimesUsed { get; set; }
     public DateTime LastUsed { get; set; }
     public string CreatedBy { get; set; } = "";
@@ -715,6 +808,7 @@ public class PublishedExamViewModel
 {
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";
+    public string Subject { get; set; } = "General";
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public int ExamDuration { get; set; }

@@ -432,7 +432,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                     <TextBlock Text="🔴 Live Exam Monitor" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                                     <Border Background="#10B981" CornerRadius="4" Padding="8,4" Margin="12,0,0,0">
-                                        <TextBlock Text="3 Active Sessions" FontSize="11" FontWeight="Medium" Foreground="White"/>
+                                        <TextBlock x:Name="ActiveSessionsText" Text="0 Active Sessions" FontSize="11" FontWeight="Medium" Foreground="White"/>
                                     </Border>
                                 </StackPanel>
 
@@ -446,19 +446,19 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                        <TextBlock Text="24" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="LiveOnlineValue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Online" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                        <TextBlock Text="2" FontSize="24" FontWeight="Bold" Foreground="{StaticResource ErrorRed}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="LiveDisconnectedValue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource ErrorRed}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Disconnected" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                        <TextBlock Text="67%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="LiveProgressValue" Text="0%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Avg Progress" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="3" HorizontalAlignment="Center">
-                                        <TextBlock Text="5" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="LiveFlagsValue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Flags" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Grid>
@@ -537,18 +537,7 @@
                                 <TextBox x:Name="BankSearchBox" Grid.Column="0" Text="Search exam bank..." Padding="10,8" Background="{StaticResource SurfaceLight}" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" FontSize="13" TextChanged="BankSearch_Changed" GotFocus="BankSearchBox_GotFocus" LostFocus="BankSearchBox_LostFocus"/>
                                 
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
-                                    <ComboBox x:Name="SubjectFilter" Width="120" Padding="8" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                                        <ComboBoxItem Content="All Subjects"/>
-                                        <ComboBoxItem Content="Mathematics"/>
-                                        <ComboBoxItem Content="Science"/>
-                                        <ComboBoxItem Content="History"/>
-                                    </ComboBox>
-                                    <ComboBox x:Name="DifficultyFilter" Width="120" Margin="8,0,0,0" Padding="8" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1">
-                                        <ComboBoxItem Content="All Levels"/>
-                                        <ComboBoxItem Content="Easy"/>
-                                        <ComboBoxItem Content="Medium"/>
-                                        <ComboBoxItem Content="Hard"/>
-                                    </ComboBox>
+                                    <ComboBox x:Name="SubjectFilter" Width="150" Padding="8" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" SelectionChanged="SubjectFilter_Changed"/>
                                 </StackPanel>
                             </Grid>
 
@@ -567,7 +556,6 @@
                                     <DataGridTextColumn Header="Title" Binding="{Binding Title}" Width="*"/>
                                     <DataGridTextColumn Header="Subject" Binding="{Binding Subject}" Width="120"/>
                                     <DataGridTextColumn Header="Questions" Binding="{Binding QuestionCount}" Width="80"/>
-                                    <DataGridTextColumn Header="Difficulty" Binding="{Binding Difficulty}" Width="80"/>
                                     <DataGridTextColumn Header="Usage" Binding="{Binding TimesUsed}" Width="60"/>
                                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='{}{0:MM/dd}'}" Width="80"/>
                                     <DataGridTemplateColumn Header="Actions" Width="120">
@@ -600,7 +588,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
                                     <TextBlock Text="📊 Grading Queue" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
                                     <Border Background="{StaticResource WarningYellow}" CornerRadius="4" Padding="8,4" Margin="12,0,0,0">
-                                        <TextBlock Text="12 Pending Review" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BackgroundDark}"/>
+                                        <TextBlock x:Name="PendingReviewBadge" Text="0 Pending Review" FontSize="11" FontWeight="Medium" Foreground="{StaticResource BackgroundDark}"/>
                                     </Border>
                                 </StackPanel>
 
@@ -613,15 +601,15 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0" HorizontalAlignment="Center">
-                                        <TextBlock Text="145" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="AutoGradedValue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Auto-Graded" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" HorizontalAlignment="Center">
-                                        <TextBlock Text="12" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="ManualReviewValue" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Manual Review" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2" HorizontalAlignment="Center">
-                                        <TextBlock Text="82%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                        <TextBlock x:Name="PassRateValue" Text="0%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
                                         <TextBlock Text="Pass Rate" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                     </StackPanel>
                                 </Grid>
@@ -670,23 +658,23 @@
                                         <StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                 <TextBlock Text="A: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
-                                                <Border Background="{StaticResource AccentGold}" Height="4" Width="60" CornerRadius="2" VerticalAlignment="Center"/>
-                                                <TextBlock Text=" 23%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                                <Border x:Name="GradeABar" Background="{StaticResource AccentGold}" Height="4" Width="0" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="GradeAValue" Text=" 0%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                 <TextBlock Text="B: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
-                                                <Border Background="{StaticResource AccentBlue}" Height="4" Width="45" CornerRadius="2" VerticalAlignment="Center"/>
-                                                <TextBlock Text=" 18%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                                <Border x:Name="GradeBBar" Background="{StaticResource AccentBlue}" Height="4" Width="0" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="GradeBValue" Text=" 0%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
                                                 <TextBlock Text="C: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
-                                                <Border Background="{StaticResource WarningYellow}" Height="4" Width="35" CornerRadius="2" VerticalAlignment="Center"/>
-                                                <TextBlock Text=" 14%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                                <Border x:Name="GradeCBar" Background="{StaticResource WarningYellow}" Height="4" Width="0" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="GradeCValue" Text=" 0%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
                                             </StackPanel>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="F: " FontSize="12" Foreground="{StaticResource TextSecondary}" Width="20"/>
-                                                <Border Background="{StaticResource ErrorRed}" Height="4" Width="25" CornerRadius="2" VerticalAlignment="Center"/>
-                                                <TextBlock Text=" 10%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
+                                                <Border x:Name="GradeFBar" Background="{StaticResource ErrorRed}" Height="4" Width="0" CornerRadius="2" VerticalAlignment="Center"/>
+                                                <TextBlock x:Name="GradeFValue" Text=" 0%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0"/>
                                             </StackPanel>
                                         </StackPanel>
                                     </StackPanel>
