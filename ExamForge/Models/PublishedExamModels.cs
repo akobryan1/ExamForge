@@ -172,4 +172,59 @@ namespace ExamForge.Models
         }
     }
 
+    [FirestoreData]
+    public class GradingQueueItem
+    {
+        [FirestoreProperty]
+        public string Id { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string ExamId { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string ExamTitle { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string SubmissionId { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string StudentName { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string StudentId { get; set; } = "";
+        
+        [FirestoreProperty]
+        public int QuestionNumber { get; set; }
+        
+        [FirestoreProperty]
+        public string QuestionText { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string QuestionType { get; set; } = "";
+        
+        [FirestoreProperty]
+        public string StudentAnswer { get; set; } = "";
+        
+        [FirestoreProperty]
+        public int MaxPoints { get; set; }
+        
+        [FirestoreProperty]
+        public int? PointsAwarded { get; set; }
+        
+        [FirestoreProperty]
+        public string Status { get; set; } = "Pending"; // Pending, Graded
+        
+        [FirestoreProperty]
+        public DateTime SubmittedAt { get; set; }
+        
+        [FirestoreProperty]
+        public DateTime? GradedAt { get; set; }
+        
+        [FirestoreProperty]
+        public string? GradedBy { get; set; }
+        
+        [FirestoreProperty]
+        public string? Feedback { get; set; }
+    }
+
 }

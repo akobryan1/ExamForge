@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using ExamForge.Models; // Add this line
+using ExamForge.Models;
 
 namespace ExamForge
 {
@@ -15,23 +15,17 @@ namespace ExamForge
 
         private void GoogleSignIn_Checked(object sender, RoutedEventArgs e)
         {
-            fullname_checkbox.IsEnabled = false;
-            year_section_checkbox.IsEnabled = false;
-            student_number_checkbox.IsEnabled = false;
+            // No checkboxes to disable anymore
         }
 
         private void AllowGuests_Checked(object sender, RoutedEventArgs e)
         {
-            fullname_checkbox.IsEnabled = true;
-            year_section_checkbox.IsEnabled = true;
-            student_number_checkbox.IsEnabled = true;
+            // No checkboxes to enable anymore
         }
 
         private void AllowGuests_Unchecked(object sender, RoutedEventArgs e)
         {
-            fullname_checkbox.IsEnabled = false;
-            year_section_checkbox.IsEnabled = false;
-            student_number_checkbox.IsEnabled = false;
+            // No checkboxes to disable anymore
         }
 
         public object SaveState()
@@ -39,9 +33,10 @@ namespace ExamForge
             return new LoginConfigState
             {
                 IsGoogleSignIn = google_signin_radiobutton.IsChecked == true,
-                RequireFullName = fullname_checkbox.IsChecked == true,
-                RequireYearSection = year_section_checkbox.IsChecked == true,
-                RequireStudentNumber = student_number_checkbox.IsChecked == true
+                // ✅ When "Allow as Guests" is selected, all fields are required by default
+                RequireFullName = allow_guests_radiobutton.IsChecked == true,
+                RequireYearSection = allow_guests_radiobutton.IsChecked == true,
+                RequireStudentNumber = allow_guests_radiobutton.IsChecked == true
             };
         }
 
@@ -57,14 +52,7 @@ namespace ExamForge
                 {
                     allow_guests_radiobutton.IsChecked = true;
                 }
-                
-                fullname_checkbox.IsChecked = savedState.RequireFullName;
-                year_section_checkbox.IsChecked = savedState.RequireYearSection;
-                student_number_checkbox.IsChecked = savedState.RequireStudentNumber;
             }
         }
     }
-
-    // ❌ REMOVE THIS - It's now in ExamReviewData.cs:
-    // public class LoginConfigState { ... }
 }

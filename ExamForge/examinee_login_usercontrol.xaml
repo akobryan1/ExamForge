@@ -62,64 +62,12 @@
 
             <!-- Sub-options for Allow as Guests (indented) -->
             <StackPanel Orientation="Vertical" Margin="32,0,0,0">
-                <TextBlock Text="Required Information:"
-                           Foreground="{StaticResource TextSecondary}"
-                           FontSize="13"
-                           Margin="0,0,0,12"/>
 
                 <!-- Full Name -->
-                <CheckBox x:Name="fullname_checkbox"
-                          Content="Full Name"
-                          Foreground="{StaticResource TextSecondary}"
-                          FontSize="14"
-                          Margin="0,0,0,12"
-                          IsEnabled="False"
-                          IsChecked="True">
-                    <CheckBox.ToolTip>
-                        <ToolTip Background="{StaticResource SurfaceDark}" 
-                                 BorderBrush="{StaticResource BorderColor}">
-                            <TextBlock Text="Require examinees to provide their full name."
-                                       Foreground="{StaticResource TextSecondary}"
-                                       MaxWidth="300"
-                                       TextWrapping="Wrap"/>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
 
                 <!-- Year and Section -->
-                <CheckBox x:Name="year_section_checkbox"
-                          Content="Year and Section"
-                          Foreground="{StaticResource TextSecondary}"
-                          FontSize="14"
-                          Margin="0,0,0,12"
-                          IsEnabled="False">
-                    <CheckBox.ToolTip>
-                        <ToolTip Background="{StaticResource SurfaceDark}" 
-                                 BorderBrush="{StaticResource BorderColor}">
-                            <TextBlock Text="Require examinees to provide their year level and section."
-                                       Foreground="{StaticResource TextSecondary}"
-                                       MaxWidth="300"
-                                       TextWrapping="Wrap"/>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
 
                 <!-- Student Number -->
-                <CheckBox x:Name="student_number_checkbox"
-                          Content="Student Number"
-                          Foreground="{StaticResource TextSecondary}"
-                          FontSize="14"
-                          IsEnabled="False">
-                    <CheckBox.ToolTip>
-                        <ToolTip Background="{StaticResource SurfaceDark}" 
-                                 BorderBrush="{StaticResource BorderColor}">
-                            <TextBlock Text="Require examinees to provide their student ID number."
-                                       Foreground="{StaticResource TextSecondary}"
-                                       MaxWidth="300"
-                                       TextWrapping="Wrap"/>
-                        </ToolTip>
-                    </CheckBox.ToolTip>
-                </CheckBox>
             </StackPanel>
         </StackPanel>
     </Grid>

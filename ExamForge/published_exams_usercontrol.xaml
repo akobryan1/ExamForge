@@ -558,12 +558,12 @@
                                     <DataGridTextColumn Header="Questions" Binding="{Binding QuestionCount}" Width="80"/>
                                     <DataGridTextColumn Header="Usage" Binding="{Binding TimesUsed}" Width="60"/>
                                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='{}{0:MM/dd}'}" Width="80"/>
-                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                    <DataGridTemplateColumn Header="Actions" Width="180">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Content="Clone" FontSize="10" Padding="6,3" Click="CloneExam_Click" Tag="{Binding Id}"/>
-                                                    <Button Content="Edit" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="EditBankExam_Click" Tag="{Binding Id}"/>
+                                                    <Button Content="Reuse" FontSize="10" Padding="6,3" Click="ReuseExam_Click" Tag="{Binding Id}" ToolTip="Load this exam as a template for a new exam"/>
+                                                    <Button Content="📋 Copy Link" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="CopyExamLink_Click" Tag="{Binding Id}" ToolTip="Copy exam URL to clipboard"/>
                                                 </StackPanel>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
@@ -630,6 +630,7 @@
                                         <DataGridTextColumn Header="Submitted" Binding="{Binding SubmittedAt, StringFormat='{}{0:MM/dd HH:mm}'}" Width="120"/>
                                         <DataGridTextColumn Header="Auto Score" Binding="{Binding AutoScore}" Width="80"/>
                                         <DataGridTextColumn Header="Essays" Binding="{Binding EssayCount}" Width="60"/>
+                                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
                                         <DataGridTemplateColumn Header="Action" Width="100">
                                             <DataGridTemplateColumn.CellTemplate>
                                                 <DataTemplate>

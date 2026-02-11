@@ -69,5 +69,13 @@ namespace ExamForge
                 }
             }
         }
+
+        /// <summary>
+        /// Public method to navigate to Published Exams tab from external code
+        /// </summary>
+        public void NavigateToPublishedExams()
+        {
+            Published_Exams_Button_Click(this, new RoutedEventArgs());
+        }
     }
 }

@@ -7,6 +7,7 @@ namespace ExamForge.Models;
 public class ExamReviewData
 {
     public string Title { get; set; } = "";
+    public string Subject { get; set; } = "General"; // ✅ Added Subject field
     public List<ExamStructure> Structures { get; set; } = new();
     public List<ExamContent> Contents { get; set; } = new();
     public DateTime StartTime { get; set; }

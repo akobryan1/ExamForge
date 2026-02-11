@@ -9,6 +9,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using ExamForge.Models;
 using ExamForge.Services;
+using ExamForge.Views;
 
 namespace ExamForge;
 
@@ -28,6 +29,7 @@ public partial class published_exams_usercontrol : UserControl
     // Live monitoring data
     private ObservableCollection<StudentRosterItem> _rosterItems = new();
     private ObservableCollection<IncidentItem> _incidentFeed = new();
+    private List<Models.GradingQueueItem> _gradingQueueItems = new();
     
     // Auto-refresh timers
     private System.Windows.Threading.DispatcherTimer? _liveDataTimer;
@@ -401,7 +403,42 @@ public partial class published_exams_usercontrol : UserControl
             var firestoreService = App.FirestoreService;
             if (firestoreService == null) return;
 
-            // Get completed exams
+            // Load grading queue items (one per essay/short-answer)
+            _gradingQueueItems = await firestoreService.GetGradingQueueItemsAsync();
+
+            var gradingItems = _gradingQueueItems
+                .OrderByDescending(i => i.SubmittedAt)
+                .Select(item => new GradingQueueItemViewModel
+                {
+                    Id = item.Id,
+                    StudentName = item.StudentName,
+                    ExamTitle = item.ExamTitle,
+                    SubmittedAt = item.SubmittedAt,
+                    AutoScore = item.PointsAwarded.HasValue ? $"{item.PointsAwarded}/{item.MaxPoints}" : $"0/{item.MaxPoints}",
+                    EssayCount = 1,
+                    Status = item.Status,
+                    SubmissionId = item.SubmissionId,
+                    QuestionNumber = item.QuestionNumber,
+                    QuestionText = item.QuestionText,
+                    StudentAnswer = item.StudentAnswer,
+                    MaxPoints = item.MaxPoints
+                })
+                .ToList();
+
+            if (GradingQueueGrid != null)
+                GradingQueueGrid.ItemsSource = gradingItems;
+
+            var pendingCount = _gradingQueueItems.Count(i => i.Status != "Graded");
+            var gradedCount = _gradingQueueItems.Count(i => i.Status == "Graded");
+
+            if (PendingReviewBadge != null)
+                PendingReviewBadge.Text = $"{pendingCount} Pending Review";
+            if (ManualReviewValue != null)
+                ManualReviewValue.Text = pendingCount.ToString();
+            if (AutoGradedValue != null)
+                AutoGradedValue.Text = gradedCount.ToString();
+
+            // Get completed exams for metrics
             var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
             var completedExams = publishedExams
                 .Where(e => e.EndTime < DateTime.UtcNow)
@@ -409,8 +446,6 @@ public partial class published_exams_usercontrol : UserControl
                 .Take(20)
                 .ToList();
 
-            // Load grading queue items from submissions
-            var gradingItems = new List<GradingQueueItem>();
             var allSubmissions = new List<ExamSubmission>();
             
             foreach (var exam in completedExams)
@@ -419,28 +454,12 @@ public partial class published_exams_usercontrol : UserControl
                 {
                     var submissions = await firestoreService.GetExamSubmissionsAsync(exam.Id);
                     allSubmissions.AddRange(submissions);
-                    
-                    foreach (var submission in submissions)
-                    {
-                        gradingItems.Add(new GradingQueueItem
-                        {
-                            Id = submission.Id,
-                            StudentName = submission.StudentName,
-                            ExamTitle = exam.Title,
-                            SubmittedAt = submission.EndTime ?? DateTime.Now,
-                            AutoScore = $"{submission.TotalScore:F0}/{submission.TotalPossiblePoints:F0}",
-                            EssayCount = 0 // Essay questions tracking can be enhanced
-                        });
-                    }
                 }
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"Error loading submissions for exam {exam.Title}: {ex.Message}");
                 }
             }
-            
-            if (GradingQueueGrid != null)
-                GradingQueueGrid.ItemsSource = gradingItems.OrderByDescending(g => g.SubmittedAt).ToList();
 
             UpdateClosedTabMetrics(allSubmissions);
             Debug.WriteLine($"📝 Loaded {gradingItems.Count} grading queue items");
@@ -455,6 +474,56 @@ public partial class published_exams_usercontrol : UserControl
     #endregion
 
     #region Event Handlers
+
+    private async void ReviewSubmission_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string gradingItemId)
+            return;
+
+        var gradingItem = _gradingQueueItems.FirstOrDefault(i => i.Id == gradingItemId);
+        if (gradingItem == null)
+        {
+            ShowError("Grading item not found.");
+            return;
+        }
+
+        var dialog = new GradingDialog(
+            gradingItem.Id,
+            gradingItem.StudentName,
+            gradingItem.QuestionNumber,
+            gradingItem.QuestionText,
+            gradingItem.StudentAnswer,
+            gradingItem.MaxPoints)
+        {
+            Owner = Window.GetWindow(this)
+        };
+
+        var result = dialog.ShowDialog();
+        if (result == true && dialog.PointsAwarded.HasValue)
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            try
+            {
+                await firestoreService.UpdateGradingQueueItemAsync(
+                    gradingItem.Id,
+                    dialog.PointsAwarded.Value,
+                    dialog.Feedback,
+                    "Instructor");
+
+                await LoadClosedExamsAsync();
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to save grade: {ex.Message}");
+            }
+        }
+    }
 
     private void Filter_Changed(object sender, RoutedEventArgs e)
     {
@@ -609,29 +678,83 @@ public partial class published_exams_usercontrol : UserControl
 
     private void CloneExam_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string examId)
-        {
-            MessageBox.Show($"Clone exam {examId} functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
-        }
+        // This method is no longer used - replaced by ReuseExam_Click
     }
 
     private void EditBankExam_Click(object sender, RoutedEventArgs e)
     {
+        // This method is no longer used - replaced by ReuseExam_Click
+    }
+
+    private async void ReuseExam_Click(object sender, RoutedEventArgs e)
+    {
         if (sender is Button btn && btn.Tag is string examId)
         {
-            MessageBox.Show($"Edit exam {examId} functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                var firestoreService = App.FirestoreService;
+                if (firestoreService == null)
+                {
+                    ShowError("Firestore service not initialized");
+                    return;
+                }
+
+                // Load the exam from Firestore
+                var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
+                var exam = publishedExams.FirstOrDefault(e => e.Id == examId);
+
+                if (exam == null)
+                {
+                    ShowError("Exam not found");
+                    return;
+                }
+
+                // Navigate to exam creation and load the exam data as a template
+                var mainWindow = Window.GetWindow(this) as MainWindow;
+                if (mainWindow != null)
+                {
+                    await mainWindow.LoadExamForEditing(examId);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to reuse exam: {ex.Message}");
+            }
         }
     }
 
-    // Grading Queue event handlers
-    private void ReviewSubmission_Click(object sender, RoutedEventArgs e)
+    private async void CopyExamLink_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string submissionId)
+        if (sender is Button btn && btn.Tag is string examId)
         {
-            MessageBox.Show($"Review submission {submissionId} functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                var firestoreService = App.FirestoreService;
+                if (firestoreService == null)
+                {
+                    ShowError("Firestore service not initialized");
+                    return;
+                }
+
+                // Get the exam URL
+                var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
+                var exam = publishedExams.FirstOrDefault(e => e.Id == examId);
+
+                if (exam == null || string.IsNullOrEmpty(exam.ExamUrl))
+                {
+                    ShowError("Exam URL not found");
+                    return;
+                }
+
+                // Copy to clipboard
+                Clipboard.SetText(exam.ExamUrl);
+                MessageBox.Show("Exam URL copied to clipboard!", "Success",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to copy exam link: {ex.Message}");
+            }
         }
     }
 
@@ -782,7 +905,7 @@ public class ExamBankItem
     public bool IsPublished { get; set; }
 }
 
-public class GradingQueueItem
+public class GradingQueueItemViewModel
 {
     public string Id { get; set; } = "";
     public string StudentName { get; set; } = "";
@@ -790,6 +913,12 @@ public class GradingQueueItem
     public DateTime SubmittedAt { get; set; }
     public string AutoScore { get; set; } = "";
     public int EssayCount { get; set; }
+    public string Status { get; set; } = "Pending";
+    public string SubmissionId { get; set; } = "";
+    public int QuestionNumber { get; set; }
+    public string QuestionText { get; set; } = "";
+    public string StudentAnswer { get; set; } = "";
+    public int MaxPoints { get; set; }
 }
 
 public class RecentExportItem

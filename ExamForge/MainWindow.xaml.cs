@@ -17,10 +17,18 @@ public partial class MainWindow : Window
 {
     private object? _currentExamBuilderView;
     private structure_builder_usercontrol? _structureBuilderInstance;
+    private sidebar_usercontrol? _sidebar;
 
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += MainWindow_Loaded;
+    }
+
+    private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        // Get reference to sidebar
+        _sidebar = this.FindName("Sidebar") as sidebar_usercontrol;
     }
 
     private void sidebar_usercontrol_Loaded(object sender, RoutedEventArgs e)
@@ -67,8 +75,14 @@ public partial class MainWindow : Window
         {
             ReturnToExamBuilder();
 
+            // ✅ Redirect to Published Exams tab
+            if (_sidebar != null)
+            {
+                _sidebar.NavigateToPublishedExams();
+            }
+
             MessageBox.Show(
-                "Exam has been published successfully!\nStudents can now access it via the provided URL.",
+                "Exam has been published successfully!\nYou can now view it in the Published Exams tab.",
                 "Success",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -117,6 +131,8 @@ public partial class MainWindow : Window
             return null;
         }
 
+        var examSubject = _structureBuilderInstance.GetSubjectName();
+
         var structureState = _structureBuilderInstance.GetStructureState();
         if (structureState == null || structureState.Rows.Count == 0)
         {
@@ -164,6 +180,7 @@ public partial class MainWindow : Window
         return new ExamReviewData
         {
             Title = examTitle,
+            Subject = examSubject,
             Structures = ConvertToExamStructures(structureState),
             Contents = ConvertToExamContents(contentItems),
             StartTime = startTimeUtc,

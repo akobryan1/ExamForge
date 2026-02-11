@@ -381,6 +381,63 @@ public class FirestoreService
 
     #endregion
 
+    #region Grading Queue Methods
+
+    public async Task<List<GradingQueueItem>> GetGradingQueueItemsAsync(string? examId = null)
+    {
+        try
+        {
+            Query query = _firestoreDb.Collection("grading_queue");
+            
+            if (!string.IsNullOrEmpty(examId))
+            {
+                query = query.WhereEqualTo("ExamId", examId);
+            }
+            
+            query = query.OrderBy("SubmittedAt");
+            
+            var snapshot = await query.GetSnapshotAsync();
+            return snapshot.Documents.Select(d => d.ConvertTo<GradingQueueItem>()).ToList();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to get grading queue items: {ex.Message}", ex);
+        }
+    }
+
+    public async Task UpdateGradingQueueItemAsync(string itemId, int pointsAwarded, string? feedback = null, string? gradedBy = null)
+    {
+        try
+        {
+            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            
+            var updates = new Dictionary<string, object>
+            {
+                { "PointsAwarded", pointsAwarded },
+                { "Status", "Graded" },
+                { "GradedAt", Timestamp.GetCurrentTimestamp() }
+            };
+            
+            if (!string.IsNullOrEmpty(feedback))
+            {
+                updates["Feedback"] = feedback;
+            }
+            
+            if (!string.IsNullOrEmpty(gradedBy))
+            {
+                updates["GradedBy"] = gradedBy;
+            }
+            
+            await docRef.UpdateAsync(updates);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to update grading queue item: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
+
     private PublishedExam ConvertSnapshotToPublishedExam(DocumentSnapshot doc)
     {
         var data = doc.ToDictionary();

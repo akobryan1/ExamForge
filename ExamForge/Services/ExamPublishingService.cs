@@ -50,7 +50,8 @@ public class ExamPublishingService
                 }).ToList(),
                 StartTime = examData.StartTime,
                 EndTime = examData.EndTime,
-                ExamDuration = examData.ExamDuration
+                ExamDuration = examData.ExamDuration,
+                LoginConfig = examData.LoginConfig // ✅ FIX: Pass LoginConfig for HTML generation
             };
             
             // Generate HTML with sanitized data
@@ -62,6 +63,7 @@ public class ExamPublishingService
             {
                 Id = examId,
                 Title = examData.Title,
+                Subject = string.IsNullOrWhiteSpace(examData.Subject) ? "General" : examData.Subject, // ✅ Capture subject
                 Structures = examData.Structures,
                 Contents = examData.Contents,
                 StartTime = examData.StartTime,
@@ -708,16 +710,20 @@ public class ExamPublishingService
         sb.AppendLine();
         sb.AppendLine("                const submissionData = {");
         sb.AppendLine("                    examId: examId,");
-        sb.AppendLine("                    studentInfo: window.studentInfo,");
+        sb.AppendLine("                    studentName: window.studentInfo.name || '',");
+        sb.AppendLine("                    studentEmail: window.studentInfo.email || '',");
+        sb.AppendLine("                    studentId: window.studentInfo.studentId || '',");
+        sb.AppendLine("                    yearSection: window.studentInfo.yearSection || '',");
         sb.AppendLine("                    answers: answers,");
         sb.AppendLine("                    submittedAt: new Date().toISOString(),");
-        sb.AppendLine("                    timeElapsed: ((examDuration * 60) - timeRemaining)");
+        sb.AppendLine("                    timeElapsed: ((examDuration * 60) - timeRemaining),");
+        sb.AppendLine("                    status: 'Submitted'");
         sb.AppendLine("                };");
         sb.AppendLine();
         sb.AppendLine("                console.log('Submitting exam data:', submissionData);");
         sb.AppendLine();
         sb.AppendLine("                // Submit to API endpoint");
-        sb.AppendLine("                const response = await fetch(apiEndpoint + '/submit', {");
+        sb.AppendLine("                const response = await fetch(apiEndpoint + '/api/submit', {");
         sb.AppendLine("                    method: 'POST',");
         sb.AppendLine("                    headers: {");
         sb.AppendLine("                        'Content-Type': 'application/json'");

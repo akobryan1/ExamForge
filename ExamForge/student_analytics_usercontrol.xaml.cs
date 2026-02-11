@@ -109,6 +109,70 @@ namespace ExamForge
             }
         }
 
+        private async void ApplyFilters_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!_availableExams.Any())
+                {
+                    ShowInfo("No exams available to filter.");
+                    return;
+                }
+
+                // Get filter selections
+                var selectedYearText = (SchoolYearFilter?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All Years";
+                var selectedSubject = (SubjectAnalyticsFilter?.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? "All Subjects";
+                var selectedExamItem = ExamAnalyticsFilter?.SelectedItem as ComboBoxItem;
+                var selectedExamId = selectedExamItem?.Tag as string;
+
+                // Filter exams by year and subject
+                var filteredExams = _availableExams.AsEnumerable();
+
+                if (selectedYearText != "All Years" && int.TryParse(selectedYearText.Substring(0, 4), out int startYear))
+                {
+                    filteredExams = filteredExams.Where(e => e.PublishedDate.Year == startYear);
+                }
+
+                if (selectedSubject != "All Subjects")
+                {
+                    filteredExams = filteredExams.Where(e => string.Equals(e.Subject, selectedSubject, StringComparison.OrdinalIgnoreCase));
+                }
+
+                var filteredList = filteredExams.OrderByDescending(e => e.PublishedDate).ToList();
+
+                if (!filteredList.Any())
+                {
+                    ShowInfo("No exams match the selected filters.");
+                    return;
+                }
+
+                // Determine selected exam id
+                if (!string.IsNullOrEmpty(selectedExamId) && filteredList.Any(e => e.Id == selectedExamId))
+                {
+                    _currentExamId = selectedExamId;
+                }
+                else
+                {
+                    // Default to first filtered exam
+                    _currentExamId = filteredList.First().Id;
+                }
+
+                // Refresh analytics for selected exam
+                await LoadClassOverviewDataAsync();
+                await LoadItemAnalysisDataAsync();
+                await LoadStudentDataAsync();
+                await LoadIntegrityDataAsync();
+                DrawScoreHistogram();
+
+                _lastDataRefresh = DateTime.UtcNow;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error applying analytics filters: {ex.Message}");
+                ShowError($"Failed to apply filters: {ex.Message}");
+            }
+        }
+
         private async Task LoadAnalyticsDataAsync()
         {
             try
@@ -127,7 +191,7 @@ namespace ExamForge
                     DrawScoreHistogram();
                     
                     _lastDataRefresh = DateTime.UtcNow;
-                    Debug.WriteLine($"?? Initial analytics data loaded at {_lastDataRefresh:HH:mm:ss}");
+                    Debug.WriteLine($"? Initial analytics data loaded at {_lastDataRefresh:HH:mm:ss}");
                 }
                 else
                 {
@@ -143,6 +207,87 @@ namespace ExamForge
                 await LoadDemoDataAsync();
                 ShowError($"Failed to load analytics data. Showing demo data. Error: {ex.Message}");
             }
+        }
+
+        private async Task LoadAvailableExamsAsync()
+        {
+            try
+            {
+                _availableExams = await _firestoreService.GetAllPublishedExamsAsync();
+                await PopulateFiltersAsync();
+                Debug.WriteLine($"? Loaded {_availableExams.Count} exams for analytics");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error loading available exams: {ex.Message}");
+                _availableExams = new List<PublishedExam>();
+            }
+        }
+
+        private async Task PopulateFiltersAsync()
+        {
+            await Dispatcher.InvokeAsync(() =>
+            {
+                // Populate School Year filter
+                if (SchoolYearFilter != null)
+                {
+                    SchoolYearFilter.Items.Clear();
+                    SchoolYearFilter.Items.Add(new ComboBoxItem { Content = "All Years" });
+                    
+                    var years = _availableExams
+                        .Select(e => e.PublishedDate.Year)
+                        .Distinct()
+                        .OrderByDescending(y => y)
+                        .Select(y => $"{y}-{y + 1}")
+                        .ToList();
+                    
+                    foreach (var year in years)
+                    {
+                        SchoolYearFilter.Items.Add(new ComboBoxItem { Content = year });
+                    }
+                    
+                    SchoolYearFilter.SelectedIndex = 0;
+                }
+
+                // Populate Subject filter
+                if (SubjectAnalyticsFilter != null)
+                {
+                    SubjectAnalyticsFilter.Items.Clear();
+                    SubjectAnalyticsFilter.Items.Add(new ComboBoxItem { Content = "All Subjects" });
+                    
+                    var subjects = _availableExams
+                        .Select(e => e.Subject)
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .Distinct()
+                        .OrderBy(s => s)
+                        .ToList();
+                    
+                    foreach (var subject in subjects)
+                    {
+                        SubjectAnalyticsFilter.Items.Add(new ComboBoxItem { Content = subject });
+                    }
+                    
+                    SubjectAnalyticsFilter.SelectedIndex = 0;
+                }
+
+                // Populate Exam filter
+                if (ExamAnalyticsFilter != null)
+                {
+                    ExamAnalyticsFilter.Items.Clear();
+                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem { Content = "All Exams" });
+                    
+                    foreach (var exam in _availableExams.OrderByDescending(e => e.PublishedDate))
+                    {
+                        ExamAnalyticsFilter.Items.Add(new ComboBoxItem 
+                        { 
+                            Content = exam.Title,
+                            Tag = exam.Id
+                        });
+                    }
+                    
+                    ExamAnalyticsFilter.SelectedIndex = _availableExams.Any() ? 1 : 0;
+                }
+            });
         }
 
         private async Task LoadDemoDataAsync()
@@ -222,39 +367,6 @@ namespace ExamForge
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error loading demo students: {ex.Message}");
-            }
-        }
-
-        private async Task LoadAvailableExamsAsync()
-        {
-            try
-            {
-                _availableExams = await _firestoreService.GetAllPublishedExamsAsync();
-                
-                // Update filter dropdown with real exams
-                if (ExamAnalyticsFilter != null)
-                {
-                    ExamAnalyticsFilter.Items.Clear();
-                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem { Content = "All Exams" });
-                    
-                    foreach (var exam in _availableExams)
-                    {
-                        ExamAnalyticsFilter.Items.Add(new ComboBoxItem 
-                        { 
-                            Content = exam.Title,
-                            Tag = exam.Id
-                        });
-                    }
-                    
-                    if (_availableExams.Any())
-                    {
-                        ExamAnalyticsFilter.SelectedIndex = 1; // Select first real exam
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error loading available exams: {ex.Message}");
             }
         }
 
@@ -712,30 +824,6 @@ namespace ExamForge
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error drawing histogram bars: {ex.Message}");
-            }
-        }
-
-        private void ApplyFilters_Click(object sender, RoutedEventArgs e)
-        {
-            try
-            {
-                // Get selected exam from filter
-                if (ExamAnalyticsFilter?.SelectedItem is ComboBoxItem selectedItem && 
-                    selectedItem.Tag is string examId)
-                {
-                    _currentExamId = examId;
-                    LoadAnalyticsDataAsync();
-                }
-                else if (ExamAnalyticsFilter?.SelectedIndex == 0) // "All Exams" selected
-                {
-                    // Use first available exam
-                    _currentExamId = _availableExams.FirstOrDefault()?.Id ?? "";
-                    LoadAnalyticsDataAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error applying filters: {ex.Message}");
             }
         }
 
