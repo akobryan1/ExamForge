@@ -10,7 +10,7 @@ using ExamForge.Services;
 
 namespace ExamForge
 {
-    public partial class dashboard_usercontrol : UserControl
+    public partial class dashboard_usercontrol_v2 : UserControl
     {
         private readonly FirestoreService _firestoreService;
         private readonly AnalyticsService _analyticsService;
@@ -23,7 +23,7 @@ namespace ExamForge
         private List<GradingQueueItem> _gradingQueue = new();
         private bool _signalrSubscribed = false;
 
-        public dashboard_usercontrol()
+        public dashboard_usercontrol_v2()
         {
             InitializeComponent();
             _firestoreService = App.FirestoreService ?? throw new InvalidOperationException("Firestore service not initialized");
@@ -138,14 +138,15 @@ namespace ExamForge
 
         private void UpdateDashboard()
         {
-            UpdateKpis();
-            UpdateScheduleAndLiveMonitor();
+            UpdateKpis(_exams);
+            UpdateHeroPanel();
             UpdateGradingQueue();
+            _ = UpdatePerformanceSnapshotAsync();
         }
 
-        private void UpdateKpis()
+        private void UpdateKpis(List<PublishedExam> filtered)
         {
-            var upcoming = _exams.Count(e => e.StartTime >= DateTime.UtcNow && e.StartTime <= DateTime.UtcNow.AddDays(7));
+            var upcoming = filtered.Count(e => e.StartTime >= DateTime.UtcNow && e.StartTime <= DateTime.UtcNow.AddDays(7));
             var liveCount = _liveSessions.Count;
             var pendingGrading = _gradingQueue.Count(g => !g.PointsAwarded.HasValue);
             var flags = _recentIncidents.Count;
@@ -155,51 +156,56 @@ namespace ExamForge
             GradingCountText.Text = pendingGrading > 0 ? pendingGrading.ToString() : "–";
             FlagsCountText.Text = flags > 0 ? flags.ToString() : "–";
 
-            UpcomingSubtitle.Text = upcoming > 0 ? "Scheduled this week" : "Nothing scheduled";
-            LiveSubtitle.Text = liveCount > 0 ? "Monitoring active" : "No live exams";
-            GradingSubtitle.Text = pendingGrading > 0 ? "Needs review" : "All graded";
-            FlagsSubtitle.Text = flags > 0 ? "Review incidents" : "No alerts";
+            UpcomingSubtitle.Text = upcoming > 0 ? $"{upcoming} exams this week" : "Nothing scheduled";
+            LiveSubtitle.Text = liveCount > 0 ? $"{liveCount} active sessions" : "No live exams";
+            GradingSubtitle.Text = pendingGrading > 0 ? $"{pendingGrading} awaiting review" : "All caught up";
+            FlagsSubtitle.Text = flags > 0 ? $"{flags} recent alerts" : "No incidents";
         }
 
-        private void UpdateScheduleAndLiveMonitor()
+        private void UpdateHeroPanel()
         {
-            var today = DateTime.UtcNow.Date;
-            var todayItems = _exams
-                .Where(e => e.StartTime.Date == today)
-                .OrderBy(e => e.StartTime)
-                .Select(e => new TodayScheduleItem
-                {
-                    ExamId = e.Id,
-                    Title = e.Title,
-                    Schedule = $"{e.StartTime:t} - {e.EndTime:t}",
-                    Meta = $"Duration: {e.ExamDuration} mins • Subject: {e.Subject}"
-                })
-                .ToList();
-
-            TodayScheduleList.ItemsSource = todayItems;
-            TodayEmptyState.Visibility = todayItems.Any() ? Visibility.Collapsed : Visibility.Visible;
-
-            // Live Monitor Stats
-            if (!_liveSessions.Any())
+            if (_liveSessions.Any())
             {
-                LiveEmpty.Visibility = Visibility.Visible;
-                StartedCountText.Text = "–";
-                SubmittedCountText.Text = "–";
-                AvgProgressText.Text = "–";
-                LastActivityText.Text = "–";
-            }
-            else
-            {
-                LiveEmpty.Visibility = Visibility.Collapsed;
+                // Show live monitor
+                HeroPanelTitle.Text = "Live Exam Monitor";
+                HeroActionButton.Content = "Open Monitor";
+                HeroActionButton.Visibility = Visibility.Visible;
+                LiveStatsPanel.Visibility = Visibility.Visible;
+                TodayScheduleList.Visibility = Visibility.Collapsed;
+                TodayEmptyState.Visibility = Visibility.Collapsed;
+
                 var participants = _liveSessions.SelectMany(s => s.Participants.Values).ToList();
                 var started = participants.Count;
                 var submitted = participants.Count(p => p.ProgressPercent >= 100);
                 var avgProgress = participants.Any() ? participants.Average(p => p.ProgressPercent) : 0;
 
-                StartedCountText.Text = started.ToString();
-                SubmittedCountText.Text = submitted.ToString();
-                AvgProgressText.Text = $"{avgProgress:F0}%";
-                LastActivityText.Text = _liveSessions.Max(s => s.LastHeartbeat).ToLocalTime().ToString("t");
+                StartedCountRun.Text = started.ToString();
+                SubmittedCountRun.Text = submitted.ToString();
+                AvgProgressRun.Text = $"{avgProgress:F0}%";
+            }
+            else
+            {
+                // Show today's schedule
+                HeroPanelTitle.Text = "Today's Schedule";
+                HeroActionButton.Visibility = Visibility.Collapsed;
+                LiveStatsPanel.Visibility = Visibility.Collapsed;
+
+                var today = DateTime.UtcNow.Date;
+                var todayItems = _exams
+                    .Where(e => e.StartTime.Date == today)
+                    .OrderBy(e => e.StartTime)
+                    .Select(e => new TodayScheduleItem
+                    {
+                        ExamId = e.Id,
+                        Title = e.Title,
+                        Schedule = $"{e.StartTime:t} - {e.EndTime:t}",
+                        Meta = $"Duration: {e.ExamDuration} mins • Subject: {e.Subject}"
+                    })
+                    .ToList();
+
+                TodayScheduleList.ItemsSource = todayItems;
+                TodayScheduleList.Visibility = todayItems.Any() ? Visibility.Visible : Visibility.Collapsed;
+                TodayEmptyState.Visibility = todayItems.Any() ? Visibility.Collapsed : Visibility.Visible;
             }
         }
 
@@ -211,7 +217,6 @@ namespace ExamForge
                 ExamId = g.ExamId,
                 ExamTitle = g.ExamTitle,
                 Student = $"{g.StudentName} • Q{g.QuestionNumber}",
-                Due = g.SubmittedAt == default ? "Submitted" : $"Submitted {g.SubmittedAt:g}",
                 QuestionNumber = g.QuestionNumber,
                 QuestionText = g.QuestionText,
                 StudentAnswer = g.StudentAnswer,
@@ -219,7 +224,25 @@ namespace ExamForge
             }).ToList();
 
             GradingQueueList.ItemsSource = items;
+            GradingQueueList.Visibility = items.Any() ? Visibility.Visible : Visibility.Collapsed;
             GradingEmpty.Visibility = items.Any() ? Visibility.Collapsed : Visibility.Visible;
+        }
+
+        private async Task UpdatePerformanceSnapshotAsync()
+        {
+            var selectedExamId = _exams.FirstOrDefault()?.Id;
+            if (string.IsNullOrEmpty(selectedExamId)) return;
+
+            try
+            {
+                var metrics = await _analyticsService.CalculateClassOverviewAsync(selectedExamId);
+                MeanScoreText.Text = double.IsNaN(metrics.ClassAverage) ? "--" : $"{metrics.ClassAverage:F0}%";
+                PassRateText.Text = $"{metrics.PassRate:F0}%";
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error updating performance: {ex.Message}");
+            }
         }
 
         private void UpcomingCard_Click(object sender, MouseButtonEventArgs e)
@@ -242,23 +265,7 @@ namespace ExamForge
             NavigateToAnalytics();
         }
 
-        private void SendReminder_Click(object sender, RoutedEventArgs e)
-        {
-            var count = _liveSessions.Count;
-            MessageBox.Show(count > 0 ? $"Reminder sent to {count} live sessions." : "No live sessions to notify.", "Reminder", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void EditExam_Click(object sender, RoutedEventArgs e)
-        {
-            NavigateToPublishedExams();
-        }
-
-        private void DuplicateExam_Click(object sender, RoutedEventArgs e)
-        {
-            NavigateToPublishedExams();
-        }
-
-        private void ViewMonitor_Click(object sender, RoutedEventArgs e)
+        private void HeroAction_Click(object sender, RoutedEventArgs e)
         {
             NavigateToAnalytics();
         }
@@ -307,65 +314,6 @@ namespace ExamForge
             }
         }
 
-        private async void ExtendTime_Click(object sender, RoutedEventArgs e)
-        {
-            if (!_liveSessions.Any())
-            {
-                MessageBox.Show("No live sessions to extend.", "Extend Time", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var result = MessageBox.Show("Extend time by 5 minutes for all active sessions?", "Extend Time", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (result != MessageBoxResult.Yes) return;
-
-            var addedSeconds = 5 * 60; // 5 minutes
-
-            foreach (var session in _liveSessions)
-            {
-                foreach (var participant in session.Participants.Values)
-                {
-                    participant.TimeRemaining += addedSeconds;
-                    participant.LastHeartbeat = DateTime.UtcNow;
-                }
-
-                session.LastHeartbeat = DateTime.UtcNow;
-
-                await _firestoreService.UpdateSessionAsync(session);
-                await _firestoreService.LogEventAsync(new SessionEvent
-                {
-                    SessionId = session.Id,
-                    ExamId = session.ExamId,
-                    EventType = "teacher_extend_time",
-                    Severity = "Info",
-                    Details = "Extended time by 5 minute(s) for all participants"
-                });
-
-                if (_signalRService != null)
-                {
-                    try
-                    {
-                        if (!_signalRService.IsConnected)
-                        {
-                            await _signalRService.ConnectAsync();
-                        }
-
-                        await _signalRService.BroadcastMessageAsync(session.Id, "extend_time:5");
-                    }
-                    catch (Exception ex)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"SignalR extend time failed: {ex.Message}");
-                    }
-                }
-            }
-
-            MessageBox.Show($"Extended {_liveSessions.Count} session(s) by 5 minutes.", "Extend Time", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
-        private void OpenAnalytics_Click(object sender, RoutedEventArgs e)
-        {
-            NavigateToAnalytics();
-        }
-
         private void NavigateToPublishedExams()
         {
             if (Window.GetWindow(this) is MainWindow main && main.FindName("MainContentHost") is ContentControl host)
@@ -405,12 +353,6 @@ namespace ExamForge
             }
         }
 
-        
-
-        
-
-        
-
         private class TodayScheduleItem
         {
             public string ExamId { get; set; } = string.Empty;
@@ -425,7 +367,6 @@ namespace ExamForge
             public string ExamId { get; set; } = string.Empty;
             public string ExamTitle { get; set; } = string.Empty;
             public string Student { get; set; } = string.Empty;
-            public string Due { get; set; } = string.Empty;
             public int QuestionNumber { get; set; }
             public string QuestionText { get; set; } = string.Empty;
             public string StudentAnswer { get; set; } = string.Empty;

@@ -6,12 +6,12 @@
              mc:Ignorable="d"
              d:DesignHeight="760" d:DesignWidth="1000"
              Margin="0"
-             Background="{StaticResource BackgroundDark}">
+             Background="{StaticResource AppBackgroundBrush}">
 
     <UserControl.Resources>
         <!-- Tab Button Style -->
         <Style x:Key="AnalyticsTabButtonStyle" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Padding" Value="20,12"/>
@@ -28,11 +28,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource AccentGold}"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -42,17 +42,17 @@
 
         <!-- Analytics Card Style -->
         <Style x:Key="AnalyticsCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource SurfaceDark}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="20"/>
         </Style>
 
         <!-- Metric Card Style -->
         <Style x:Key="MetricCardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource SurfaceLight}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+            <Setter Property="Background" Value="{StaticResource HeaderBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrushLight}"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="16"/>
@@ -79,8 +79,8 @@
         </Style>
     </UserControl.Resources>
 
-    <!-- Premium Background -->
-    <Grid Background="{StaticResource BackgroundDark}">
+    <!-- Light Modern Background -->
+    <Grid Background="{StaticResource AppBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -88,25 +88,24 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Border Grid.Row="0" Background="{StaticResource SurfaceDark}" Padding="24,24,24,16">
+        <Border Grid.Row="0" Background="{StaticResource CardBackgroundBrush}" 
+                BorderBrush="{StaticResource BorderBrushLight}" BorderThickness="0,0,0,1" 
+                Padding="30,24,30,16">
             <StackPanel>
                 <TextBlock Text="Student Analytics and Performance Insights"
-                           FontSize="24"
-                           FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimary}"/>
+                           Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Analyze student performance, identify learning gaps, and track progress over time"
-                           FontSize="13"
-                           Foreground="{StaticResource TextSecondary}"
-                           Margin="0,4,0,0"/>
+                           Style="{StaticResource SmallTextStyle}"
+                           Margin="0,8,0,0"/>
             </StackPanel>
         </Border>
 
         <!-- Tab Navigation -->
         <Border Grid.Row="1"
-                Background="{StaticResource SurfaceDark}"
-                BorderBrush="{StaticResource BorderColor}"
-                BorderThickness="0,1"
-                Margin="24,0">
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushLight}"
+                BorderThickness="0,0,0,1"
+                Padding="30,0">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ClassOverviewTab"
                              Content="?? Class Overview"
