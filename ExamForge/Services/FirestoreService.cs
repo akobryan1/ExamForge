@@ -436,6 +436,19 @@ public class FirestoreService
         }
     }
 
+    public async Task RemoveGradingQueueItemAsync(string itemId)
+    {
+        try
+        {
+            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            await docRef.DeleteAsync();
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to remove grading queue item: {ex.Message}", ex);
+        }
+    }
+
     #endregion
 
     private PublishedExam ConvertSnapshotToPublishedExam(DocumentSnapshot doc)

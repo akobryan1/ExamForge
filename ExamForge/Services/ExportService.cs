@@ -201,6 +201,66 @@ namespace ExamForge.Services
         }
 
         /// <summary>
+        /// Export individual student performance report
+        /// </summary>
+        public async Task<string> ExportStudentReportAsync(
+            string studentName,
+            string examTitle,
+            ExamSubmission submission,
+            PublishedExam exam)
+        {
+            try
+            {
+                var percentage = submission.TotalPossiblePoints > 0
+                    ? (submission.TotalScore / submission.TotalPossiblePoints) * 100
+                    : 0;
+
+                var csv = new List<string>
+                {
+                    "STUDENT PERFORMANCE REPORT",
+                    "",
+                    $"Student Name:,{studentName}",
+                    $"Student ID:,{submission.StudentId}",
+                    $"Exam:,{examTitle}",
+                    $"Submitted:,{submission.SubmittedAt:MMM dd, yyyy h:mm tt}",
+                    "",
+                    $"Total Score:,{submission.TotalScore:F1}/{submission.TotalPossiblePoints:F1}",
+                    $"Percentage:,{percentage:F1}%",
+                    $"Status:,{(percentage >= 60 ? "PASSED" : "FAILED")}",
+                    "",
+                    "DETAILED QUESTION ANALYSIS",
+                    "Q#,Question,Your Answer,Correct Answer,Points Earned,Status"
+                };
+
+                int questionNum = 1;
+                foreach (var content in exam.Contents)
+                {
+                    var response = submission.Responses.FirstOrDefault(r => r.QuestionId == content.ContentId);
+                    var studentAnswer = (response?.Answer ?? "(No answer)").Replace("\"", "\"\"");
+                    var correctAnswer = content.Answer.Replace("\"", "\"\"");
+                    var questionText = content.Question.Replace("\"", "\"\"");
+
+                    csv.Add($"{questionNum},\"{questionText}\",\"{studentAnswer}\",\"{correctAnswer}\",{response?.PointsEarned ?? 0:F1}/{content.Points},{(response?.IsCorrect == true ? "Correct" : "Incorrect")}");
+                    questionNum++;
+                }
+
+                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var filename = $"StudentReport_{studentName.Replace(" ", "_")}_{timestamp}.csv";
+                var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+                var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
+                Directory.CreateDirectory(exportPath);
+                var filePath = Path.Combine(exportPath, filename);
+
+                await File.WriteAllLinesAsync(filePath, csv);
+                return filePath;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to export student report: {ex.Message}", ex);
+            }
+        }
+
+        /// <summary>
         /// Export item analysis metrics to CSV
         /// </summary>
         public async Task<string> ExportItemAnalysisAsync(string examId, string examTitle)

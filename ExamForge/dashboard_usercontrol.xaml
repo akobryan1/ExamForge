@@ -135,34 +135,50 @@
                         <StackPanel>
                             <DockPanel Margin="0,0,0,15">
                                 <TextBlock Text="Grading Queue" Style="{StaticResource SectionTitleStyle}" DockPanel.Dock="Left"/>
-                                <Button Content="Open" Width="75" Height="30" HorizontalAlignment="Right" 
-                                        Style="{StaticResource PrimaryButtonStyle}" Click="OpenGrading_Click"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Remove Graded" Width="110" Height="30" Margin="0,0,8,0" 
+                                            Style="{StaticResource SecondaryButtonStyle}" Click="RemoveGraded_Click"/>
+                                    <Button Content="Open" Width="75" Height="30" 
+                                            Style="{StaticResource PrimaryButtonStyle}" Click="OpenGrading_Click"/>
+                                </StackPanel>
                             </DockPanel>
 
-                            <ItemsControl x:Name="GradingQueueList">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border Background="{StaticResource HeaderBackgroundBrush}" CornerRadius="6" 
-                                                Padding="12" Margin="0,0,0,8">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding ExamTitle}" FontSize="13" FontWeight="Medium"
-                                                           Foreground="{StaticResource TextPrimaryBrush}"/>
-                                                <TextBlock Text="{Binding Student}" FontSize="12"
-                                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
-                                                <TextBlock Text="{Binding Due}" FontSize="11"
-                                                           Foreground="{StaticResource WarningTextBrush}" Margin="0,2,0,0"/>
-                                                <Button Content="Grade" Width="70" Height="26" Margin="0,8,0,0"
-                                                        HorizontalAlignment="Left"
-                                                        Style="{StaticResource PrimaryButtonStyle}" Tag="{Binding Id}" 
-                                                        Click="GradeQueueItem_Click"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                                <ItemsControl x:Name="GradingQueueList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{StaticResource HeaderBackgroundBrush}" CornerRadius="6" 
+                                                    Padding="15" Margin="0,0,0,10">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,0,0,5">
+                                                        <TextBlock Text="{Binding ExamTitle}" FontSize="13" FontWeight="Medium"
+                                                                   Foreground="{StaticResource TextPrimaryBrush}" DockPanel.Dock="Left"/>
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold"
+                                                                   Foreground="{Binding StatusColor}" 
+                                                                   HorizontalAlignment="Right" Margin="5,0,0,0"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="{Binding Student}" FontSize="12"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                                    <TextBlock Text="{Binding Due}" FontSize="11"
+                                                               Foreground="{StaticResource WarningTextBrush}" Margin="0,0,0,8"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="{Binding ButtonText}" Width="80" Height="28" Margin="0,0,8,0"
+                                                                Style="{Binding ButtonStyle}" Tag="{Binding Id}" 
+                                                                Click="GradeQueueItem_Click"/>
+                                                        <Button Content="Remove" Width="70" Height="28"
+                                                                Style="{StaticResource SecondaryButtonStyle}" Tag="{Binding Id}" 
+                                                                Click="RemoveQueueItem_Click"
+                                                                Visibility="{Binding RemoveButtonVisibility}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
 
                             <TextBlock x:Name="GradingEmpty" Text="?? No submissions waiting." 
-                                       Style="{StaticResource SmallTextStyle}" FontStyle="Italic" Visibility="Collapsed"/>
+                                       Style="{StaticResource SmallTextStyle}" FontStyle="Italic" Visibility="Collapsed" Margin="0,10,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>

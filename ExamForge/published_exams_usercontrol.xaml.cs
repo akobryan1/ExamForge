@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -33,7 +34,9 @@ public partial class published_exams_usercontrol : UserControl
     
     // Auto-refresh timers
     private System.Windows.Threading.DispatcherTimer? _liveDataTimer;
+    private System.Windows.Threading.DispatcherTimer? _gradingQueueTimer;
     private const int LIVE_REFRESH_INTERVAL = 5000; // 5 seconds
+    private const int GRADING_QUEUE_REFRESH_INTERVAL = 10000; // 10 seconds
 
     public published_exams_usercontrol()
     {
@@ -50,6 +53,7 @@ public partial class published_exams_usercontrol : UserControl
     private void Published_Exams_UserControl_Unloaded(object sender, RoutedEventArgs e)
     {
         StopLiveDataRefresh();
+        StopGradingQueueRefresh();
     }
 
     public void ShowClosedTab()
@@ -158,6 +162,9 @@ public partial class published_exams_usercontrol : UserControl
 
         var filteredList = filtered.ToList();
 
+        // Set the ItemsSource to display the filtered exams
+        ExamCardsContainer.ItemsSource = filteredList;
+
         if (filteredList.Count == 0)
         {
             ExamCardsContainer.Visibility = Visibility.Collapsed;
@@ -167,8 +174,9 @@ public partial class published_exams_usercontrol : UserControl
         {
             ExamCardsContainer.Visibility = Visibility.Visible;
             EmptyState.Visibility = Visibility.Collapsed;
-            // Update the ItemsSource with filtered results
         }
+
+        Debug.WriteLine($"✅ Applied filters: {filteredList.Count} exams displayed (Filter: {_currentFilter}, Search: '{_searchQuery}')");
     }
 
     #region Tab Event Handlers
@@ -270,6 +278,27 @@ public partial class published_exams_usercontrol : UserControl
     private async Task RefreshLiveData()
     {
         await LoadLiveRosterData();
+    }
+
+    private void StartGradingQueueRefresh()
+    {
+        StopGradingQueueRefresh();
+
+        _gradingQueueTimer = new System.Windows.Threading.DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(GRADING_QUEUE_REFRESH_INTERVAL)
+        };
+        _gradingQueueTimer.Tick += async (s, e) => await LoadClosedExamsAsync();
+        _gradingQueueTimer.Start();
+        
+        Debug.WriteLine("🔄 Grading queue auto-refresh started (every 10s)");
+    }
+
+    private void StopGradingQueueRefresh()
+    {
+        _gradingQueueTimer?.Stop();
+        _gradingQueueTimer = null;
+        Debug.WriteLine("⏸️ Grading queue refresh stopped");
     }
 
     private async Task LoadLiveRosterData()
@@ -499,6 +528,7 @@ public partial class published_exams_usercontrol : UserControl
             }
 
             UpdateClosedTabMetrics(allSubmissions);
+            StartGradingQueueRefresh(); // Auto-refresh every 10 seconds
             Debug.WriteLine($"📝 Loaded {pendingItems.Count} pending and {gradedItems.Count} graded items");
         }
         catch (Exception ex)
@@ -593,10 +623,83 @@ public partial class published_exams_usercontrol : UserControl
             MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
-    private void ExportLiveReport_Click(object sender, RoutedEventArgs e)
+    private async void ExportLiveReport_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Export Live Report functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            if (!_rosterItems.Any() || _rosterItems.First().StudentId == "none")
+            {
+                MessageBox.Show("No active sessions to export.", "Export Live Report", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            // Get session data
+            var sessions = await firestoreService.GetRunningSessionsAsync();
+            if (!sessions.Any())
+            {
+                MessageBox.Show("No active sessions found.", "Export Live Report", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Prepare data for export
+            var exportData = new List<Dictionary<string, object>>();
+            
+            foreach (var session in sessions)
+            {
+                foreach (var participant in session.Participants.Values)
+                {
+                    exportData.Add(new Dictionary<string, object>
+                    {
+                        ["Student ID"] = participant.StudentId,
+                        ["Student Name"] = participant.StudentName,
+                        ["Connection Status"] = participant.ConnectionStatus ?? "Unknown",
+                        ["Progress"] = $"{participant.ProgressPercent}%",
+                        ["Time Remaining"] = FormatTimeRemaining(TimeSpan.FromSeconds(participant.TimeRemaining)),
+                        ["Flags"] = participant.FlagCount,
+                        ["Last Heartbeat"] = participant.LastHeartbeat.ToString("yyyy-MM-dd HH:mm:ss"),
+                        ["Session ID"] = session.Id,
+                        ["Exam ID"] = session.ExamId
+                    });
+                }
+            }
+
+            // Export using CSV
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var filename = $"LiveSessionReport_{timestamp}";
+            
+            var csv = new List<string>
+            {
+                "Student ID,Student Name,Connection Status,Progress,Time Remaining,Flags,Last Heartbeat,Session ID,Exam ID"
+            };
+
+            foreach (var item in exportData)
+            {
+                csv.Add($"\"{item["Student ID"]}\",\"{item["Student Name"]}\",{item["Connection Status"]},{item["Progress"]},{item["Time Remaining"]},{item["Flags"]},{item["Last Heartbeat"]},{item["Session ID"]},{item["Exam ID"]}");
+            }
+
+            var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
+            Directory.CreateDirectory(exportPath);
+            var path = Path.Combine(exportPath, $"{filename}.csv");
+            
+            await File.WriteAllLinesAsync(path, csv);
+            
+            MessageBox.Show($"Live report exported successfully!\n\nSaved to: {path}", 
+                "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to export live report: {ex.Message}");
+        }
     }
 
     // Exam Bank event handlers
@@ -795,16 +898,138 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
-    private void BulkFinalize_Click(object sender, RoutedEventArgs e)
+    private async void BulkFinalize_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Bulk Finalize Grades functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var gradedItems = _gradingQueueItems.Where(g => g.Status == "Graded").ToList();
+            
+            if (!gradedItems.Any())
+            {
+                MessageBox.Show("No graded items to finalize.", "Bulk Finalize", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Finalize {gradedItems.Count} graded item(s)?\n\n" +
+                "This will mark all graded essays as finalized and update student scores.",
+                "Bulk Finalize Grades", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+            
+            if (result != MessageBoxResult.Yes) return;
+
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            int successCount = 0;
+            foreach (var item in gradedItems)
+            {
+                try
+                {
+                    // Update submission with finalized scores
+                    var submissions = await firestoreService.GetExamSubmissionsAsync(item.ExamId);
+                    var submission = submissions.FirstOrDefault(s => s.Id == item.SubmissionId);
+                    
+                    if (submission != null)
+                    {
+                        // Update the response with the graded points
+                        var response = submission.Responses.FirstOrDefault(r => r.QuestionNumber == item.QuestionNumber);
+                        if (response != null && item.PointsAwarded.HasValue)
+                        {
+                            response.PointsEarned = item.PointsAwarded.Value;
+                            
+                            // Recalculate total score
+                            submission.TotalScore = submission.Responses.Sum(r => r.PointsEarned);
+                            
+                            // Update submission in Firestore
+                            await firestoreService.SaveExamineeSubmissionAsync(submission);
+                        }
+                    }
+                    
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error finalizing item {item.Id}: {ex.Message}");
+                }
+            }
+
+            await LoadClosedExamsAsync();
+            MessageBox.Show(
+                $"Successfully finalized {successCount} of {gradedItems.Count} grades.\n\n" +
+                "Student scores have been updated.",
+                "Bulk Finalize Complete", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to finalize grades: {ex.Message}");
+        }
     }
 
-    private void ReleaseResults_Click(object sender, RoutedEventArgs e)
+    private async void ReleaseResults_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Release Results functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            // Get selected exam from grading queue
+            var pendingGrid = GradingQueueGrid ?? this.FindName("GradingQueueGrid") as DataGrid;
+            var gradedGrid = this.FindName("GradedEssayGrid") as DataGrid;
+
+            var selectedItem = (pendingGrid?.SelectedItem as GradingQueueItemViewModel)
+                ?? (gradedGrid?.SelectedItem as GradingQueueItemViewModel);
+
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Please select an exam submission to release results.", 
+                    "Release Results", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Release results for exam: {selectedItem.ExamTitle}?\n\n" +
+                "Students will be able to view their grades and feedback.",
+                "Release Results", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+            
+            if (result != MessageBoxResult.Yes) return;
+
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            // Update all submissions for this exam to "Released" status
+            var submissions = await firestoreService.GetExamSubmissionsAsync(selectedItem.ExamId);
+            int releasedCount = 0;
+
+            foreach (var submission in submissions)
+            {
+                submission.Status = "Released";
+                await firestoreService.SaveExamineeSubmissionAsync(submission);
+                releasedCount++;
+            }
+
+            MessageBox.Show(
+                $"Results released for {releasedCount} student(s).\n\n" +
+                "Students can now view their grades.",
+                "Release Complete", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to release results: {ex.Message}");
+        }
     }
 
     private void ReopenMakeup_Click(object sender, RoutedEventArgs e)

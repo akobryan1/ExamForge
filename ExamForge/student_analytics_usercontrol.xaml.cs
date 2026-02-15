@@ -509,8 +509,10 @@ namespace ExamForge
                 var insights = await GenerateQuickInsights(_currentExamId);
 
                 // Find Quick Insights panel and update content
-                var quickInsightsPanel = QuickInsightsPanel;
+                // var quickInsightsPanel = QuickInsightsPanel; // Removed as Quick Insights panel was removed from UI
 
+                // Quick Insights panel was removed from UI
+                /*
                 if (quickInsightsPanel != null)
                 {
                     // Clear existing content except title
@@ -643,6 +645,7 @@ namespace ExamForge
                         quickInsightsPanel.Children.Add(riskBorder);
                     }
                 }
+                */ // End of commented Quick Insights code
             }
             catch (Exception ex)
             {
@@ -892,15 +895,6 @@ namespace ExamForge
             catch (Exception ex)
             {
                 ShowError($"Failed to export item analysis: {ex.Message}");
-            }
-        }
-
-        private void ItemDetails_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is Button btn && btn.Tag is string questionId)
-            {
-                MessageBox.Show($"Question details for {questionId} coming soon!", "Info", 
-                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
@@ -1447,6 +1441,89 @@ namespace ExamForge
                         yield return childOfChild;
                     }
                 }
+            }
+        }
+
+        private void ItemDetails_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is not Button btn || btn.Tag is not string questionId)
+                    return;
+
+                // Find the analysis data for this question
+                var analysisData = (ItemAnalysisGrid?.ItemsSource as List<ItemAnalysisData>)?
+                    .FirstOrDefault(item => item.QuestionId == questionId);
+
+                if (analysisData == null)
+                {
+                    MessageBox.Show("Question analysis data not found.", "Item Details", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                // Find the question content
+                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
+                var questionContent = exam?.Contents.FirstOrDefault(c => c.ContentId == questionId);
+
+                // Show item details dialog
+                var dialog = new Views.ItemDetailsDialog(questionId, _currentExamId, analysisData, questionContent)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load item details: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"Error showing item details: {ex.Message}");
+            }
+        }
+
+        private async void ViewSubmission_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_selectedStudent == null || string.IsNullOrEmpty(_currentExamId))
+                {
+                    MessageBox.Show("Please select a student first.", "View Submission", 
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                // Get the submission and exam data
+                var submissions = await _firestoreService.GetExamSubmissionsAsync(_currentExamId);
+                var submission = submissions.FirstOrDefault(s => 
+                    s.StudentName == _selectedStudent.Name || s.StudentId == _selectedStudent.Id);
+
+                if (submission == null)
+                {
+                    MessageBox.Show("Submission not found for this student.", "View Submission", 
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var exam = _availableExams.FirstOrDefault(e => e.Id == _currentExamId);
+                if (exam == null)
+                {
+                    MessageBox.Show("Exam data not found.", "View Submission", 
+                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Show the submission dialog
+                var dialog = new Views.ViewSubmissionDialog(submission, exam)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+                dialog.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load submission: {ex.Message}", "Error", 
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+                Debug.WriteLine($"Error viewing submission: {ex.Message}");
             }
         }
 

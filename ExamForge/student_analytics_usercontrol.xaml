@@ -170,7 +170,8 @@
                                 <ComboBoxItem Content="Final Exam"/>
                             </ComboBox>
                             
-                            <Button Grid.Column="4" Content="Apply Filters" Margin="12,0,0,0" Padding="12,6" Background="{StaticResource AccentGold}" Foreground="{StaticResource BackgroundDark}" BorderThickness="0" Style="{StaticResource RoundedButtonStyle}" Click="ApplyFilters_Click"/>
+                            <Button Grid.Column="4" Content="Apply Filters" Margin="12,0,0,0" 
+                                    Style="{StaticResource PrimaryButtonStyle}" Click="ApplyFilters_Click"/>
                         </Grid>
                     </Border>
 
@@ -219,17 +220,16 @@
                     <!-- Main Analytics Row -->
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- Score Distribution -->
-                        <Border Grid.Column="0" Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,12,0">
+                        <Border Grid.Column="0" Style="{StaticResource AnalyticsCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="?? Score Distribution" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
+                                <TextBlock Text="?? Score Distribution" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,16"/>
                                 
                                 <!-- Score Histogram -->
-                                <Canvas Name="ScoreHistogram" Height="200" Background="{StaticResource SurfaceLight}" Margin="0,0,0,16"/>
+                                <Canvas Name="ScoreHistogram" Height="200" Background="{StaticResource HeaderBackgroundBrush}" Margin="0,0,0,16"/>
                                 
                                 <!-- Statistics -->
                                 <Grid>
@@ -240,27 +240,18 @@
                                     </Grid.ColumnDefinitions>
 
                                     <StackPanel Grid.Column="0">
-                                        <TextBlock Text="Mean: 78.5%" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
-                                        <TextBlock Text="Median: 81.0%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Mean: 78.5%" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Median: 81.0%" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="Std Dev: 12.3" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
-                                        <TextBlock Text="Range: 45-98%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Std Dev: 12.3" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Range: 45-98%" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Q1: 68%" FontSize="12" Foreground="{StaticResource TextPrimary}"/>
-                                        <TextBlock Text="Q3: 87%" FontSize="12" Foreground="{StaticResource TextSecondary}" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Q1: 68%" FontSize="12" Foreground="{StaticResource TextPrimaryBrush}"/>
+                                        <TextBlock Text="Q3: 87%" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,4,0,0"/>
                                     </StackPanel>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Quick Insights -->
-                        <Border Grid.Column="1" Style="{StaticResource AnalyticsCardStyle}">
-                            <StackPanel x:Name="QuickInsightsPanel">
-                                <!-- Quick Insights content will be populated dynamically -->
-                                <TextBlock Text="?? Quick Insights" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
-                                <TextBlock Text="Loading insights..." FontSize="12" Foreground="{StaticResource TextSecondary}"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -339,7 +330,12 @@
                         <!-- Student Details -->
                         <Border Grid.Column="1" Style="{StaticResource AnalyticsCardStyle}">
                             <StackPanel x:Name="StudentDetailsPanel">
-                                <TextBlock x:Name="SelectedStudentName" Text="Select a student to view details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
+                                <DockPanel Margin="0,0,0,16">
+                                    <TextBlock x:Name="SelectedStudentName" Text="Select a student to view details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" DockPanel.Dock="Left"/>
+                                    <Button Content="?? View Full Submission" Width="180" Height="35" HorizontalAlignment="Right"
+                                            Style="{StaticResource PrimaryButtonStyle}" Click="ViewSubmission_Click"
+                                            x:Name="ViewSubmissionButton" Visibility="Collapsed"/>
+                                </DockPanel>
                                 
                                 <!-- Student performance details will be populated here -->
                                 <Grid x:Name="StudentPerformanceGrid" Visibility="Collapsed">
