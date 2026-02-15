@@ -11,11 +11,35 @@ namespace ExamForge.Services;
 public class FirestoreService
 {
     private readonly FirestoreDb _firestoreDb;
+    private readonly string _userId;
     private static FirestoreService? _instance;
     private static readonly object _lock = new();
 
+    // Constructor with userId for user-scoped collections
+    public FirestoreService(string userId)
+    {
+        _userId = userId;
+
+        var projectId = "examforge-201e8";
+        var credentialPath = "firebase-adminsdk.json";
+
+        if (FirebaseApp.DefaultInstance == null)
+        {
+            FirebaseApp.Create(new AppOptions
+            {
+                Credential = GoogleCredential.FromFile(credentialPath)
+            });
+        }
+
+        Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
+        _firestoreDb = FirestoreDb.Create(projectId);
+    }
+
+    // Legacy static instance method (kept for compatibility)
     private FirestoreService(string projectId, string credentialPath)
     {
+        _userId = "default"; // Legacy default user
+
         if (FirebaseApp.DefaultInstance == null)
         {
             FirebaseApp.Create(new AppOptions
@@ -40,12 +64,15 @@ public class FirestoreService
         return _instance;
     }
 
-    // Save published exam
+    // User-scoped collection paths
+    private string GetUserPath(string collection) => $"users/{_userId}/{collection}";
+
+    // Save published exam (user-scoped)
     public async Task<string> SavePublishedExamAsync(PublishedExam exam)
     {
         try
         {
-            var docRef = _firestoreDb.Collection("published_exams").Document(exam.Id);
+            var docRef = _firestoreDb.Collection(GetUserPath("exams")).Document(exam.Id);
             await docRef.SetAsync(exam);
             return exam.Id;
         }
