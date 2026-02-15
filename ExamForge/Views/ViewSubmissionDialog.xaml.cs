@@ -90,13 +90,25 @@ public partial class ViewSubmissionDialog : Window
         try
         {
             var exportService = new Services.ExportService();
-            var path = await exportService.ExportStudentReportAsync(
+            var pdfService = new Services.PdfExportService();
+            
+            // Export both CSV and PDF
+            var csvPath = await exportService.ExportStudentReportAsync(
                 _submission.StudentName,
                 _exam.Title,
                 _submission,
                 _exam);
 
-            MessageBox.Show($"Student report exported successfully!\n\nSaved to: {path}",
+            var pdfPath = await pdfService.ExportStudentReportToPdfAsync(
+                _submission.StudentName,
+                _exam.Title,
+                _submission,
+                _exam);
+
+            MessageBox.Show(
+                $"Student report exported successfully!\n\n" +
+                $"CSV: {csvPath}\n" +
+                $"PDF: {pdfPath}",
                 "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
@@ -106,10 +118,25 @@ public partial class ViewSubmissionDialog : Window
         }
     }
 
-    private void ExportPdf_Click(object sender, RoutedEventArgs e)
+    private async void ExportPdf_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("PDF Export functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var pdfService = new Services.PdfExportService();
+            var path = await pdfService.ExportStudentReportToPdfAsync(
+                _submission.StudentName,
+                _exam.Title,
+                _submission,
+                _exam);
+
+            MessageBox.Show($"PDF report exported successfully!\n\nSaved to: {path}",
+                "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to export PDF: {ex.Message}", "Export Error",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)

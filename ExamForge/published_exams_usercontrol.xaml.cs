@@ -611,16 +611,113 @@ public partial class published_exams_usercontrol : UserControl
     }
 
     // Live monitoring event handlers
-    private void BroadcastMessage_Click(object sender, RoutedEventArgs e)
+    private async void BroadcastMessage_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Broadcast Message functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            var sessions = await firestoreService.GetRunningSessionsAsync();
+            
+            if (!sessions.Any())
+            {
+                MessageBox.Show("No active exam sessions to broadcast to.", "Broadcast Message", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new Views.BroadcastMessageDialog(sessions, _signalRService)
+            {
+                Owner = Window.GetWindow(this)
+            };
+            
+            dialog.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to open broadcast dialog: {ex.Message}");
+        }
     }
 
-    private void PauseAllExams_Click(object sender, RoutedEventArgs e)
+    private async void PauseAllExams_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Pause All Exams functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            var sessions = await firestoreService.GetRunningSessionsAsync();
+            
+            if (!sessions.Any())
+            {
+                MessageBox.Show("No active exam sessions to pause.", "Pause Exams", 
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Pause all {sessions.Count} active exam session(s)?\n\n" +
+                "Students will receive a notification and their timers will be frozen.",
+                "Confirm Pause All", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+            
+            if (result != MessageBoxResult.Yes) return;
+
+            int successCount = 0;
+            
+            foreach (var session in sessions)
+            {
+                try
+                {
+                    // Update session status
+                    session.Status = "Paused";
+                    await firestoreService.UpdateSessionAsync(session);
+
+                    // Log event
+                    await firestoreService.LogEventAsync(new SessionEvent
+                    {
+                        SessionId = session.Id,
+                        ExamId = session.ExamId,
+                        EventType = "teacher_pause_exam",
+                        Severity = "Info",
+                        Details = "Exam paused by instructor"
+                    });
+
+                    // Send SignalR notification
+                    if (_signalRService != null && _signalRService.IsConnected)
+                    {
+                        await _signalRService.BroadcastMessageAsync(session.Id, "pause_exam");
+                    }
+
+                    successCount++;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to pause session {session.Id}: {ex.Message}");
+                }
+            }
+
+            await LoadLiveRosterData();
+            MessageBox.Show(
+                $"Paused {successCount} of {sessions.Count} session(s) successfully!", 
+                "Pause Complete", 
+                MessageBoxButton.OK, 
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to pause exams: {ex.Message}");
+        }
     }
 
     private async void ExportLiveReport_Click(object sender, RoutedEventArgs e)
@@ -1032,17 +1129,69 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
-    private void ReopenMakeup_Click(object sender, RoutedEventArgs e)
+    private async void ReopenMakeup_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("Reopen for Make-up functionality coming soon!", "Info", 
-            MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var pendingGrid = GradingQueueGrid ?? this.FindName("GradingQueueGrid") as DataGrid;
+            var gradedGrid = this.FindName("GradedEssayGrid") as DataGrid;
+
+            var selectedItem = (pendingGrid?.SelectedItem as GradingQueueItemViewModel)
+                ?? (gradedGrid?.SelectedItem as GradingQueueItemViewModel);
+
+            if (selectedItem == null)
+            {
+                MessageBox.Show("Please select an exam to reopen for makeup.", 
+                    "Reopen for Makeup", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Reopen exam '{selectedItem.ExamTitle}' for makeup?\n\n" +
+                "This will:\n" +
+                "• Extend the exam deadline by 7 days\n" +
+                "• Allow students to retake the exam\n" +
+                "• Keep existing submissions",
+                "Confirm Reopen", 
+                MessageBoxButton.YesNo, 
+                MessageBoxImage.Question);
+            
+            if (result != MessageBoxResult.Yes) return;
+
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            // Get and update the exam
+            var exam = await firestoreService.GetPublishedExamAsync(selectedItem.ExamId);
+            if (exam != null)
+            {
+                exam.EndTime = DateTime.UtcNow.AddDays(7);
+                exam.Status = "Makeup";
+                await firestoreService.SavePublishedExamAsync(exam);
+
+                await LoadClosedExamsAsync();
+                MessageBox.Show(
+                    "Exam reopened for makeup successfully!\n\n" +
+                    $"New deadline: {exam.EndTime:MMM dd, yyyy h:mm tt}",
+                    "Reopen Complete", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to reopen exam: {ex.Message}");
+        }
     }
 
     private async void ExportGradebook_Click(object sender, RoutedEventArgs e)
     {
         try
         {
-            // Use selected row from pending or graded grid
             var pendingGrid = GradingQueueGrid ?? this.FindName("GradingQueueGrid") as DataGrid;
             var gradedGrid = this.FindName("GradedEssayGrid") as DataGrid;
 
@@ -1055,9 +1204,26 @@ public partial class published_exams_usercontrol : UserControl
                 return;
             }
 
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            var submissions = await firestoreService.GetExamSubmissionsAsync(vm.ExamId);
+            
             var exportService = new ExportService();
-            var path = await exportService.ExportGradesToExcelAsync(vm.ExamId, vm.ExamTitle);
-            MessageBox.Show($"Gradebook exported to: {path}", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+            var pdfService = new PdfExportService();
+            
+            var excelPath = await exportService.ExportGradesToExcelAsync(vm.ExamId, vm.ExamTitle);
+            var pdfPath = await pdfService.ExportGradebookToPdfAsync(vm.ExamId, vm.ExamTitle, submissions);
+            
+            MessageBox.Show(
+                $"Gradebook exported successfully!\n\n" +
+                $"Excel: {excelPath}\n" +
+                $"PDF: {pdfPath}",
+                "Export Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex)
         {
@@ -1089,12 +1255,42 @@ public partial class published_exams_usercontrol : UserControl
         }
     }
 
-    private void EditSchedule_Click(object sender, RoutedEventArgs e)
+    private async void EditSchedule_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is string examId)
         {
-            MessageBox.Show($"Edit schedule for exam {examId} functionality coming soon!", "Info", 
-                MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                var firestoreService = App.FirestoreService;
+                if (firestoreService == null)
+                {
+                    ShowError("Firestore service not initialized");
+                    return;
+                }
+
+                var exam = await firestoreService.GetPublishedExamAsync(examId);
+                if (exam == null)
+                {
+                    ShowError("Exam not found");
+                    return;
+                }
+
+                var dialog = new Views.EditScheduleDialog(exam)
+                {
+                    Owner = Window.GetWindow(this)
+                };
+
+                dialog.ShowDialog();
+
+                if (dialog.ChangesSaved)
+                {
+                    await LoadPublishedExamsAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to edit schedule: {ex.Message}");
+            }
         }
     }
 
@@ -1125,16 +1321,60 @@ public partial class published_exams_usercontrol : UserControl
         {
             try
             {
-                var result = MessageBox.Show("Are you sure you want to unpublish this exam?", 
-                    "Confirm Unpublish", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                
-                if (result == MessageBoxResult.Yes)
+                var exam = _allExams.FirstOrDefault(e => e.Id == examId);
+                if (exam == null)
                 {
-                    MessageBox.Show("Unpublish functionality coming soon!", "Info",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                    // TODO: Implement unpublish functionality
-                    // await firestoreService.UnpublishExamAsync(examId);
+                    ShowError("Exam not found");
+                    return;
                 }
+
+                var result = MessageBox.Show(
+                    $"Are you sure you want to unpublish '{exam.Title}'?\n\n" +
+                    "This will:\n" +
+                    "• Remove the exam from the published list\n" +
+                    "• Keep all submitted responses\n" +
+                    "• Delete the public HTML file\n\n" +
+                    "This action cannot be undone.",
+                    "Confirm Unpublish", 
+                    MessageBoxButton.YesNo, 
+                    MessageBoxImage.Warning);
+                
+                if (result != MessageBoxResult.Yes) return;
+
+                var firestoreService = App.FirestoreService;
+                if (firestoreService == null)
+                {
+                    ShowError("Firestore service not initialized");
+                    return;
+                }
+
+                // Update status to Unpublished
+                var publishedExam = await firestoreService.GetPublishedExamAsync(examId);
+                if (publishedExam != null)
+                {
+                    publishedExam.Status = "Unpublished";
+                    publishedExam.LifecycleStatus = "Unpublished";
+                    await firestoreService.SavePublishedExamAsync(publishedExam);
+                }
+
+                // Delete HTML file if it exists
+                try
+                {
+                    var htmlFileName = System.IO.Path.GetFileName(new Uri(exam.ExamUrl).LocalPath);
+                    var publicPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "public", "exams", htmlFileName);
+                    if (System.IO.File.Exists(publicPath))
+                    {
+                        System.IO.File.Delete(publicPath);
+                    }
+                }
+                catch (Exception deleteEx)
+                {
+                    Debug.WriteLine($"Failed to delete HTML file: {deleteEx.Message}");
+                }
+
+                await LoadPublishedExamsAsync();
+                MessageBox.Show("Exam unpublished successfully!", "Success",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {

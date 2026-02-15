@@ -1175,7 +1175,7 @@ namespace ExamForge
                     {
                         Text = "No historical data available",
                         FontSize = 14,
-                        Foreground = new SolidColorBrush(Colors.Gray),
+                        Foreground = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
                         HorizontalAlignment = HorizontalAlignment.Center,
                         VerticalAlignment = VerticalAlignment.Center
                     };
@@ -1188,8 +1188,105 @@ namespace ExamForge
                     return;
                 }
 
-                // Draw trend chart
-                DrawTrendLine(trendData);
+                // Chart dimensions
+                double width = TrendChart.ActualWidth;
+                double height = TrendChart.ActualHeight;
+                double margin = 40;
+                double chartWidth = width - (margin * 2);
+                double chartHeight = height - (margin * 2);
+
+                // Find min/max values
+                double maxScore = trendData.Max(d => d.Score);
+                double minScore = trendData.Min(d => d.Score);
+                double range = maxScore - minScore;
+                if (range < 10) range = 10; // Minimum range for visibility
+
+                // Draw axes
+                var xAxis = new Line
+                {
+                    X1 = margin,
+                    Y1 = height - margin,
+                    X2 = width - margin,
+                    Y2 = height - margin,
+                    Stroke = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
+                    StrokeThickness = 2
+                };
+                TrendChart.Children.Add(xAxis);
+
+                var yAxis = new Line
+                {
+                    X1 = margin,
+                    Y1 = margin,
+                    X2 = margin,
+                    Y2 = height - margin,
+                    Stroke = new SolidColorBrush(Color.FromRgb(156, 163, 175)),
+                    StrokeThickness = 2
+                };
+                TrendChart.Children.Add(yAxis);
+
+                // Draw data points and lines
+                double xStep = chartWidth / (trendData.Count - 1);
+                
+                for (int i = 0; i < trendData.Count; i++)
+                {
+                    double x = margin + (i * xStep);
+                    double y = height - margin - ((trendData[i].Score - minScore) / range * chartHeight);
+
+                    // Draw line to next point
+                    if (i < trendData.Count - 1)
+                    {
+                        double nextX = margin + ((i + 1) * xStep);
+                        double nextY = height - margin - ((trendData[i + 1].Score - minScore) / range * chartHeight);
+
+                        var line = new Line
+                        {
+                            X1 = x,
+                            Y1 = y,
+                            X2 = nextX,
+                            Y2 = nextY,
+                            Stroke = new SolidColorBrush(Color.FromRgb(58, 174, 158)),
+                            StrokeThickness = 3
+                        };
+                        TrendChart.Children.Add(line);
+                    }
+
+                    // Draw point
+                    var point = new Ellipse
+                    {
+                        Width = 8,
+                        Height = 8,
+                        Fill = new SolidColorBrush(Color.FromRgb(58, 174, 158)),
+                        Stroke = new SolidColorBrush(Colors.White),
+                        StrokeThickness = 2
+                    };
+                    Canvas.SetLeft(point, x - 4);
+                    Canvas.SetTop(point, y - 4);
+                    TrendChart.Children.Add(point);
+
+                    // Draw label
+                    var label = new TextBlock
+                    {
+                        Text = trendData[i].Label,
+                        FontSize = 10,
+                        Foreground = new SolidColorBrush(Color.FromRgb(107, 114, 128))
+                    };
+                    Canvas.SetLeft(label, x - 15);
+                    Canvas.SetTop(label, height - margin + 5);
+                    TrendChart.Children.Add(label);
+
+                    // Draw score value
+                    var scoreLabel = new TextBlock
+                    {
+                        Text = $"{trendData[i].Score:F1}%",
+                        FontSize = 10,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = new SolidColorBrush(Color.FromRgb(58, 174, 158))
+                    };
+                    Canvas.SetLeft(scoreLabel, x - 15);
+                    Canvas.SetTop(scoreLabel, y - 20);
+                    TrendChart.Children.Add(scoreLabel);
+                }
+
                 await UpdateTrendInsights(trendData);
             }
             catch (Exception ex)
