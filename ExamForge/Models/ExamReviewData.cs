@@ -7,53 +7,13 @@ namespace ExamForge.Models;
 public class ExamReviewData
 {
     public string Title { get; set; } = "";
+    public string Subject { get; set; } = "General"; // ✅ Added Subject field
     public List<ExamStructure> Structures { get; set; } = new();
     public List<ExamContent> Contents { get; set; } = new();
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public int ExamDuration { get; set; }
     public LoginConfigState? LoginConfig { get; set; }
-}
-
-[FirestoreData]
-public class ExamStructure
-{
-    [FirestoreProperty]
-    public string SectionName { get; set; } = "";
-    
-    [FirestoreProperty]
-    public string Description { get; set; } = "";
-    
-    [FirestoreProperty]
-    public int Points { get; set; }
-    
-    [FirestoreProperty]
-    public int QuestionCount { get; set; }
-    
-    [FirestoreProperty]
-    public bool IsComplete { get; set; }
-}
-
-[FirestoreData]
-public class ExamContent
-{
-    [FirestoreProperty]
-    public string QuestionText { get; set; } = "";
-    
-    [FirestoreProperty]
-    public string QuestionType { get; set; } = "";
-    
-    [FirestoreProperty]
-    public List<string> Options { get; set; } = new();
-    
-    [FirestoreProperty]
-    public int Points { get; set; }
-    
-    [FirestoreProperty]
-    public string CorrectAnswer { get; set; } = "";
-    
-    [FirestoreProperty]
-    public bool IsComplete { get; set; }
 }
 
 [FirestoreData]
@@ -73,43 +33,25 @@ public class LoginConfigState
 }
 
 [FirestoreData]
-public class PublishedExam
+public class SubmissionResponse
 {
     [FirestoreProperty]
-    public string Id { get; set; } = "";
-    
+    public string QuestionId { get; set; } = "";
+
     [FirestoreProperty]
-    public string Title { get; set; } = "";
-    
+    public int QuestionNumber { get; set; }
+
     [FirestoreProperty]
-    public List<ExamStructure> Structures { get; set; } = new();
-    
+    public string Answer { get; set; } = "";
+
     [FirestoreProperty]
-    public List<ExamContent> Contents { get; set; } = new();
-    
+    public double PointsEarned { get; set; }
+
     [FirestoreProperty]
-    public DateTime StartTime { get; set; }
-    
+    public double PointsPossible { get; set; }
+
     [FirestoreProperty]
-    public DateTime EndTime { get; set; }
-    
-    [FirestoreProperty]
-    public int ExamDuration { get; set; }
-    
-    [FirestoreProperty]
-    public DateTime PublishedDate { get; set; }
-    
-    [FirestoreProperty]
-    public string CreatedBy { get; set; } = "";
-    
-    [FirestoreProperty]
-    public string ExamUrl { get; set; } = "";
-    
-    [FirestoreProperty]
-    public string Status { get; set; } = "";
-    
-    [FirestoreProperty]
-    public LoginConfigState? LoginConfig { get; set; }
+    public bool IsCorrect { get; set; }
 }
 
 [FirestoreData]
@@ -117,34 +59,42 @@ public class ExamSubmission
 {
     [FirestoreProperty]
     public string Id { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string ExamId { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentName { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentEmail { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string StudentId { get; set; } = "";
-    
+
     [FirestoreProperty]
     public string YearSection { get; set; } = "";
-    
+
     [FirestoreProperty]
     public DateTime SubmittedAt { get; set; }
-    
+
+    // ✅ REAL responses, not a dictionary
     [FirestoreProperty]
-    public Dictionary<string, string> Answers { get; set; } = new();
-    
+    public List<SubmissionResponse> Responses { get; set; } = new();
+
     [FirestoreProperty]
-    public int TotalScore { get; set; }
-    
+    public double TotalScore { get; set; }
+
     [FirestoreProperty]
-    public int MaxScore { get; set; }
-    
+    public double TotalPossiblePoints { get; set; }
+
     [FirestoreProperty]
     public string Status { get; set; } = "Submitted";
+
+    // ✅ Nullable because your logic treats them as optional
+    [FirestoreProperty]
+    public DateTime? StartTime { get; set; }
+
+    [FirestoreProperty]
+    public DateTime? EndTime { get; set; }
 }

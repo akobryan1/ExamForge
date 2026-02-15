@@ -364,6 +364,11 @@ namespace ExamForge
             return exam_name_textbox?.Text ?? "Untitled Exam";
         }
 
+        public string GetSubjectName()
+        {
+            return subject_name_textbox?.Text ?? "General";
+        }
+
         /// <summary>
         /// Restore structure_builder state from configuration
         /// </summary>

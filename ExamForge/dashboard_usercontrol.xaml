@@ -1,0 +1,189 @@
+<UserControl x:Class="ExamForge.dashboard_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             Background="{StaticResource AppBackgroundBrush}"
+             FontFamily="Segoe UI"
+             Loaded="Dashboard_usercontrol_Loaded">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="30" MaxWidth="1200">
+            
+            <!-- Page Title -->
+            <TextBlock Text="Dashboard" Style="{StaticResource PageTitleStyle}" Margin="0,0,0,30"/>
+
+            <!-- KPI Row -->
+            <Grid Margin="0,0,0,30">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,10,0" Cursor="Hand" MouseLeftButtonUp="UpcomingCard_Click">
+                    <StackPanel>
+                        <TextBlock Text="Upcoming Exams" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="UpcomingCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
+                        <TextBlock x:Name="UpcomingSubtitle" Style="{StaticResource SmallTextStyle}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="10,0,10,0" Cursor="Hand" MouseLeftButtonUp="LiveCard_Click">
+                    <StackPanel>
+                        <TextBlock Text="Live Now" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="LiveCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
+                        <TextBlock x:Name="LiveSubtitle" Style="{StaticResource SmallTextStyle}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="10,0,10,0" Cursor="Hand" MouseLeftButtonUp="GradingCard_Click">
+                    <StackPanel>
+                        <TextBlock Text="Pending Grading" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="GradingCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
+                        <TextBlock x:Name="GradingSubtitle" Style="{StaticResource SmallTextStyle}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+                
+                <Border Grid.Column="3" Style="{StaticResource CardStyle}" Margin="10,0,0,0" Cursor="Hand" MouseLeftButtonUp="FlagsCard_Click">
+                    <StackPanel>
+                        <TextBlock Text="Flags / Incidents" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="FlagsCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
+                        <TextBlock x:Name="FlagsSubtitle" Style="{StaticResource SmallTextStyle}" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Main Content Grid -->
+            <Grid Margin="0,30,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: Hero Panel (Live Monitor or Schedule) -->
+                <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,15,0" MinHeight="250">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,15">
+                            <TextBlock x:Name="HeroPanelTitle" Text="Today's Schedule / Live Monitor" 
+                                       Style="{StaticResource SectionTitleStyle}" DockPanel.Dock="Left"/>
+                            <Button x:Name="HeroActionButton" Content="Send Reminder" Width="120" Height="34" 
+                                    HorizontalAlignment="Right" Style="{StaticResource PrimaryButtonStyle}" 
+                                    Click="SendReminder_Click"/>
+                        </DockPanel>
+
+                        <!-- Live Stats -->
+                        <StackPanel x:Name="LiveStatsPanel" Orientation="Horizontal" Margin="0,0,0,15">
+                            <StackPanel Margin="0,0,20,0">
+                                <TextBlock Text="Started" Style="{StaticResource SmallTextStyle}"/>
+                                <TextBlock x:Name="StartedCountText" Style="{StaticResource KpiValueStyle}" Text="0" FontSize="20"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,20,0">
+                                <TextBlock Text="Submitted" Style="{StaticResource SmallTextStyle}"/>
+                                <TextBlock x:Name="SubmittedCountText" Style="{StaticResource KpiValueStyle}" Text="0" FontSize="20"/>
+                            </StackPanel>
+                            <StackPanel Margin="0,0,20,0">
+                                <TextBlock Text="Avg Progress" Style="{StaticResource SmallTextStyle}"/>
+                                <TextBlock x:Name="AvgProgressText" Style="{StaticResource KpiValueStyle}" Text="0%" FontSize="20"/>
+                            </StackPanel>
+                            <StackPanel>
+                                <TextBlock Text="Last Activity" Style="{StaticResource SmallTextStyle}"/>
+                                <TextBlock x:Name="LastActivityText" Style="{StaticResource KpiValueStyle}" Text="--" FontSize="20"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- Schedule List -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Height="180">
+                            <ItemsControl x:Name="TodayScheduleList">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{StaticResource HeaderBackgroundBrush}" 
+                                                CornerRadius="8" Padding="15" Margin="0,0,0,10">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" 
+                                                           Foreground="{StaticResource TextPrimaryBrush}" FontSize="14"/>
+                                                <TextBlock Text="{Binding Schedule}" 
+                                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,3,0,0"/>
+                                                <TextBlock Text="{Binding Meta}" 
+                                                           Foreground="{StaticResource TextMutedBrush}" FontSize="12" Margin="0,3,0,0"/>
+                                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                    <Button Content="Edit" Width="60" Height="28" Click="EditExam_Click" Tag="{Binding ExamId}" Margin="0,0,8,0" Style="{StaticResource PrimaryButtonStyle}"/>
+                                                    <Button Content="Duplicate" Width="80" Height="28" Click="DuplicateExam_Click" Tag="{Binding ExamId}" Margin="0,0,8,0" Style="{StaticResource SecondaryButtonStyle}"/>
+                                                    <Button Content="View Monitor" Width="100" Height="28" Click="ViewMonitor_Click" Tag="{Binding ExamId}" Style="{StaticResource SecondaryButtonStyle}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+
+                        <TextBlock x:Name="TodayEmptyState" Text="No scheduled exams today." 
+                                   Style="{StaticResource SmallTextStyle}" FontStyle="Italic" Visibility="Collapsed"/>
+                        
+                        <TextBlock x:Name="LiveEmpty" Text="? No live sessions." 
+                                   Style="{StaticResource SmallTextStyle}" FontStyle="Italic" Visibility="Collapsed"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Right Column -->
+                <StackPanel Grid.Column="1">
+                    <!-- Grading Queue -->
+                    <Border Style="{StaticResource CardStyle}">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,15">
+                                <TextBlock Text="Grading Queue" Style="{StaticResource SectionTitleStyle}" DockPanel.Dock="Left"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Content="Remove Graded" Width="110" Height="30" Margin="0,0,8,0" 
+                                            Style="{StaticResource SecondaryButtonStyle}" Click="RemoveGraded_Click"/>
+                                    <Button Content="Open" Width="75" Height="30" 
+                                            Style="{StaticResource PrimaryButtonStyle}" Click="OpenGrading_Click"/>
+                                </StackPanel>
+                            </DockPanel>
+
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                                <ItemsControl x:Name="GradingQueueList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Background="{StaticResource HeaderBackgroundBrush}" CornerRadius="6" 
+                                                    Padding="15" Margin="0,0,0,10">
+                                                <StackPanel>
+                                                    <DockPanel Margin="0,0,0,5">
+                                                        <TextBlock Text="{Binding ExamTitle}" FontSize="13" FontWeight="Medium"
+                                                                   Foreground="{StaticResource TextPrimaryBrush}" DockPanel.Dock="Left"/>
+                                                        <TextBlock Text="{Binding StatusText}" FontSize="10" FontWeight="SemiBold"
+                                                                   Foreground="{Binding StatusColor}" 
+                                                                   HorizontalAlignment="Right" Margin="5,0,0,0"/>
+                                                    </DockPanel>
+                                                    <TextBlock Text="{Binding Student}" FontSize="12"
+                                                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,2"/>
+                                                    <TextBlock Text="{Binding Due}" FontSize="11"
+                                                               Foreground="{StaticResource WarningTextBrush}" Margin="0,0,0,8"/>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <Button Content="{Binding ButtonText}" Width="80" Height="28" Margin="0,0,8,0"
+                                                                Style="{Binding ButtonStyle}" Tag="{Binding Id}" 
+                                                                Click="GradeQueueItem_Click"/>
+                                                        <Button Content="Remove" Width="70" Height="28"
+                                                                Style="{StaticResource SecondaryButtonStyle}" Tag="{Binding Id}" 
+                                                                Click="RemoveQueueItem_Click"
+                                                                Visibility="{Binding RemoveButtonVisibility}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <TextBlock x:Name="GradingEmpty" Text="?? No submissions waiting." 
+                                       Style="{StaticResource SmallTextStyle}" FontStyle="Italic" Visibility="Collapsed" Margin="0,10,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

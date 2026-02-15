@@ -16,7 +16,14 @@ namespace ExamForge
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             // Dashboard button clicked
-            // TODO: Navigate to dashboard
+            Window mainWindow = Window.GetWindow(this);
+            if (mainWindow is MainWindow main)
+            {
+                if (main.FindName("MainContentHost") is ContentControl contentHost)
+                {
+                    contentHost.Content = new dashboard_usercontrol();
+                }
+            }
         }
 
         private void Create_Button_Click(object sender, RoutedEventArgs e)
@@ -55,6 +62,27 @@ namespace ExamForge
                     contentHost.Content = new published_exams_usercontrol();
                 }
             }
+        }
+
+        private void Analytics_Button_Click(object sender, RoutedEventArgs e)
+        {
+            // Analytics button clicked - load student analytics usercontrol
+            Window mainWindow = Window.GetWindow(this);
+            if (mainWindow is MainWindow main)
+            {
+                if (main.FindName("MainContentHost") is ContentControl contentHost)
+                {
+                    contentHost.Content = new student_analytics_usercontrol();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Public method to navigate to Published Exams tab from external code
+        /// </summary>
+        public void NavigateToPublishedExams()
+        {
+            Published_Exams_Button_Click(this, new RoutedEventArgs());
         }
     }
 }

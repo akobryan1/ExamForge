@@ -50,7 +50,8 @@ public class ExamPublishingService
                 }).ToList(),
                 StartTime = examData.StartTime,
                 EndTime = examData.EndTime,
-                ExamDuration = examData.ExamDuration
+                ExamDuration = examData.ExamDuration,
+                LoginConfig = examData.LoginConfig // ✅ FIX: Pass LoginConfig for HTML generation
             };
             
             // Generate HTML with sanitized data
@@ -62,6 +63,7 @@ public class ExamPublishingService
             {
                 Id = examId,
                 Title = examData.Title,
+                Subject = string.IsNullOrWhiteSpace(examData.Subject) ? "General" : examData.Subject, // ✅ Capture subject
                 Structures = examData.Structures,
                 Contents = examData.Contents,
                 StartTime = examData.StartTime,
@@ -71,7 +73,7 @@ public class ExamPublishingService
                 CreatedBy = creatorEmail,
                 ExamUrl = "",
                 Status = "Active",
-                LoginConfig = examData.LoginConfig  // Add this line with proper comma
+                LoginConfig = examData.LoginConfig
             };
             
             await _firestoreService.SavePublishedExamAsync(publishedExam);
@@ -173,6 +175,14 @@ public class ExamPublishingService
         sb.AppendLine("    <meta charset=\"UTF-8\">");
         sb.AppendLine("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
         sb.AppendLine($"    <title>{System.Security.SecurityElement.Escape(examData.Title)}</title>");
+        
+        // Add Google Sign-In if needed
+        var loginConfig = examData.LoginConfig;
+        if (loginConfig != null && loginConfig.IsGoogleSignIn)
+        {
+            sb.AppendLine("    <script src=\"https://accounts.google.com/gsi/client\" async defer></script>");
+        }
+        
         sb.AppendLine("    <style>");
         sb.AppendLine(GetExamStyleSheet());
         sb.AppendLine("    </style>");
@@ -194,33 +204,47 @@ public class ExamPublishingService
         sb.AppendLine("            <div style=\"margin: 20px 0;\">");
         
         // Generate fields based on LoginConfig
-        var loginConfig = examData.LoginConfig;
-        if (loginConfig != null && !loginConfig.IsGoogleSignIn)
+        if (loginConfig != null && loginConfig.IsGoogleSignIn)
         {
-            // Guest Login - Show configured fields
-            if (loginConfig.RequireFullName)
-            {
-                sb.AppendLine("                <input type=\"text\" id=\"studentName\" placeholder=\"Full Name\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
-            }
-            
-            if (loginConfig.RequireStudentNumber)
-            {
-                sb.AppendLine("                <input type=\"text\" id=\"studentId\" placeholder=\"Student ID\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
-            }
-            
-            if (loginConfig.RequireYearSection)
-            {
-                sb.AppendLine("                <input type=\"text\" id=\"yearSection\" placeholder=\"Year and Section\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
-            }
+            // Google Sign-In Button
+            sb.AppendLine("                <div style=\"text-align: center; margin: 30px 0;\">");
+            sb.AppendLine("                    <div id=\"g_id_onload\"");
+            sb.AppendLine("                         data-client_id=\"161243911904-9hebpq9f3c2r7gg9ih2uroimr155lbjn.apps.googleusercontent.com\"");
+            sb.AppendLine("                         data-callback=\"handleGoogleSignIn\"");
+            sb.AppendLine("                         data-auto_prompt=\"false\">");
+            sb.AppendLine("                    </div>");
+            sb.AppendLine("                    <div class=\"g_id_signin\"");
+            sb.AppendLine("                         data-type=\"standard\"");
+            sb.AppendLine("                         data-size=\"large\"");
+            sb.AppendLine("                         data-theme=\"outline\"");
+            sb.AppendLine("                         data-text=\"sign_in_with\"");
+            sb.AppendLine("                         data-shape=\"rectangular\"");
+            sb.AppendLine("                         data-logo_alignment=\"left\">");
+            sb.AppendLine("                    </div>");
+            sb.AppendLine("                    <p style=\"color: #666; margin-top: 15px; font-size: 14px;\">Sign in with your Google account to start the exam</p>");
+            sb.AppendLine("                </div>");
         }
         else
         {
-            // Google Sign-In or default fallback
-            sb.AppendLine("                <input type=\"text\" id=\"studentName\" placeholder=\"Full Name\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
-            sb.AppendLine("                <input type=\"email\" id=\"studentEmail\" placeholder=\"Email Address\" style=\"width: 100%; padding: 10px; margin-bottom: 10px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px;\" required>");
+            // Guest Login - Show configured fields
+            if (loginConfig != null && loginConfig.RequireFullName)
+            {
+                sb.AppendLine("                <input type=\"text\" id=\"studentName\" placeholder=\"Full Name\" style=\"width: 100%; padding: 12px; margin-bottom: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px;\" required>");
+            }
+            
+            if (loginConfig != null && loginConfig.RequireStudentNumber)
+            {
+                sb.AppendLine("                <input type=\"text\" id=\"studentId\" placeholder=\"Student Number\" style=\"width: 100%; padding: 12px; margin-bottom: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px;\" required>");
+            }
+            
+            if (loginConfig != null && loginConfig.RequireYearSection)
+            {
+                sb.AppendLine("                <input type=\"text\" id=\"yearSection\" placeholder=\"Year and Section (e.g., 3rd Year - Section A)\" style=\"width: 100%; padding: 12px; margin-bottom: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px;\" required>");
+            }
+            
+            sb.AppendLine("                <button onclick=\"startExam()\" id=\"startExamBtn\" style=\"width: 100%; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; transition: transform 0.2s;\">Start Exam</button>");
         }
         
-        sb.AppendLine("                <button onclick=\"startExam()\" style=\"width: 100%; padding: 15px; background: #27ae60; color: white; border: none; font-size: 18px; font-weight: bold; border-radius: 5px; cursor: pointer;\">Start Exam</button>");
         sb.AppendLine("            </div>");
         sb.AppendLine("        </div>");
         
@@ -552,53 +576,93 @@ public class ExamPublishingService
     private string GetExamJavaScript(ExamReviewData examData, string examId)
     {
         var sb = new StringBuilder();
+        var loginConfig = examData.LoginConfig;
         
         sb.AppendLine("        // Exam Configuration");
         sb.AppendLine($"        const examId = '{examId}';");
         sb.AppendLine($"        const examDuration = {examData.ExamDuration};");
         sb.AppendLine($"        const apiEndpoint = '{_apiEndpoint}';");
+        sb.AppendLine($"        const useGoogleSignIn = {(loginConfig?.IsGoogleSignIn == true ? "true" : "false")};");
         sb.AppendLine();
         sb.AppendLine("        let timeRemaining = examDuration * 60;");
         sb.AppendLine("        let timerInterval;");
         sb.AppendLine();
         
+        // Google Sign-In Handler
+        if (loginConfig?.IsGoogleSignIn == true)
+        {
+            sb.AppendLine("        // Handle Google Sign-In");
+            sb.AppendLine("        function handleGoogleSignIn(response) {");
+            sb.AppendLine("            const idToken = response.credential;");
+            sb.AppendLine("            ");
+            sb.AppendLine("            // Decode JWT token to get user info");
+            sb.AppendLine("            const base64Url = idToken.split('.')[1];");
+            sb.AppendLine("            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');");
+            sb.AppendLine("            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {");
+            sb.AppendLine("                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);");
+            sb.AppendLine("            }).join(''));");
+            sb.AppendLine("            ");
+            sb.AppendLine("            const userInfo = JSON.parse(jsonPayload);");
+            sb.AppendLine("            ");
+            sb.AppendLine("            window.studentInfo = {");
+            sb.AppendLine("                name: userInfo.name || '',");
+            sb.AppendLine("                email: userInfo.email || '',");
+            sb.AppendLine("                studentId: userInfo.email ? userInfo.email.split('@')[0] : '',");
+            sb.AppendLine("                yearSection: '',");
+            sb.AppendLine("                googleId: userInfo.sub || ''");
+            sb.AppendLine("            };");
+            sb.AppendLine("            ");
+            sb.AppendLine("            console.log('Google Sign-In successful:', window.studentInfo);");
+            sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
+            sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
+            sb.AppendLine("            startTimer();");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+        }
+        
         // Start Exam Function
         sb.AppendLine("        function startExam() {");
-        sb.AppendLine("            const studentName = document.getElementById('studentName');");
-        sb.AppendLine("            const studentId = document.getElementById('studentId');");
-        sb.AppendLine("            const yearSection = document.getElementById('yearSection');");
-        sb.AppendLine("            const studentEmail = document.getElementById('studentEmail');");
-        sb.AppendLine();
-        sb.AppendLine("            let missingFields = [];" );
-        sb.AppendLine();
-        sb.AppendLine("            if (studentName && !studentName.value.trim()) {");
-        sb.AppendLine("                missingFields.push('Full Name');");
-        sb.AppendLine("            }");
-        sb.AppendLine("            if (studentId && !studentId.value.trim()) {");
-        sb.AppendLine("                missingFields.push('Student ID');");
-        sb.AppendLine("            }");
-        sb.AppendLine("            if (yearSection && !yearSection.value.trim()) {");
-        sb.AppendLine("                missingFields.push('Year and Section');");
-        sb.AppendLine("            }");
-        sb.AppendLine("            if (studentEmail && !studentEmail.value.trim()) {");
-        sb.AppendLine("                missingFields.push('Email');");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine("            if (missingFields.length > 0) {");
-        sb.AppendLine("                alert('Please fill in: ' + missingFields.join(', '));");
-        sb.AppendLine("                return;");
-        sb.AppendLine("            }" );
-        sb.AppendLine();
-        sb.AppendLine("            window.studentInfo = {");
-        sb.AppendLine("                name: studentName ? studentName.value : '',");
-        sb.AppendLine("                studentId: studentId ? studentId.value : '',");
-        sb.AppendLine("                yearSection: yearSection ? yearSection.value : '',");
-        sb.AppendLine("                email: studentEmail ? studentEmail.value : ''");
-        sb.AppendLine("            };");
-        sb.AppendLine();
-        sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
-        sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
-        sb.AppendLine("            startTimer();");
+        
+        if (loginConfig?.IsGoogleSignIn == true)
+        {
+            sb.AppendLine("            // Google Sign-In is handled separately via handleGoogleSignIn callback");
+            sb.AppendLine("            return;");
+        }
+        else
+        {
+            sb.AppendLine("            const studentName = document.getElementById('studentName');");
+            sb.AppendLine("            const studentId = document.getElementById('studentId');");
+            sb.AppendLine("            const yearSection = document.getElementById('yearSection');");
+            sb.AppendLine();
+            sb.AppendLine("            let missingFields = [];" );
+            sb.AppendLine();
+            sb.AppendLine("            if (studentName && !studentName.value.trim()) {");
+            sb.AppendLine("                missingFields.push('Full Name');");
+            sb.AppendLine("            }");
+            sb.AppendLine("            if (studentId && !studentId.value.trim()) {");
+            sb.AppendLine("                missingFields.push('Student Number');");
+            sb.AppendLine("            }");
+            sb.AppendLine("            if (yearSection && !yearSection.value.trim()) {");
+            sb.AppendLine("                missingFields.push('Year and Section');");
+            sb.AppendLine("            }");
+            sb.AppendLine();
+            sb.AppendLine("            if (missingFields.length > 0) {");
+            sb.AppendLine("                alert('Please fill in: ' + missingFields.join(', '));");
+            sb.AppendLine("                return;");
+            sb.AppendLine("            }" );
+            sb.AppendLine();
+            sb.AppendLine("            window.studentInfo = {");
+            sb.AppendLine("                name: studentName ? studentName.value : '',");
+            sb.AppendLine("                studentId: studentId ? studentId.value : '',");
+            sb.AppendLine("                yearSection: yearSection ? yearSection.value : '',");
+            sb.AppendLine("                email: ''");
+            sb.AppendLine("            };");
+            sb.AppendLine();
+            sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
+            sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
+            sb.AppendLine("            startTimer();");
+        }
+        
         sb.AppendLine("        }");
         sb.AppendLine();
         
@@ -625,11 +689,92 @@ public class ExamPublishingService
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // Submit Function (rest of the JavaScript...)
+        // Submit Function  
         sb.AppendLine("        async function submitExam(event) {");
         sb.AppendLine("            event.preventDefault();");
-        sb.AppendLine("            // Submit logic here...");
+        sb.AppendLine("            console.log('Submit button clicked');");
+        sb.AppendLine();
+        sb.AppendLine("            // Disable submit button to prevent double submission");
+        sb.AppendLine("            const submitButton = document.querySelector('.submit-button');");
+        sb.AppendLine("            submitButton.disabled = true;");
+        sb.AppendLine("            submitButton.textContent = 'Submitting...';");
+        sb.AppendLine();
+        sb.AppendLine("            try {");
+        sb.AppendLine("                // Collect all answers");
+        sb.AppendLine("                const formData = new FormData(event.target);");
+        sb.AppendLine("                const answers = {};");
+        sb.AppendLine();
+        sb.AppendLine("                for (let [key, value] of formData.entries()) {");
+        sb.AppendLine("                    answers[key] = value;");
+        sb.AppendLine("                }");
+        sb.AppendLine();
+        sb.AppendLine("                const submissionData = {");
+        sb.AppendLine("                    examId: examId,");
+        sb.AppendLine("                    studentName: window.studentInfo.name || '',");
+        sb.AppendLine("                    studentEmail: window.studentInfo.email || '',");
+        sb.AppendLine("                    studentId: window.studentInfo.studentId || '',");
+        sb.AppendLine("                    yearSection: window.studentInfo.yearSection || '',");
+        sb.AppendLine("                    answers: answers,");
+        sb.AppendLine("                    submittedAt: new Date().toISOString(),");
+        sb.AppendLine("                    timeElapsed: ((examDuration * 60) - timeRemaining),");
+        sb.AppendLine("                    status: 'Submitted'");
+        sb.AppendLine("                };");
+        sb.AppendLine();
+        sb.AppendLine("                console.log('Submitting exam data:', submissionData);");
+        sb.AppendLine();
+        sb.AppendLine("                // Submit to API endpoint");
+        sb.AppendLine("                const response = await fetch(apiEndpoint + '/api/submit', {");
+        sb.AppendLine("                    method: 'POST',");
+        sb.AppendLine("                    headers: {");
+        sb.AppendLine("                        'Content-Type': 'application/json'");
+        sb.AppendLine("                    },");
+        sb.AppendLine("                    body: JSON.stringify(submissionData)");
+        sb.AppendLine("                });");
+        sb.AppendLine();
+        sb.AppendLine("                if (response.ok) {");
+        sb.AppendLine("                    const result = await response.json();");
+        sb.AppendLine("                    console.log('Submission successful:', result);");
+        sb.AppendLine("                    clearInterval(timerInterval);");
+        sb.AppendLine("                    showSuccessMessage();");
+        sb.AppendLine("                } else {");
+        sb.AppendLine("                    const error = await response.text();");
+        sb.AppendLine("                    console.error('Submission failed:', error);");
+        sb.AppendLine("                    throw new Error('Submission failed: ' + error);");
+        sb.AppendLine("                }");
+        sb.AppendLine("            } catch (error) {");
+        sb.AppendLine("                console.error('Error submitting exam:', error);");
+        sb.AppendLine("                alert('Error submitting exam: ' + error.message + '\\nYour answers have been saved locally. Please contact your instructor.');");
+        sb.AppendLine("                // Save to local storage as backup");
+        sb.AppendLine("                localStorage.setItem('examBackup_' + examId, JSON.stringify(submissionData));");
+        sb.AppendLine("            } finally {");
+        sb.AppendLine("                submitButton.disabled = false;");
+        sb.AppendLine("                submitButton.textContent = 'Submit Exam';");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        function showSuccessMessage() {");
+        sb.AppendLine("            document.body.innerHTML = `");
+        sb.AppendLine("                <div style='display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'>");
+        sb.AppendLine("                    <div style='background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); text-align: center; max-width: 500px;'>");
+        sb.AppendLine("                        <h1 style='color: #10b981; margin-bottom: 20px;'>✅ Exam Submitted Successfully!</h1>");
+        sb.AppendLine("                        <p style='color: #6b7280; font-size: 18px; margin-bottom: 30px;'>Thank you for completing the exam. Your answers have been recorded.</p>");
+        sb.AppendLine("                        <p style='color: #374151; font-size: 14px;'>You may now close this window.</p>");
+        sb.AppendLine("                    </div>");
+        sb.AppendLine("                </div>`;");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        // Add event listeners");
+        sb.AppendLine("        document.addEventListener('DOMContentLoaded', function() {");
+        sb.AppendLine("            const examForm = document.getElementById('examForm');");
+        sb.AppendLine("            if (examForm) {");
+        sb.AppendLine("                examForm.addEventListener('submit', submitExam);");
+        sb.AppendLine("            }");
+        sb.AppendLine();
+        sb.AppendLine("            const startButton = document.getElementById('startExamButton');");
+        sb.AppendLine("            if (startButton) {");
+        sb.AppendLine("                startButton.addEventListener('click', startExam);");
+        sb.AppendLine("            }");
+        sb.AppendLine("        });");
         
         return sb.ToString();
     }

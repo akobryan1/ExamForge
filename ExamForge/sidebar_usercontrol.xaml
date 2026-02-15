@@ -9,9 +9,9 @@
              HorizontalAlignment="Stretch"
              VerticalAlignment="Stretch">
     <UserControl.Resources>
-        <!-- Modern Sidebar Button Style with Smooth Animations -->
+        <!-- Clean Sidebar Button Style -->
         <Style x:Key="SidebarButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource TextSecondary}"/>
+            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="Height" Value="44"/>
             <Setter Property="Margin" Value="0,0,0,4"/>
@@ -23,13 +23,7 @@
                                 CornerRadius="8"
                                 Padding="12,0"
                                 Background="Transparent">
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="scaleTransform" ScaleX="1" ScaleY="1"/>
-                            </Border.RenderTransform>
-                            <Border.RenderTransformOrigin>0.5,0.5</Border.RenderTransformOrigin>
-                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                <ContentPresenter/>
-                            </StackPanel>
+                            <ContentPresenter Margin="16,0,0,0" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
@@ -38,24 +32,8 @@
                                         <Storyboard>
                                             <ColorAnimation Storyboard.TargetName="border"
                                                           Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
-                                                          To="#363848"
+                                                          To="#F8FAFB"
                                                           Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleX"
-                                                           To="1.02"
-                                                           Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleY"
-                                                           To="1.02"
-                                                           Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.EnterActions>
@@ -66,52 +44,14 @@
                                                           Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Color)"
                                                           To="Transparent"
                                                           Duration="0:0:0.2"/>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleX"
-                                                           To="1"
-                                                           Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleY"
-                                                           To="1"
-                                                           Duration="0:0:0.2">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
                                         </Storyboard>
                                     </BeginStoryboard>
                                 </Trigger.ExitActions>
-                                <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource AccentGoldGradient}"/>
-                                <Setter Property="Foreground" Value="{StaticResource SurfaceDark}"/>
-                                <Trigger.EnterActions>
-                                    <BeginStoryboard>
-                                        <Storyboard>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleX"
-                                                           To="0.98"
-                                                           Duration="0:0:0.1">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                            <DoubleAnimation Storyboard.TargetName="scaleTransform"
-                                                           Storyboard.TargetProperty="ScaleY"
-                                                           To="0.98"
-                                                           Duration="0:0:0.1">
-                                                <DoubleAnimation.EasingFunction>
-                                                    <CubicEase EasingMode="EaseOut"/>
-                                                </DoubleAnimation.EasingFunction>
-                                            </DoubleAnimation>
-                                        </Storyboard>
-                                    </BeginStoryboard>
-                                </Trigger.EnterActions>
+                            <Trigger Property="Tag" Value="Active">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource HeaderBackgroundBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -122,8 +62,8 @@
 
     <Border CornerRadius="0" 
             Margin="0"
-            Background="#282538"
-            BorderBrush="{StaticResource BorderColor}"
+            Background="{StaticResource SidebarBackgroundBrush}"
+            BorderBrush="{StaticResource BorderBrushLight}"
             BorderThickness="0,0,1,0">
         <Grid Margin="0">
             <Grid.RowDefinitions>
@@ -138,7 +78,7 @@
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="16,24,16,32">
                 <Border Width="40" Height="40" 
                         CornerRadius="8"
-                        Background="{StaticResource AccentGoldGradient}">
+                        Background="{StaticResource PrimaryBrush}">
                     <Image x:Name="ExamForge_Icon"
                            Width="24" Height="24"
                            Source="pack://application:,,,/ICONS/white_anvil64.png"/>
@@ -147,7 +87,7 @@
                            Margin="12,0,0,0"
                            FontSize="18"
                            FontWeight="SemiBold"
-                           Foreground="{StaticResource TextPrimary}"
+                           Foreground="{StaticResource PrimaryBrush}"
                            VerticalAlignment="Center"/>
             </StackPanel>
 
@@ -177,7 +117,8 @@
 
                 <!-- Analytics -->
                 <Button x:Name="analytics_button"
-                        Style="{StaticResource SidebarButtonStyle}">
+                        Style="{StaticResource SidebarButtonStyle}"
+                        Click="Analytics_Button_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="pack://application:,,,/ICONS/analytics_grey32.png"
                                Width="20" Height="20" Stretch="Uniform"/>
