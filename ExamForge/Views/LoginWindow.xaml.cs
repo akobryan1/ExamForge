@@ -1,17 +1,18 @@
 using System;
 using System.Windows;
 using ExamForge.Services;
+using System.Threading;
 
 namespace ExamForge.Views
 {
     public partial class LoginWindow : Window
     {
-        private readonly FirebaseAuthService _authService;
+        private readonly BackendAuthService _authService;
 
         public LoginWindow()
         {
             InitializeComponent();
-            _authService = new FirebaseAuthService();
+            _authService = new BackendAuthService();
         }
 
         private async void GoogleSignIn_Click(object sender, RoutedEventArgs e)
@@ -25,17 +26,22 @@ namespace ExamForge.Views
                 StatusText.Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush");
                 StatusText.Text = "Opening Google Sign-In...";
 
-                // Attempt sign-in
-                var success = await _authService.SignInWithGoogleAsync();
+                // Attempt sign-in via backend OAuth middleman
+                var success = await _authService.SignInWithGoogleAsync(CancellationToken.None);
 
                 if (success && _authService.UserId != null)
                 {
                     StatusText.Text = "Sign-in successful! Loading your workspace...";
 
-                    // Store auth service globally
-                    App.AuthService = _authService;
+                    // Store backend auth context globally
+                    App.AuthService = null; // Legacy direct Google flow disabled when backend is used
+                    App.BackendAuthService = _authService;
+                    App.BackendJwt = _authService.JwtToken;
+                    App.CurrentUserId = _authService.UserId;
+                    App.CurrentUserEmail = _authService.Email;
+                    App.CurrentUserName = _authService.DisplayName;
 
-                    // Initialize Firestore with user's ID (data isolation)
+                    // Initialize Firestore with user's ID (kept for now; replace with backend-proxied data if needed)
                     App.FirestoreService = new FirestoreService(_authService.UserId);
 
                     // Small delay for UX

@@ -1,18 +1,30 @@
 <Window x:Class="ExamForge.Views.LoginWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="ExamForge - Sign In"
-        Height="600" Width="450"
-        WindowStartupLocation="CenterScreen"
-        Background="{StaticResource AppBackgroundBrush}"
-        ResizeMode="NoResize"
-        WindowStyle="SingleBorderWindow">
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="ExamForge - Sign In"
+    Height="600" Width="450"
+    WindowStartupLocation="CenterScreen"
+    Background="#F3F5F7"
+    ResizeMode="NoResize"
+    WindowStyle="SingleBorderWindow">
     
-    <Grid>
-        <!-- Background decoration -->
-        <Border Background="{StaticResource CardBackgroundBrush}" 
-                CornerRadius="12" Margin="40"
-                Effect="{StaticResource CardShadow}">
+<Window.Resources>
+    <!-- Define colors directly to avoid resource loading issues -->
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#3AAE9E"/>
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#2E2F33"/>
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#6B7280"/>
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#9AA3AF"/>
+    <SolidColorBrush x:Key="SoftAccentBackgroundBrush" Color="#E6F4F1"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="#EF4444"/>
+</Window.Resources>
+    
+<Grid>
+    <!-- Background decoration -->
+    <Border Background="White" 
+            CornerRadius="12" Margin="40">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" Opacity="0.1" ShadowDepth="4" BlurRadius="12"/>
+        </Border.Effect>
             
             <StackPanel VerticalAlignment="Center" Margin="50">
                 

@@ -11,6 +11,11 @@ namespace ExamForge
         public static FirestoreService? FirestoreService { get; set; }
         public static ExamPublishingService? PublishingService { get; private set; }
         public static FirebaseAuthService? AuthService { get; set; }
+        public static BackendAuthService? BackendAuthService { get; set; }
+        public static string? BackendJwt { get; set; }
+        public static string? CurrentUserId { get; set; }
+        public static string? CurrentUserEmail { get; set; }
+        public static string? CurrentUserName { get; set; }
 
         protected override void OnStartup(StartupEventArgs e)
         {
