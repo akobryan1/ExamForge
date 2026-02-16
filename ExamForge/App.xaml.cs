@@ -8,8 +8,14 @@ namespace ExamForge
 {
     public partial class App : Application
     {
-        public static FirestoreService? FirestoreService { get; private set; }
+        public static FirestoreService? FirestoreService { get; set; }
         public static ExamPublishingService? PublishingService { get; private set; }
+        public static FirebaseAuthService? AuthService { get; set; }
+        public static BackendAuthService? BackendAuthService { get; set; }
+        public static string? BackendJwt { get; set; }
+        public static string? CurrentUserId { get; set; }
+        public static string? CurrentUserEmail { get; set; }
+        public static string? CurrentUserName { get; set; }
 
         protected override void OnStartup(StartupEventArgs e)
         {
@@ -17,35 +23,24 @@ namespace ExamForge
 
             try
             {
-                // Load appsettings.json
+                // Load appsettings.json for publishing service config
                 var configuration = new ConfigurationBuilder()
                     .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                     .Build();
 
                 var firebaseSettings = configuration.GetSection("Firebase");
-                var credentialsPath = firebaseSettings["CredentialsPath"];
                 var projectId = firebaseSettings["ProjectId"];
                 var hostingUrl = firebaseSettings["HostingUrl"];
                 var apiEndpoint = firebaseSettings["ApiEndpoint"];
                 var publishingServerUrl = firebaseSettings["PublishingServerUrl"];
 
-                if (string.IsNullOrEmpty(credentialsPath) || !File.Exists(credentialsPath))
-                {
-                    MessageBox.Show($"Firebase credentials file not found at: {credentialsPath}", 
-                        "Configuration Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    Shutdown();
-                    return;
-                }
+                // Store config for later use after login
+                // FirestoreService will be initialized after authentication with user-scoped collections
 
-                // ✅ FIX: Use GetInstance() instead of constructor
-                FirestoreService = Services.FirestoreService.GetInstance(projectId ?? "", credentialsPath);
-                PublishingService = new ExamPublishingService(
-                    FirestoreService, 
-                    hostingUrl ?? "", 
-                    apiEndpoint ?? "",
-                    publishingServerUrl ?? ""
-                );
+                // Show login window first (authentication required before accessing any data)
+                var loginWindow = new Views.LoginWindow();
+                loginWindow.Show();
             }
             catch (Exception ex)
             {

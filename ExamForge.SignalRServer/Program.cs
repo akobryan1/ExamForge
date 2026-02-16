@@ -13,6 +13,9 @@ if (!string.IsNullOrEmpty(redisUrl))
     });
 }
 
+// ? Add controllers for OAuth
+builder.Services.AddControllers();
+
 // CORS for clients (WPF + browser)
 builder.Services.AddCors(options =>
 {
@@ -36,6 +39,9 @@ app.MapGet("/", () => Results.Ok(new
     service = "ExamForge SignalR Server",
     timestamp = DateTime.UtcNow
 }));
+
+// ? OAuth endpoints
+app.MapControllers();
 
 // SignalR hub
 app.MapHub<SessionHub>("/sessionHub");
