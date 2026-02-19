@@ -11,6 +11,17 @@ namespace ExamForge
         public sidebar_usercontrol()
         {
             InitializeComponent();
+            Loaded += Sidebar_Loaded;
+        }
+
+        private void Sidebar_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Update username greeting
+            if (App.SupabaseAuth != null && !string.IsNullOrEmpty(App.SupabaseAuth.Email))
+            {
+                var username = App.SupabaseAuth.Email.Split('@')[0];
+                UsernameGreeting.Text = $"Hello, {username}";
+            }
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -83,6 +94,33 @@ namespace ExamForge
         public void NavigateToPublishedExams()
         {
             Published_Exams_Button_Click(this, new RoutedEventArgs());
+        }
+
+        private async void logout_button_Click(object sender, RoutedEventArgs e)
+        {
+            var result = MessageBox.Show("Are you sure you want to log out?", "Logout", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                if (App.SupabaseAuth != null)
+                {
+                    await App.SupabaseAuth.SignOutAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Logout error: {ex.Message}");
+            }
+            finally
+            {
+                App.ResetServices();
+
+                var authWindow = new ExamForge.Views.AuthWindow();
+                authWindow.Show();
+
+                Window.GetWindow(this)?.Close();
+            }
         }
     }
 }

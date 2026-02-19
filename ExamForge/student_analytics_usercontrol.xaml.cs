@@ -115,7 +115,7 @@ namespace ExamForge
             {
                 if (!_availableExams.Any())
                 {
-                    ShowInfo("No exams available to filter.");
+                    await ShowEmptyAnalyticsStateAsync();
                     return;
                 }
 
@@ -180,7 +180,7 @@ namespace ExamForge
                 // Load available exams first
                 await LoadAvailableExamsAsync();
                 
-                // Load data for the first available exam or show demo data
+                // Load data for the first available exam or show empty state
                 if (_availableExams.Any())
                 {
                     _currentExamId = _availableExams.First().Id;
@@ -195,17 +195,13 @@ namespace ExamForge
                 }
                 else
                 {
-                    // Show demo data when no exams exist
-                    await LoadDemoDataAsync();
-                    ShowInfo("No published exams found. Showing demo data. Please publish some exams to see real analytics.");
+                    await ShowEmptyAnalyticsStateAsync();
                 }
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"❌ Error loading analytics data: {ex.Message}");
-                // Show demo data on error
-                await LoadDemoDataAsync();
-                ShowError($"Failed to load analytics data. Showing demo data. Error: {ex.Message}");
+                await ShowEmptyAnalyticsStateAsync();
             }
         }
 
@@ -290,45 +286,33 @@ namespace ExamForge
             });
         }
 
-        private async Task LoadDemoDataAsync()
+        private async Task ShowEmptyAnalyticsStateAsync()
         {
             try
             {
-                // Create demo published exam
-                _availableExams = new List<PublishedExam>
-                {
-                    new PublishedExam
-                    {
-                        Id = "demo-exam-001",
-                        Title = "Demo Mathematics Exam",
-                        PublishedDate = DateTime.Now.AddDays(-1),
-                        ExamUrl = "https://demo-exam.example.com"
-                    }
-                };
-                _currentExamId = "demo-exam-001";
+                _currentExamId = string.Empty;
+                _availableExams = new List<PublishedExam>();
+                _allStudents = new List<StudentPerformanceData>();
 
-                // Update dropdown
-                if (ExamAnalyticsFilter != null)
+                // Set filters to indicate no data
+                await Dispatcher.InvokeAsync(() =>
                 {
-                    ExamAnalyticsFilter.Items.Clear();
-                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem { Content = "All Exams" });
-                    ExamAnalyticsFilter.Items.Add(new ComboBoxItem 
-                    { 
-                        Content = "Demo Mathematics Exam",
-                        Tag = "demo-exam-001"
-                    });
-                    ExamAnalyticsFilter.SelectedIndex = 1;
-                }
+                    ExamAnalyticsFilter?.Items.Clear();
+                    ExamAnalyticsFilter?.Items.Add(new ComboBoxItem { Content = "No data yet" });
+                    if (ExamAnalyticsFilter != null) ExamAnalyticsFilter.SelectedIndex = 0;
 
-                // Load demo metrics
-                await LoadDemoClassOverview();
-                LoadDemoStudents();
-                
-                Debug.WriteLine("?? Demo data loaded successfully");
+                    SubjectAnalyticsFilter?.Items.Clear();
+                    SubjectAnalyticsFilter?.Items.Add(new ComboBoxItem { Content = "No data yet" });
+                    if (SubjectAnalyticsFilter != null) SubjectAnalyticsFilter.SelectedIndex = 0;
+                });
+
+                // Update metrics to zeros
+                await UpdateClassMetricsDisplay(new ExamForge.Services.ClassOverviewMetrics());
+                DrawScoreHistogram();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading demo data: {ex.Message}");
+                Debug.WriteLine($"Error setting empty analytics state: {ex.Message}");
             }
         }
 

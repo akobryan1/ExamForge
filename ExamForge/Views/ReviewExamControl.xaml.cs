@@ -39,10 +39,12 @@ public partial class ReviewExamControl : UserControl
         PublishButton.Content = "Publishing...";
 
         // ✅ Show loading dialog
-        var loadingDialog = new LoadingDialog
+        var loadingDialog = new LoadingDialog();
+        var parentWindow = Window.GetWindow(this);
+        if (parentWindow != null)
         {
-            Owner = Window.GetWindow(this)
-        };
+            loadingDialog.Owner = parentWindow;
+        }
         loadingDialog.Show();
 
         try

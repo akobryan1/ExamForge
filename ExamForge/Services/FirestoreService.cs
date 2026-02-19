@@ -87,7 +87,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("published_exams").Document(examId);
+            var docRef = _firestoreDb.Collection(GetUserPath("exams")).Document(examId);
             var snapshot = await docRef.GetSnapshotAsync();
             
             if (!snapshot.Exists) return null;
@@ -113,7 +113,7 @@ public class FirestoreService
     {
         try
         {
-            var collection = _firestoreDb.Collection("published_exams");
+            var collection = _firestoreDb.Collection(GetUserPath("exams"));
             var snapshot = await collection.GetSnapshotAsync();
             
             var exams = new List<PublishedExam>();
@@ -148,7 +148,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("examinee_data").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath("submissions")).Document();
             submission.Id = docRef.Id;
             await docRef.SetAsync(submission);
             return submission.Id;
@@ -164,7 +164,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("examinee_data")
+            var query = _firestoreDb.Collection(GetUserPath("submissions"))
                 .WhereEqualTo("ExamId", examId);
             var snapshot = await query.GetSnapshotAsync();
             
@@ -183,7 +183,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("published_exams").Document(examId);
+            var docRef = _firestoreDb.Collection(GetUserPath("exams")).Document(examId);
             await docRef.DeleteAsync();
         }
         catch (Exception ex)
@@ -198,7 +198,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath("sessions")).Document();
             session.Id = docRef.Id;
             await docRef.SetAsync(session);
             return session.Id;
@@ -213,7 +213,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document(sessionId);
+            var docRef = _firestoreDb.Collection(GetUserPath("sessions")).Document(sessionId);
             var snapshot = await docRef.GetSnapshotAsync();
             return snapshot.Exists ? snapshot.ConvertTo<ExamSession>() : null;
         }
@@ -227,7 +227,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document(session.Id);
+            var docRef = _firestoreDb.Collection(GetUserPath("sessions")).Document(session.Id);
             await docRef.SetAsync(session, SetOptions.MergeAll);
         }
         catch (Exception ex)
@@ -240,7 +240,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath("sessions"))
                 .WhereEqualTo("ExamId", examId)
                 .WhereEqualTo("Status", "Running");
             var snapshot = await query.GetSnapshotAsync();
@@ -256,7 +256,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath("sessions"))
                 .WhereEqualTo("Status", "Running");
             var snapshot = await query.GetSnapshotAsync();
             return snapshot.Documents.Select(d => d.ConvertTo<ExamSession>()).ToList();
@@ -275,7 +275,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("session_events").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath("session_events")).Document();
             evt.Id = docRef.Id;
             await docRef.SetAsync(evt);
             return evt.Id;
@@ -290,7 +290,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("session_events")
+            var query = _firestoreDb.Collection(GetUserPath("session_events"))
                 .WhereEqualTo("SessionId", sessionId)
                 .OrderByDescending("Timestamp")
                 .Limit(limit);
@@ -311,7 +311,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("question_bank").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath("question_bank")).Document();
             question.Id = docRef.Id;
             await docRef.SetAsync(question);
             return question.Id;
@@ -329,7 +329,7 @@ public class FirestoreService
     {
         try
         {
-            Query query = _firestoreDb.Collection("question_bank");
+            Query query = _firestoreDb.Collection(GetUserPath("question_bank"));
 
             if (!string.IsNullOrEmpty(subject))
                 query = query.WhereEqualTo("Subject", subject);
@@ -353,7 +353,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("integrity_incidents")
+            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
                 .WhereEqualTo("ExamId", examId)
                 .OrderByDescending("Timestamp");
                 
@@ -371,7 +371,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath("sessions"))
                 .WhereEqualTo("IsActive", true)
                 .OrderBy("StartTime");
                 
@@ -390,7 +390,7 @@ public class FirestoreService
         try
         {
             var cutoffTime = DateTime.UtcNow.Subtract(timeSpan);
-            var query = _firestoreDb.Collection("integrity_incidents")
+            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
                 .WhereGreaterThan("Timestamp", Timestamp.FromDateTime(cutoffTime))
                 .OrderByDescending("Timestamp")
                 .Limit(50);
@@ -414,7 +414,7 @@ public class FirestoreService
     {
         try
         {
-            Query query = _firestoreDb.Collection("grading_queue");
+            Query query = _firestoreDb.Collection(GetUserPath("grading_queue"));
             
             if (!string.IsNullOrEmpty(examId))
             {
@@ -436,7 +436,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
             
             var updates = new Dictionary<string, object>
             {
@@ -467,7 +467,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
             await docRef.DeleteAsync();
         }
         catch (Exception ex)
