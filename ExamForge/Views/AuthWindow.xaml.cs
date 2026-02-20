@@ -46,6 +46,8 @@ namespace ExamForge.Views
         {
             // Open main window
             var mainWindow = new MainWindow();
+            // Ensure Application.Current.MainWindow references the new main window
+            Application.Current.MainWindow = mainWindow;
             mainWindow.Show();
             
             // Close auth window

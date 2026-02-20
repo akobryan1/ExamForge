@@ -38,13 +38,8 @@ public partial class ReviewExamControl : UserControl
         PublishButton.IsEnabled = false;
         PublishButton.Content = "Publishing...";
 
-        // ✅ Show loading dialog
+        // ✅ Show loading dialog (no owner required - centers on screen)
         var loadingDialog = new LoadingDialog();
-        var parentWindow = Window.GetWindow(this);
-        if (parentWindow != null)
-        {
-            loadingDialog.Owner = parentWindow;
-        }
         loadingDialog.Show();
 
         try

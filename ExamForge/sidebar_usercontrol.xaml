@@ -141,8 +141,17 @@
             <!-- Spacer -->
             <Border Grid.Row="2"/>
 
-            <!-- Settings -->
+            <!-- User Info & Settings -->
             <StackPanel Grid.Row="3" Margin="12,0,12,8">
+                <!-- Username Greeting -->
+                <TextBlock x:Name="UsernameGreeting"
+                           Text="Hello, User"
+                           FontSize="13"
+                           FontWeight="Medium"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="12,0,0,12"
+                           TextTrimming="CharacterEllipsis"/>
+                
                 <Button x:Name="settings_button"
                         Style="{StaticResource SidebarButtonStyle}">
                     <StackPanel Orientation="Horizontal">
@@ -153,17 +162,8 @@
                 </Button>
             </StackPanel>
 
-            <!-- User Info & Logout -->
+            <!-- Logout -->
             <StackPanel Grid.Row="4" Margin="12,0,12,16">
-                <!-- Username Greeting -->
-                <TextBlock x:Name="UsernameGreeting"
-                           Text="Hello, User"
-                           FontSize="13"
-                           FontWeight="Medium"
-                           Foreground="{StaticResource TextPrimaryBrush}"
-                           Margin="12,0,0,12"
-                           TextTrimming="CharacterEllipsis"/>
-                
                 <Button x:Name="logout_button"
                         Style="{StaticResource SidebarButtonStyle}"
                         Click="logout_button_Click">

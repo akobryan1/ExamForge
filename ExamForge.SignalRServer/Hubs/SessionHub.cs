@@ -1,9 +1,69 @@
 using Microsoft.AspNetCore.SignalR;
+using Google.Cloud.Firestore;
+using System.Net;
+using System.Threading.Tasks;
+using System.Collections.Generic;
+using System;
 
 namespace ExamForge.SignalRServer.Hubs;
 
 public class SessionHub : Hub
 {
+    private static readonly object _fsLock = new();
+    private static FirestoreDb? _firestoreDb;
+
+    private static FirestoreDb GetFirestoreDb()
+    {
+        if (_firestoreDb != null) return _firestoreDb;
+        lock (_fsLock)
+        {
+            if (_firestoreDb != null) return _firestoreDb;
+
+            var projectId = Environment.GetEnvironmentVariable("FIRESTORE_PROJECT_ID") ?? "examforge-201e8";
+            var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") ?? "firebase-adminsdk.json";
+            try
+            {
+                _firestoreDb = FirestoreDb.Create(projectId);
+            }
+            catch (Exception ex)
+            {
+                // Swallow - Firestore may not be configured in local dev
+                Console.WriteLine($"Failed to initialize Firestore in SessionHub: {ex.Message}");
+                _firestoreDb = null;
+            }
+
+            return _firestoreDb;
+        }
+    }
+
+    private async Task LogSessionEventAsync(string sessionId, string studentId, string studentName, string eventType, string details, string severity = "Info")
+    {
+        try
+        {
+            var db = GetFirestoreDb();
+            if (db == null) return;
+
+            var docRef = db.Collection("session_events").Document();
+            var payload = new Dictionary<string, object>
+            {
+                ["SessionId"] = sessionId,
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["EventType"] = eventType,
+                ["Details"] = details,
+                ["Severity"] = severity,
+                ["Timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["IpAddress"] = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? "",
+                ["ConnectionId"] = Context.ConnectionId
+            };
+
+            await docRef.SetAsync(payload);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to write session event: {ex.Message}");
+        }
+    }
     public async Task JoinSession(string sessionId, string studentId, string studentName)
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, sessionId);
@@ -45,6 +105,9 @@ public class SessionHub : Hub
             Details = details,
             Timestamp = DateTime.UtcNow
         });
+
+        // Log to Firestore for auditing
+        _ = LogSessionEventAsync(sessionId, studentId, studentName, eventType, details, severity);
     }
 
     public async Task MonitorSession(string sessionId)

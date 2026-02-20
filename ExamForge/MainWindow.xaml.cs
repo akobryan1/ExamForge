@@ -192,7 +192,9 @@ public partial class MainWindow : Window
             StartTime = startTimeUtc,
             EndTime = endTimeUtc,
             ExamDuration = CalculateDuration(timingState),
-            LoginConfig = loginConfig
+            LoginConfig = loginConfig,
+            // Include anti-cheat configuration from the structure builder (if any)
+            AntiCheat = _structureBuilderInstance?.GetAntiCheatState()
         };
     }
 

@@ -340,9 +340,28 @@ public class ExamPublishingService
         sb.AppendLine("        </div>");
         sb.AppendLine("    </div>");
         
+        // Generate JavaScript and ensure any accidental </script> sequences are escaped
+        var jsContent = GetExamJavaScript(examData, examId);
+        // Add a lightweight initialization log and error boundary
+        jsContent = "try{console.log('Exam JS initializing');}catch(e){console.error('Exam JS init error',e);}\n" + jsContent;
+        // Prevent closing the script tag prematurely when embedding
+        jsContent = jsContent.Replace("</script>", "<\\/script>");
+
         sb.AppendLine("    <script>");
-        sb.AppendLine(GetExamJavaScript(examData, examId));
+        sb.AppendLine(jsContent);
         sb.AppendLine("    </script>");
+        sb.AppendLine("        // Anti-cheat: Detect tabbing and copy/paste/screenshot prevention");
+        sb.AppendLine("        document.addEventListener('visibilitychange', function() {");
+        sb.AppendLine("            if (!antiCheatConfig.DetectTabbing) return;");
+        sb.AppendLine("            if (document.hidden) {");
+        sb.AppendLine("                tabSwitchCount++; console.warn('Tab switched. Count: ' + tabSwitchCount);");
+        sb.AppendLine("                if (antiCheatConfig.WarningOnly) alert('Warning: You switched away from the exam window. This has been recorded.');");
+        sb.AppendLine("                if (antiCheatConfig.DeductPoints) { const pts = parseInt(antiCheatConfig.DeductPointsValue || '0', 10) || 0; deductedPoints += pts; console.warn('Deducted points: ' + pts + '. Total deducted: ' + deductedPoints); }");
+        sb.AppendLine("                if (antiCheatConfig.AutoSubmit) { alert('You switched away from the exam. The exam will be submitted automatically.'); document.getElementById('examForm').dispatchEvent(new Event('submit')); }");
+        sb.AppendLine("                // Try to report to SignalR server if available");
+        sb.AppendLine("                try { if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') { window.signalRConnection.invoke('ReportEvent', examId, (window.studentInfo && window.studentInfo.studentId) ? window.studentInfo.studentId : '', (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : '', 'tab_switch', JSON.stringify({ count: tabSwitchCount, deductedPoints: deductedPoints })); } } catch(e) { console.warn('ReportEvent failed', e); }");
+        sb.AppendLine("            }");
+        sb.AppendLine("        });");
         sb.AppendLine("</body>");
         sb.AppendLine("</html>");
         
@@ -577,15 +596,44 @@ public class ExamPublishingService
     {
         var sb = new StringBuilder();
         var loginConfig = examData.LoginConfig;
+        var antiCheat = examData.AntiCheat;
         
         sb.AppendLine("        // Exam Configuration");
         sb.AppendLine($"        const examId = '{examId}';");
         sb.AppendLine($"        const examDuration = {examData.ExamDuration};");
         sb.AppendLine($"        const apiEndpoint = '{_apiEndpoint}';");
         sb.AppendLine($"        const useGoogleSignIn = {(loginConfig?.IsGoogleSignIn == true ? "true" : "false")};");
+        var antiDict = new System.Collections.Generic.Dictionary<string, object?>
+        {
+            ["DetectTabbing"] = antiCheat?.DetectTabbing ?? false,
+            ["WarningOnly"] = antiCheat?.WarningOnly ?? false,
+            ["DeductPoints"] = antiCheat?.DeductPoints ?? false,
+            ["DeductPointsValue"] = antiCheat?.DeductPointsValue ?? "0",
+            ["AutoSubmit"] = antiCheat?.AutoSubmit ?? false,
+            ["OneQuestionAtATime"] = antiCheat?.OneQuestionAtATime ?? false,
+            ["DisableBacktrack"] = antiCheat?.DisableBacktrack ?? false,
+            ["TimeLimitPerQuestion"] = antiCheat?.TimeLimitPerQuestion ?? false,
+            ["TimeLimitValue"] = antiCheat?.TimeLimitValue ?? "60",
+            ["DisableCopyPaste"] = antiCheat?.DisableCopyPaste ?? false,
+            ["DisableScreenshot"] = antiCheat?.DisableScreenshot ?? false
+        };
+
+        var antiCheatJson = System.Text.Json.JsonSerializer.Serialize(antiDict);
+        sb.AppendLine("        const antiCheatConfig = " + antiCheatJson + ";");
         sb.AppendLine();
         sb.AppendLine("        let timeRemaining = examDuration * 60;");
         sb.AppendLine("        let timerInterval;");
+        sb.AppendLine("        // Anti-cheat state tracking");
+        sb.AppendLine("        let tabSwitchCount = 0;");
+        sb.AppendLine("        let deductedPoints = 0;");
+        sb.AppendLine();
+
+        // SignalR hub URL (attempt to connect for real-time reporting)
+        var hubUrl = _publishingServerUrl?.TrimEnd('/') + "/sessionHub";
+        var hubUrlJson = System.Text.Json.JsonSerializer.Serialize(hubUrl);
+        sb.AppendLine("        const signalRHubUrl = " + hubUrlJson + ";");
+        sb.AppendLine("        // Load SignalR client dynamically and connect (best-effort)");
+        sb.AppendLine("        (function(){\n            try {\n                var script = document.createElement('script');\n                script.src = 'https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.7/dist/browser/signalr.min.js';\n                script.onload = function() {\n                    try {\n                        if (typeof signalR === 'undefined') return;\n                        window.signalRConnection = new signalR.HubConnectionBuilder().withUrl(signalRHubUrl).withAutomaticReconnect().build();\n                        window.signalRConnection.start().then(function(){\n                            console.log('✅ Connected to SignalR hub');\n                            // Will join when student info is available after startExam/GoogleSignIn\n                        }).catch(function(err){ console.warn('SignalR start failed', err); });\n                    } catch (e) { console.warn('SignalR init error', e); }\n                };\n                script.onerror = function(e){ console.warn('Failed to load SignalR client', e); };\n                document.head.appendChild(script);\n            } catch (e) { console.warn('Failed to inject SignalR script', e); }\n        })();");
         sb.AppendLine();
         
         // Google Sign-In Handler

@@ -227,7 +227,71 @@ public class AuthController : ControllerBase
 
         return Ok(new { removed = expiredKeys.Count });
     }
+
+    [HttpPost("admin/confirm")]
+    public async Task<IActionResult> ConfirmUser([FromBody] ConfirmUserRequest req)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(req?.Email))
+                return BadRequest(new { error = "Email is required" });
+
+            var serviceKey = _configuration["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            if (string.IsNullOrWhiteSpace(serviceKey))
+            {
+                _logger.LogWarning("Supabase service role key not configured for admin confirm");
+                return StatusCode(500, new { error = "Admin key not configured on server" });
+            }
+
+            using var http = new HttpClient { BaseAddress = new Uri("https://poscguejitgziwppvmaa.supabase.co") };
+            http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", serviceKey);
+            http.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+
+            // Find user by email
+            var getResp = await http.GetAsync($"/auth/v1/admin/users?email={Uri.EscapeDataString(req.Email)}");
+            if (!getResp.IsSuccessStatusCode)
+            {
+                var err = await getResp.Content.ReadAsStringAsync();
+                _logger.LogError("Admin confirm: failed to query user: {code} {err}", getResp.StatusCode, err);
+                return StatusCode(502, new { error = "Failed to query Supabase admin API" });
+            }
+
+            var json = await getResp.Content.ReadAsStringAsync();
+            using var doc = System.Text.Json.JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != System.Text.Json.JsonValueKind.Array || doc.RootElement.GetArrayLength() == 0)
+                return NotFound(new { error = "User not found" });
+
+            var userElem = doc.RootElement[0];
+            if (!userElem.TryGetProperty("id", out var idProp))
+                return StatusCode(502, new { error = "Unexpected response from Supabase admin API" });
+
+            var userId = idProp.GetString();
+            if (string.IsNullOrWhiteSpace(userId))
+                return StatusCode(502, new { error = "Invalid user id from Supabase" });
+
+            var payload = new { email_confirm = true, email_confirmed_at = DateTime.UtcNow.ToString("o") };
+            var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+
+            var patchReq = new HttpRequestMessage(new HttpMethod("PATCH"), $"/auth/v1/admin/users/{userId}") { Content = content };
+            var patchResp = await http.SendAsync(patchReq);
+            if (!patchResp.IsSuccessStatusCode)
+            {
+                var err = await patchResp.Content.ReadAsStringAsync();
+                _logger.LogError("Admin confirm: patch failed: {code} {err}", patchResp.StatusCode, err);
+                return StatusCode(502, new { error = "Failed to update user via Supabase admin API" });
+            }
+
+            return Ok(new { success = true, userId });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in admin confirm");
+            return StatusCode(500, new { error = "Internal error" });
+        }
+    }
 }
+
+public class ConfirmUserRequest { public string Email { get; set; } = ""; }
 
 // DTOs
 public class AuthRequest

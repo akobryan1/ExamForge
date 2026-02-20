@@ -101,21 +101,18 @@ namespace ExamForge.Views
                 if (success)
                 {
                     ShowMessage("Account created successfully! Redirecting...", isError: false);
-                    
+
                     // Store auth service globally
                     App.SupabaseAuth = _authService;
-                    
-                    // Initialize Firestore with user ID
-                    App.FirestoreService = new FirestoreService(_authService.UserId!);
 
-                    // Configure publishing service for this user
-                    if (App.FirestoreService != null)
+                    // Initialize Firestore with user ID if available and configure publishing
+                    if (!string.IsNullOrEmpty(_authService.UserId))
                     {
+                        App.FirestoreService = new FirestoreService(_authService.UserId);
                         App.ConfigurePublishingService(App.FirestoreService);
                     }
 
-                    // Wait a moment then trigger success
-                    await System.Threading.Tasks.Task.Delay(1500);
+                    // Immediately trigger success to redirect user
                     SignUpSuccessful?.Invoke(this, EventArgs.Empty);
                 }
                 else

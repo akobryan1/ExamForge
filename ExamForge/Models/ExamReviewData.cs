@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Google.Cloud.Firestore;
+using ExamForge; // for AntiCheatState
 
 namespace ExamForge.Models;
 
@@ -14,6 +15,8 @@ public class ExamReviewData
     public DateTime EndTime { get; set; }
     public int ExamDuration { get; set; }
     public LoginConfigState? LoginConfig { get; set; }
+    // Optional anti-cheat configuration saved from the builder
+    public AntiCheatState? AntiCheat { get; set; }
 }
 
 [FirestoreData]

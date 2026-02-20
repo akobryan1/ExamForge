@@ -19,6 +19,7 @@ public class SignalRService : IDisposable
     public event Action<object>? OnStudentJoined;
     public event Action<object>? OnStudentHeartbeat;
     public event Action<object>? OnIntegrityEvent;
+    public event Action<string, string, string, string>? OnReportEvent; // sessionId, studentId, eventType, details
 
     public SignalRService(string hubUrl)
     {
@@ -56,10 +57,24 @@ public class SignalRService : IDisposable
                 OnStudentHeartbeat?.Invoke(data);
             });
 
+            _connection.On<string, string, string, string>("ReportEvent", async (sessionId, studentId, studentName, payloadJson) =>
+            {
+                Debug.WriteLine($"🔔 ReportEvent received: {sessionId} {studentId} {payloadJson}");
+                // Forward to local handler so UI can log or persist
+                OnIntegrityEvent?.Invoke(new { sessionId, studentId, studentName, payloadJson });
+            });
+
             _connection.On<object>("IntegrityEvent", data =>
             {
                 Debug.WriteLine($"⚠️ IntegrityEvent: {data}");
                 OnIntegrityEvent?.Invoke(data);
+            });
+
+            // New: server can request client to report an event that should be logged to Firestore
+            _connection.On<string, string, string, string>("RequestReportEvent", (sessionId, studentId, eventType, details) =>
+            {
+                Debug.WriteLine($"🔔 RequestReportEvent: {eventType} for {studentId} in {sessionId}");
+                OnReportEvent?.Invoke(sessionId, studentId, eventType, details);
             });
 
             _connection.Closed += async (error) =>

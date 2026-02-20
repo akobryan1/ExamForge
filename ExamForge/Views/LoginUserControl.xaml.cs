@@ -64,17 +64,20 @@ namespace ExamForge.Views
                 {
                     // Store auth service globally
                     App.SupabaseAuth = _authService;
-                    
-                    // Initialize Firestore with user ID
-                    App.FirestoreService = new FirestoreService(_authService.UserId!);
 
-                    // Configure publishing service for this user
-                    if (App.FirestoreService != null)
+                    // Initialize Firestore with user ID if available
+                    if (!string.IsNullOrEmpty(_authService.UserId))
                     {
-                        App.ConfigurePublishingService(App.FirestoreService);
+                        App.FirestoreService = new FirestoreService(_authService.UserId);
+                        // Configure publishing service if present
+                        try
+                        {
+                            App.ConfigurePublishingService(App.FirestoreService);
+                        }
+                        catch { }
                     }
 
-                    // Trigger success event
+                    // Trigger success event to open main window
                     LoginSuccessful?.Invoke(this, EventArgs.Empty);
                 }
                 else

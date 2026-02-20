@@ -23,3 +23,6 @@
 
 ## Resource Management
 - Icons are stored under `Documents/ICONS`; adjust WPF image sources accordingly (pack URI or add to project).
+
+## Firestore Configuration
+- On user sign-up, Firestore should create per-user collections named `exam_sessions`, `examinee_data`, `grading_queue`, and `published_exams`. Adjust system paths accordingly, using `examforge_users` as the root user collection.
