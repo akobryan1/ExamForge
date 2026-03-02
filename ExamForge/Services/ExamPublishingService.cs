@@ -53,7 +53,8 @@ public class ExamPublishingService
                 StartTime = examData.StartTime,
                 EndTime = examData.EndTime,
                 ExamDuration = examData.ExamDuration,
-                LoginConfig = examData.LoginConfig // ✅ FIX: Pass LoginConfig for HTML generation
+                LoginConfig = examData.LoginConfig, // ✅ FIX: Pass LoginConfig for HTML generation
+                AntiCheat = examData.AntiCheat // ✅ FIX: Pass AntiCheat config for HTML generation
             };
             
             // Generate HTML with sanitized data
@@ -75,7 +76,8 @@ public class ExamPublishingService
                 CreatedBy = creatorEmail,
                 ExamUrl = "",
                 Status = "Active",
-                LoginConfig = examData.LoginConfig
+                LoginConfig = examData.LoginConfig,
+                AntiCheat = examData.AntiCheat
             };
             
             await _firestoreService.SavePublishedExamAsync(publishedExam);
@@ -587,6 +589,12 @@ public class ExamPublishingService
         var sb = new StringBuilder();
         var loginConfig = examData.LoginConfig;
         var antiCheat = examData.AntiCheat;
+        
+        System.Diagnostics.Debug.WriteLine($"[ExamPublishingService] antiCheat is null: {antiCheat == null}");
+        if (antiCheat != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ExamPublishingService] DetectTabbing: {antiCheat.DetectTabbing}, WarningOnly: {antiCheat.WarningOnly}");
+        }
         
         sb.AppendLine("        // Exam Configuration");
         sb.AppendLine($"        const examId = '{examId}';");

@@ -58,6 +58,10 @@ namespace ExamForge.Models
         [FirestoreProperty]
         public LoginConfigState? LoginConfig { get; set; }
         
+        // AntiCheat configuration
+        [FirestoreProperty]
+        public AntiCheatState? AntiCheat { get; set; }
+        
         // LifecycleStatus is a string, not an object
         [FirestoreProperty]
         public string LifecycleStatus { get; set; } = "Draft";
