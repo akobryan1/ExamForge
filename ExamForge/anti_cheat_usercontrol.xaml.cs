@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using Google.Cloud.Firestore;
 
 namespace ExamForge
 {
@@ -106,19 +107,43 @@ namespace ExamForge
         }
     }
 
+    [FirestoreData]
     public class AntiCheatState
     {
+        [FirestoreProperty]
         public bool DetectTabbing { get; set; }
+        
+        [FirestoreProperty]
         public bool WarningOnly { get; set; }
+        
+        [FirestoreProperty]
         public bool DeductPoints { get; set; }
+        
+        [FirestoreProperty]
         public string DeductPointsValue { get; set; } = "0";
+        
+        [FirestoreProperty]
         public bool AutoSubmit { get; set; }
+        
+        [FirestoreProperty]
         public bool OneQuestionAtATime { get; set; }
+        
+        [FirestoreProperty]
         public bool DisableBacktrack { get; set; }
+        
+        [FirestoreProperty]
         public bool TimeLimitPerQuestion { get; set; }
+        
+        [FirestoreProperty]
         public string TimeLimitValue { get; set; } = "60";
+        
+        [FirestoreProperty]
         public bool DisableCopyPaste { get; set; }
+        
+        [FirestoreProperty]
         public bool DisableScreenshot { get; set; }
+        
+        [FirestoreProperty]
         public bool AutoResumeSession { get; set; }
     }
 }

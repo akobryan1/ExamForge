@@ -80,9 +80,15 @@ public partial class MainWindow : Window
         reviewControl.PublishRequested += (s, args) =>
         {
             // ✅ Redirect to Published Exams tab
+            System.Diagnostics.Debug.WriteLine("[MainWindow] PublishRequested event received, redirecting to Published Exams");
             if (_sidebar != null)
             {
-                _sidebar.NavigateToPublishedExams();
+                // Ensure redirect happens on UI thread
+                Dispatcher.Invoke(() =>
+                {
+                    _sidebar.NavigateToPublishedExams();
+                    System.Diagnostics.Debug.WriteLine("[MainWindow] Redirect completed");
+                });
             }
         };
 
@@ -175,6 +181,13 @@ public partial class MainWindow : Window
         DateTime startTimeUtc = ConvertToUtc(timingState.StartDateTime.Value);
         DateTime endTimeUtc = ConvertToUtc(timingState.EndDateTime.Value);
 
+        var antiCheatState = _structureBuilderInstance?.GetAntiCheatState();
+        System.Diagnostics.Debug.WriteLine($"[MainWindow] AntiCheatState is null: {antiCheatState == null}");
+        if (antiCheatState != null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainWindow] DetectTabbing: {antiCheatState.DetectTabbing}, WarningOnly: {antiCheatState.WarningOnly}");
+        }
+
         return new ExamReviewData
         {
             Title = examTitle,
@@ -186,7 +199,7 @@ public partial class MainWindow : Window
             ExamDuration = CalculateDuration(timingState),
             LoginConfig = loginConfig,
             // Include anti-cheat configuration from the structure builder (if any)
-            AntiCheat = _structureBuilderInstance?.GetAntiCheatState()
+            AntiCheat = antiCheatState
         };
     }
 

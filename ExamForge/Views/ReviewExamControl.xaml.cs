@@ -79,6 +79,8 @@ public partial class ReviewExamControl : UserControl
                 MessageBox.Show("URL copied to clipboard!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
 
+            // Invoke redirect event AFTER all dialogs are closed
+            System.Diagnostics.Debug.WriteLine("[ReviewControl] Invoking PublishRequested event for redirect");
             PublishRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
