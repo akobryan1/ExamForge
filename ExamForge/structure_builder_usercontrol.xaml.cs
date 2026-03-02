@@ -359,6 +359,12 @@ namespace ExamForge
             return savedLoginConfigState as LoginConfigState;
         }
 
+        public AntiCheatState? GetAntiCheatState()
+        {
+            SaveCurrentTabState();
+            return savedAntiCheatState as AntiCheatState;
+        }
+
         public string GetExamTitle()
         {
             return exam_name_textbox?.Text ?? "Untitled Exam";

@@ -212,6 +212,24 @@
                     </ToolTip>
                 </CheckBox.ToolTip>
             </CheckBox>
+
+            <!-- Auto-Resume Session Checkbox -->
+            <CheckBox x:Name="auto_resume_session_checkbox"
+                      Content="Auto-Resume Session"
+                      Foreground="{StaticResource TextPrimary}"
+                      FontSize="15"
+                      FontWeight="Medium"
+                      Margin="0,0,0,16">
+                <CheckBox.ToolTip>
+                    <ToolTip Background="{StaticResource SurfaceDark}" 
+                             BorderBrush="{StaticResource BorderColor}">
+                        <TextBlock Text="Allows examinees to resume their exam if disconnected. Progress is automatically saved to prevent data loss."
+                                   Foreground="{StaticResource TextSecondary}"
+                                   MaxWidth="300"
+                                   TextWrapping="Wrap"/>
+                    </ToolTip>
+                </CheckBox.ToolTip>
+            </CheckBox>
         </StackPanel>
     </Grid>
 </UserControl>

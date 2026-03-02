@@ -79,19 +79,11 @@ public partial class MainWindow : Window
 
         reviewControl.PublishRequested += (s, args) =>
         {
-            ReturnToExamBuilder();
-
             // ✅ Redirect to Published Exams tab
             if (_sidebar != null)
             {
                 _sidebar.NavigateToPublishedExams();
             }
-
-            MessageBox.Show(
-                "Exam has been published successfully!\nYou can now view it in the Published Exams tab.",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         };
 
         reviewControl.CancelRequested += (s, args) =>
@@ -192,7 +184,9 @@ public partial class MainWindow : Window
             StartTime = startTimeUtc,
             EndTime = endTimeUtc,
             ExamDuration = CalculateDuration(timingState),
-            LoginConfig = loginConfig
+            LoginConfig = loginConfig,
+            // Include anti-cheat configuration from the structure builder (if any)
+            AntiCheat = _structureBuilderInstance?.GetAntiCheatState()
         };
     }
 

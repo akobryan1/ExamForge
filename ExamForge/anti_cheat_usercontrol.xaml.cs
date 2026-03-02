@@ -78,7 +78,8 @@ namespace ExamForge
                 TimeLimitPerQuestion = time_limit_per_question_checkbox.IsChecked == true,
                 TimeLimitValue = time_limit_textbox.Text,
                 DisableCopyPaste = disable_copy_paste_checkbox.IsChecked == true,
-                DisableScreenshot = disable_screenshot_checkbox.IsChecked == true
+                DisableScreenshot = disable_screenshot_checkbox.IsChecked == true,
+                AutoResumeSession = auto_resume_session_checkbox.IsChecked == true
             };
         }
 
@@ -97,6 +98,7 @@ namespace ExamForge
                 time_limit_textbox.Text = savedState.TimeLimitValue;
                 disable_copy_paste_checkbox.IsChecked = savedState.DisableCopyPaste;
                 disable_screenshot_checkbox.IsChecked = savedState.DisableScreenshot;
+                auto_resume_session_checkbox.IsChecked = savedState.AutoResumeSession;
             }
         }
     }
@@ -114,5 +116,6 @@ namespace ExamForge
         public string TimeLimitValue { get; set; } = "60";
         public bool DisableCopyPaste { get; set; }
         public bool DisableScreenshot { get; set; }
+        public bool AutoResumeSession { get; set; }
     }
 }

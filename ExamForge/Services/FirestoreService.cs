@@ -15,13 +15,41 @@ public class FirestoreService
     private static FirestoreService? _instance;
     private static readonly object _lock = new();
 
+    // Top-level users collection name (matches Supabase table / your screenshot)
+    private const string UsersRoot = "examforge_users";
+    // Standard per-user subcollection names
+    private const string PublishedExamsCollection = "published_exams";
+    private const string ExamSessionsCollection = "exam_sessions";
+    private const string ExamineeDataCollection = "examinee_data";
+    private const string GradingQueueCollection = "grading_queue";
+    private const string QuestionBankCollection = "question_bank";
+    private const string IntegrityIncidentsCollection = "integrity_incidents";
+    private const string SessionEventsCollection = "session_events";
+    private const string IncidentReportsCollection = "incident_reports";
+
     // Constructor with userId for user-scoped collections
     public FirestoreService(string userId)
     {
         _userId = userId;
 
-        var projectId = "examforge-201e8";
+        // Allow overriding via environment variables (useful on Render)
+        var projectId = Environment.GetEnvironmentVariable("FIRESTORE_PROJECT_ID") ?? "examforge-201e8";
+        var credentialEnv = Environment.GetEnvironmentVariable("SERVICE_ACCOUNT_JSON");
         var credentialPath = "firebase-adminsdk.json";
+
+        if (!string.IsNullOrWhiteSpace(credentialEnv))
+        {
+            // If a JSON key is provided via env var, write it to the expected file path so
+            // existing code that calls FromFile continues to work.
+            try
+            {
+                System.IO.File.WriteAllText(credentialPath, credentialEnv);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Failed to write service account JSON to file: {ex.Message}");
+            }
+        }
 
         if (FirebaseApp.DefaultInstance == null)
         {
@@ -31,6 +59,7 @@ public class FirestoreService
             });
         }
 
+        // Ensure GOOGLE_APPLICATION_CREDENTIALS is set for any libraries that rely on it
         Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credentialPath);
         _firestoreDb = FirestoreDb.Create(projectId);
     }
@@ -65,14 +94,14 @@ public class FirestoreService
     }
 
     // User-scoped collection paths
-    private string GetUserPath(string collection) => $"users/{_userId}/{collection}";
+    private string GetUserPath(string collection) => $"{UsersRoot}/{_userId}/{collection}";
 
     // Save published exam (user-scoped)
     public async Task<string> SavePublishedExamAsync(PublishedExam exam)
     {
         try
         {
-            var docRef = _firestoreDb.Collection(GetUserPath("exams")).Document(exam.Id);
+            var docRef = _firestoreDb.Collection(GetUserPath(PublishedExamsCollection)).Document(exam.Id);
             await docRef.SetAsync(exam);
             return exam.Id;
         }
@@ -87,7 +116,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("published_exams").Document(examId);
+            var docRef = _firestoreDb.Collection(GetUserPath(PublishedExamsCollection)).Document(examId);
             var snapshot = await docRef.GetSnapshotAsync();
             
             if (!snapshot.Exists) return null;
@@ -113,7 +142,7 @@ public class FirestoreService
     {
         try
         {
-            var collection = _firestoreDb.Collection("published_exams");
+            var collection = _firestoreDb.Collection(GetUserPath(PublishedExamsCollection));
             var snapshot = await collection.GetSnapshotAsync();
             
             var exams = new List<PublishedExam>();
@@ -148,7 +177,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("examinee_data").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath(ExamineeDataCollection)).Document();
             submission.Id = docRef.Id;
             await docRef.SetAsync(submission);
             return submission.Id;
@@ -164,7 +193,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("examinee_data")
+            var query = _firestoreDb.Collection(GetUserPath(ExamineeDataCollection))
                 .WhereEqualTo("ExamId", examId);
             var snapshot = await query.GetSnapshotAsync();
             
@@ -183,7 +212,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("published_exams").Document(examId);
+            var docRef = _firestoreDb.Collection(GetUserPath(PublishedExamsCollection)).Document(examId);
             await docRef.DeleteAsync();
         }
         catch (Exception ex)
@@ -198,7 +227,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection)).Document();
             session.Id = docRef.Id;
             await docRef.SetAsync(session);
             return session.Id;
@@ -213,7 +242,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document(sessionId);
+            var docRef = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection)).Document(sessionId);
             var snapshot = await docRef.GetSnapshotAsync();
             return snapshot.Exists ? snapshot.ConvertTo<ExamSession>() : null;
         }
@@ -227,7 +256,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("exam_sessions").Document(session.Id);
+            var docRef = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection)).Document(session.Id);
             await docRef.SetAsync(session, SetOptions.MergeAll);
         }
         catch (Exception ex)
@@ -240,7 +269,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection))
                 .WhereEqualTo("ExamId", examId)
                 .WhereEqualTo("Status", "Running");
             var snapshot = await query.GetSnapshotAsync();
@@ -256,7 +285,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection))
                 .WhereEqualTo("Status", "Running");
             var snapshot = await query.GetSnapshotAsync();
             return snapshot.Documents.Select(d => d.ConvertTo<ExamSession>()).ToList();
@@ -275,7 +304,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("session_events").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath(SessionEventsCollection)).Document();
             evt.Id = docRef.Id;
             await docRef.SetAsync(evt);
             return evt.Id;
@@ -290,7 +319,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("session_events")
+            var query = _firestoreDb.Collection(GetUserPath(SessionEventsCollection))
                 .WhereEqualTo("SessionId", sessionId)
                 .OrderByDescending("Timestamp")
                 .Limit(limit);
@@ -311,7 +340,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("question_bank").Document();
+            var docRef = _firestoreDb.Collection(GetUserPath(QuestionBankCollection)).Document();
             question.Id = docRef.Id;
             await docRef.SetAsync(question);
             return question.Id;
@@ -329,7 +358,7 @@ public class FirestoreService
     {
         try
         {
-            Query query = _firestoreDb.Collection("question_bank");
+            Query query = _firestoreDb.Collection(GetUserPath("question_bank"));
 
             if (!string.IsNullOrEmpty(subject))
                 query = query.WhereEqualTo("Subject", subject);
@@ -353,7 +382,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("integrity_incidents")
+            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
                 .WhereEqualTo("ExamId", examId)
                 .OrderByDescending("Timestamp");
                 
@@ -371,7 +400,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection("exam_sessions")
+            var query = _firestoreDb.Collection(GetUserPath("sessions"))
                 .WhereEqualTo("IsActive", true)
                 .OrderBy("StartTime");
                 
@@ -390,7 +419,7 @@ public class FirestoreService
         try
         {
             var cutoffTime = DateTime.UtcNow.Subtract(timeSpan);
-            var query = _firestoreDb.Collection("integrity_incidents")
+            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
                 .WhereGreaterThan("Timestamp", Timestamp.FromDateTime(cutoffTime))
                 .OrderByDescending("Timestamp")
                 .Limit(50);
@@ -405,6 +434,35 @@ public class FirestoreService
         }
     }
 
+    /// <summary>
+    /// Create default subcollections for a new user by writing a small metadata document to each collection.
+    /// Firestore creates collections when a document is written, so this ensures the collections exist.
+    /// </summary>
+    public async Task InitializeUserCollectionsAsync()
+    {
+        try
+        {
+            var collections = new[] { "exam_sessions", "examinee_data", "grading_queue", "published_exams" };
+
+            foreach (var col in collections)
+            {
+                var collRef = _firestoreDb.Collection(GetUserPath(col));
+                var metaRef = collRef.Document("_meta");
+                var data = new Dictionary<string, object>
+                {
+                    { "created_at", Timestamp.FromDateTime(DateTime.UtcNow) },
+                    { "initialized", true }
+                };
+                await metaRef.SetAsync(data);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to initialize user collections: {ex.Message}");
+            throw;
+        }
+    }
+
 
     #endregion
 
@@ -414,7 +472,7 @@ public class FirestoreService
     {
         try
         {
-            Query query = _firestoreDb.Collection("grading_queue");
+            Query query = _firestoreDb.Collection(GetUserPath("grading_queue"));
             
             if (!string.IsNullOrEmpty(examId))
             {
@@ -436,7 +494,7 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
             
             var updates = new Dictionary<string, object>
             {
@@ -467,12 +525,157 @@ public class FirestoreService
     {
         try
         {
-            var docRef = _firestoreDb.Collection("grading_queue").Document(itemId);
+            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
             await docRef.DeleteAsync();
         }
         catch (Exception ex)
         {
             throw new Exception($"Failed to remove grading queue item: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
+
+    #region Incident Reports Methods
+
+    /// <summary>
+    /// Save session progress to incident_reports collection (auto-creates if doesn't exist)
+    /// </summary>
+    public async Task<string> SaveIncidentReportAsync(string examId, Dictionary<string, object> sessionData, string studentId, string studentName, string? studentEmail = null)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var docRef = _firestoreDb.Collection(collectionPath).Document();
+            
+            var reportData = new Dictionary<string, object>
+            {
+                ["Id"] = docRef.Id,
+                ["ExamId"] = examId,
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["StudentEmail"] = studentEmail ?? "",
+                ["SessionData"] = sessionData,
+                ["EventType"] = "session_saved",
+                ["Timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["Status"] = "active"
+            };
+
+            await docRef.SetAsync(reportData);
+            Debug.WriteLine($"✅ Incident report saved: {docRef.Id}");
+            return docRef.Id;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to save incident report: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Retrieve active session for a student (cross-device support)
+    /// </summary>
+    public async Task<Dictionary<string, object>?> GetActiveSessionForStudentAsync(string examId, string studentId, string? studentEmail = null)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            Query query = _firestoreDb.Collection(collectionPath)
+                .WhereEqualTo("ExamId", examId)
+                .WhereEqualTo("Status", "active")
+                .OrderByDescending("Timestamp")
+                .Limit(1);
+
+            // Match by student ID or email
+            if (!string.IsNullOrEmpty(studentEmail))
+            {
+                query = query.WhereEqualTo("StudentEmail", studentEmail);
+            }
+            else
+            {
+                query = query.WhereEqualTo("StudentId", studentId);
+            }
+
+            var snapshot = await query.GetSnapshotAsync();
+            
+            if (snapshot.Documents.Count == 0)
+                return null;
+
+            var doc = snapshot.Documents[0];
+            var data = doc.ToDictionary();
+            
+            // Check if session is still valid (exam hasn't ended)
+            var exam = await GetPublishedExamAsync(examId);
+            if (exam != null && DateTime.UtcNow > exam.EndTime)
+            {
+                // Exam ended, mark session as expired and delete
+                await doc.Reference.UpdateAsync("Status", "expired");
+                await doc.Reference.DeleteAsync();
+                Debug.WriteLine($"⏰ Session expired for student {studentId}");
+                return null;
+            }
+
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get active session: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Update session status (e.g., mark as resumed or expired)
+    /// </summary>
+    public async Task UpdateSessionStatusAsync(string reportId, string status)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var docRef = _firestoreDb.Collection(collectionPath).Document(reportId);
+            
+            await docRef.UpdateAsync(new Dictionary<string, object>
+            {
+                ["Status"] = status,
+                ["UpdatedAt"] = Timestamp.FromDateTime(DateTime.UtcNow)
+            });
+            
+            Debug.WriteLine($"✅ Session {reportId} status updated to: {status}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to update session status: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Clean up expired sessions for an exam
+    /// </summary>
+    public async Task CleanupExpiredSessionsAsync(string examId)
+    {
+        try
+        {
+            var exam = await GetPublishedExamAsync(examId);
+            if (exam == null || DateTime.UtcNow <= exam.EndTime)
+                return; // Exam still active
+
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var query = _firestoreDb.Collection(collectionPath)
+                .WhereEqualTo("ExamId", examId)
+                .WhereEqualTo("Status", "active");
+
+            var snapshot = await query.GetSnapshotAsync();
+            
+            foreach (var doc in snapshot.Documents)
+            {
+                await doc.Reference.UpdateAsync("Status", "expired");
+                await doc.Reference.DeleteAsync();
+            }
+
+            Debug.WriteLine($"🧹 Cleaned up {snapshot.Documents.Count} expired sessions for exam {examId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to cleanup expired sessions: {ex.Message}");
         }
     }
 

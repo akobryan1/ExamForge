@@ -16,6 +16,7 @@
             <SolidColorBrush x:Key="TextMuted" Color="#9AA3AF"/>
             <SolidColorBrush x:Key="TextTertiary" Color="#9AA3AF"/>
             <SolidColorBrush x:Key="AccentGold" Color="#3AAE9E"/>
+            <SolidColorBrush x:Key="AccentTeal" Color="#3AAE9E"/>
             <SolidColorBrush x:Key="AccentBlue" Color="#3AAE9E"/>
             <SolidColorBrush x:Key="AccentBlueLight" Color="#2E9C8D"/>
             <SolidColorBrush x:Key="BorderColor" Color="#E3E7EB"/>
