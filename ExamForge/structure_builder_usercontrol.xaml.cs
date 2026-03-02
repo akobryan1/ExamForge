@@ -362,6 +362,11 @@ namespace ExamForge
         public AntiCheatState? GetAntiCheatState()
         {
             SaveCurrentTabState();
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] GetAntiCheatState called, savedAntiCheatState is null: {savedAntiCheatState == null}");
+            if (savedAntiCheatState is AntiCheatState state)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DEBUG] DetectTabbing: {state.DetectTabbing}, WarningOnly: {state.WarningOnly}");
+            }
             return savedAntiCheatState as AntiCheatState;
         }
 

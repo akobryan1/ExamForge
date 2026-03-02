@@ -66,7 +66,7 @@ namespace ExamForge
 
         public object SaveState()
         {
-            return new AntiCheatState
+            var state = new AntiCheatState
             {
                 DetectTabbing = detect_tabbing_checkbox.IsChecked == true,
                 WarningOnly = warning_only_checkbox.IsChecked == true,
@@ -81,6 +81,9 @@ namespace ExamForge
                 DisableScreenshot = disable_screenshot_checkbox.IsChecked == true,
                 AutoResumeSession = auto_resume_session_checkbox.IsChecked == true
             };
+            
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] SaveState called - DetectTabbing: {state.DetectTabbing}, WarningOnly: {state.WarningOnly}");
+            return state;
         }
 
         public void RestoreState(object state)
