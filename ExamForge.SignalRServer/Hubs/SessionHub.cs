@@ -20,15 +20,35 @@ public class SessionHub : Hub
             if (_firestoreDb != null) return _firestoreDb;
 
             var projectId = Environment.GetEnvironmentVariable("FIRESTORE_PROJECT_ID") ?? "examforge-201e8";
-            var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") ?? "firebase-adminsdk.json";
+            
             try
             {
-                _firestoreDb = FirestoreDb.Create(projectId);
+                // Check if credentials are in environment variable (Render deployment)
+                var credentialsJson = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS_JSON");
+                
+                if (!string.IsNullOrEmpty(credentialsJson))
+                {
+                    // Use credentials from environment variable
+                    var credential = Google.Apis.Auth.OAuth2.GoogleCredential.FromJson(credentialsJson);
+                    var builder = new FirestoreDbBuilder
+                    {
+                        ProjectId = projectId,
+                        Credential = credential
+                    };
+                    _firestoreDb = builder.Build();
+                    Console.WriteLine("? Firestore initialized from environment credentials");
+                }
+                else
+                {
+                    // Fallback to file-based credentials (local development)
+                    var credentialPath = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS") ?? "firebase-adminsdk.json";
+                    _firestoreDb = FirestoreDb.Create(projectId);
+                    Console.WriteLine("? Firestore initialized from file");
+                }
             }
             catch (Exception ex)
             {
-                // Swallow - Firestore may not be configured in local dev
-                Console.WriteLine($"Failed to initialize Firestore in SessionHub: {ex.Message}");
+                Console.WriteLine($"? Failed to initialize Firestore: {ex.Message}");
                 _firestoreDb = null;
             }
 

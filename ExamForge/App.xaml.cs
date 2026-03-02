@@ -46,12 +46,14 @@ namespace ExamForge
                 var hostingUrl = firebaseSettings["HostingUrl"] ?? string.Empty;
                 var apiEndpoint = firebaseSettings["ApiEndpoint"] ?? string.Empty;
                 var publishingServerUrl = firebaseSettings["PublishingServerUrl"] ?? string.Empty;
+                var signalRHubUrl = firebaseSettings["SignalRHubUrl"] ?? publishingServerUrl;
 
                 PublishingService = new ExamPublishingService(
                     firestoreService,
                     hostingUrl,
                     apiEndpoint,
-                    publishingServerUrl);
+                    publishingServerUrl,
+                    signalRHubUrl);
             }
             catch (Exception ex)
             {

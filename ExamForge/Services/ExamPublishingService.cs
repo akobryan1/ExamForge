@@ -15,14 +15,16 @@ public class ExamPublishingService
     private readonly string _hostingUrl;
     private readonly string _apiEndpoint;
     private readonly string _publishingServerUrl;
+    private readonly string _signalRHubUrl;
     private readonly HttpClient _httpClient;
 
-    public ExamPublishingService(FirestoreService firestoreService, string hostingUrl, string apiEndpoint, string publishingServerUrl)
+    public ExamPublishingService(FirestoreService firestoreService, string hostingUrl, string apiEndpoint, string publishingServerUrl, string? signalRHubUrl = null)
     {
         _firestoreService = firestoreService;
         _hostingUrl = hostingUrl;
         _apiEndpoint = apiEndpoint;
         _publishingServerUrl = publishingServerUrl;
+        _signalRHubUrl = signalRHubUrl ?? publishingServerUrl;
         _httpClient = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
     }
 
@@ -610,6 +612,9 @@ public class ExamPublishingService
         var antiCheatJson = System.Text.Json.JsonSerializer.Serialize(antiDict);
         sb.AppendLine("        const antiCheatConfig = " + antiCheatJson + ";");
         sb.AppendLine("        console.log('Anti-cheat configuration loaded:', antiCheatConfig);");
+        sb.AppendLine("        console.log('[Anti-Cheat] DetectTabbing:', antiCheatConfig.DetectTabbing);");
+        sb.AppendLine("        console.log('[Anti-Cheat] WarningOnly:', antiCheatConfig.WarningOnly);");
+        sb.AppendLine("        console.log('[Anti-Cheat] AutoResumeSession:', antiCheatConfig.AutoResumeSession);");
         sb.AppendLine();
         sb.AppendLine("        let timeRemaining = examDuration * 60;");
         sb.AppendLine("        let timerInterval;");
@@ -621,9 +626,10 @@ public class ExamPublishingService
         sb.AppendLine();
 
         // SignalR hub URL (attempt to connect for real-time reporting)
-        var hubUrl = _publishingServerUrl?.TrimEnd('/') + "/sessionHub";
+        var hubUrl = _signalRHubUrl?.TrimEnd('/') + "/sessionHub";
         var hubUrlJson = System.Text.Json.JsonSerializer.Serialize(hubUrl);
         sb.AppendLine("        const signalRHubUrl = " + hubUrlJson + ";");
+        sb.AppendLine("        console.log('[SignalR] Hub URL:', signalRHubUrl);");
         sb.AppendLine("        // Load SignalR client dynamically and connect (best-effort)");
         sb.AppendLine("        (function(){\n            try {\n                var script = document.createElement('script');\n                script.src = 'https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.7/dist/browser/signalr.min.js';\n                script.onload = function() {\n                    try {\n                        if (typeof signalR === 'undefined') return;\n                        window.signalRConnection = new signalR.HubConnectionBuilder().withUrl(signalRHubUrl).withAutomaticReconnect().build();\n                        window.signalRConnection.start().then(function(){\n                            console.log('✅ Connected to SignalR hub');\n                            // Will join when student info is available after startExam/GoogleSignIn\n                        }).catch(function(err){ console.warn('SignalR start failed', err); });\n                    } catch (e) { console.warn('SignalR init error', e); }\n                };\n                script.onerror = function(e){ console.warn('Failed to load SignalR client', e); };\n                document.head.appendChild(script);\n            } catch (e) { console.warn('Failed to inject SignalR script', e); }\n        })();");
         sb.AppendLine();
