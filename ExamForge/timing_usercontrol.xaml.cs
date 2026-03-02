@@ -14,6 +14,33 @@ namespace ExamForge
         public timing_usercontrol()
         {
             InitializeComponent();
+            Loaded += Timing_UserControl_Loaded;
+        }
+
+        private void Timing_UserControl_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Set minimum dates to today to prevent selecting past dates
+            var today = DateTime.Today;
+            
+            if (start_datetime_picker != null)
+            {
+                start_datetime_picker.Minimum = today;
+                // If no value is set, default to today at current time
+                if (!start_datetime_picker.Value.HasValue)
+                {
+                    start_datetime_picker.Value = DateTime.Now;
+                }
+            }
+
+            if (end_datetime_picker != null)
+            {
+                end_datetime_picker.Minimum = today;
+                // If no value is set, default to today + 1 hour
+                if (!end_datetime_picker.Value.HasValue)
+                {
+                    end_datetime_picker.Value = DateTime.Now.AddHours(1);
+                }
+            }
         }
 
         private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)

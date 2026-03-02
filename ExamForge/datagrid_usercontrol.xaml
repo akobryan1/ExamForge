@@ -19,6 +19,92 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="CaretBrush" Value="{StaticResource TextPrimary}"/>
         </Style>
+
+        <!-- Add Row Button Style -->
+        <Style x:Key="AddRowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource AccentGoldGradient}"/>
+            <Setter Property="Foreground" Value="{StaticResource SurfaceDark}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#FFB94A" Opacity="0.9"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.3" Color="#FFB94A"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#E09A35"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Remove Button Style (Red with hover animation) -->
+        <Style x:Key="RemoveButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E74C3C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#C0392B"/>
+                                <Setter Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect ShadowDepth="2" BlurRadius="8" Opacity="0.4" Color="#E74C3C"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#A93226"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     
     <Border CornerRadius="12"
@@ -169,35 +255,13 @@
                                             Width="80"
                                             Height="28"
                                             Margin="0,0,5,0"
-                                            Background="{StaticResource AccentGoldGradient}"
-                                            Foreground="{StaticResource SurfaceDark}"
-                                            BorderThickness="0"
-                                            Cursor="Hand"
-                                            FontSize="11"
-                                            FontWeight="SemiBold"
-                                            Click="AddRow_Click">
-                                        <Button.Resources>
-                                            <Style TargetType="Border">
-                                                <Setter Property="CornerRadius" Value="6"/>
-                                            </Style>
-                                        </Button.Resources>
-                                    </Button>
+                                            Style="{StaticResource AddRowButtonStyle}"
+                                            Click="AddRow_Click"/>
                                     <Button Content="Remove"
                                             Width="80"
                                             Height="28"
-                                            Background="{StaticResource ErrorRed}"
-                                            Foreground="{StaticResource TextPrimary}"
-                                            BorderThickness="0"
-                                            Cursor="Hand"
-                                            FontSize="11"
-                                            FontWeight="SemiBold"
-                                            Click="RemoveRow_Click">
-                                        <Button.Resources>
-                                            <Style TargetType="Border">
-                                                <Setter Property="CornerRadius" Value="6"/>
-                                            </Style>
-                                        </Button.Resources>
-                                    </Button>
+                                            Style="{StaticResource RemoveButtonStyle}"
+                                            Click="RemoveRow_Click"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding Warning}"
                                            Foreground="{StaticResource ErrorRed}"

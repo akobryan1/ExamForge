@@ -79,19 +79,11 @@ public partial class MainWindow : Window
 
         reviewControl.PublishRequested += (s, args) =>
         {
-            ReturnToExamBuilder();
-
             // ✅ Redirect to Published Exams tab
             if (_sidebar != null)
             {
                 _sidebar.NavigateToPublishedExams();
             }
-
-            MessageBox.Show(
-                "Exam has been published successfully!\nYou can now view it in the Published Exams tab.",
-                "Success",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
         };
 
         reviewControl.CancelRequested += (s, args) =>

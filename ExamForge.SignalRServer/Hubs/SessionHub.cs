@@ -142,4 +142,81 @@ public class SessionHub : Hub
         // Optionally notify monitors of disconnects
         await base.OnDisconnectedAsync(exception);
     }
+
+    /// <summary>
+    /// Save session progress to Firestore incident_reports collection
+    /// </summary>
+    public async Task SaveSessionProgress(string examId, object sessionData, string studentId, string studentName, string studentEmail)
+    {
+        try
+        {
+            // For now, we'll use a simplified approach - store with examId as key
+            // In production, you should implement proper user ID lookup
+            var db = GetFirestoreDb();
+            if (db == null)
+            {
+                Console.WriteLine("? Firestore not initialized, cannot save session");
+                return;
+            }
+
+            // Save to a temporary collection that can be queried by examId and studentId
+            var collectionPath = $"temp_sessions/{examId}/students";
+            var docRef = db.Collection(collectionPath).Document(studentId);
+            
+            var sessionDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
+                System.Text.Json.JsonSerializer.Serialize(sessionData)
+            ) ?? new Dictionary<string, object>();
+
+            var reportData = new Dictionary<string, object>
+            {
+                ["ExamId"] = examId,
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["StudentEmail"] = studentEmail,
+                ["SessionData"] = sessionDict,
+                ["EventType"] = "session_saved",
+                ["Timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["Status"] = "active"
+            };
+
+            await docRef.SetAsync(reportData);
+            Console.WriteLine($"? Session saved for student {studentName} in exam {examId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"? Failed to save session: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Check for active session (cross-device support)
+    /// </summary>
+    public async Task<object?> CheckForActiveSession(string examId, string studentId, string? studentEmail)
+    {
+        try
+        {
+            var db = GetFirestoreDb();
+            if (db == null) return null;
+
+            var collectionPath = $"temp_sessions/{examId}/students";
+            var docRef = db.Collection(collectionPath).Document(studentId);
+            
+            var snapshot = await docRef.GetSnapshotAsync();
+            
+            if (!snapshot.Exists)
+            {
+                Console.WriteLine($"No saved session found for student {studentId}");
+                return null;
+            }
+
+            var data = snapshot.ToDictionary();
+            Console.WriteLine($"? Found saved session for student {studentId}");
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"? Failed to check for active session: {ex.Message}");
+            return null;
+        }
+    }
 }

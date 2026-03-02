@@ -25,6 +25,7 @@ public class FirestoreService
     private const string QuestionBankCollection = "question_bank";
     private const string IntegrityIncidentsCollection = "integrity_incidents";
     private const string SessionEventsCollection = "session_events";
+    private const string IncidentReportsCollection = "incident_reports";
 
     // Constructor with userId for user-scoped collections
     public FirestoreService(string userId)
@@ -530,6 +531,151 @@ public class FirestoreService
         catch (Exception ex)
         {
             throw new Exception($"Failed to remove grading queue item: {ex.Message}", ex);
+        }
+    }
+
+    #endregion
+
+    #region Incident Reports Methods
+
+    /// <summary>
+    /// Save session progress to incident_reports collection (auto-creates if doesn't exist)
+    /// </summary>
+    public async Task<string> SaveIncidentReportAsync(string examId, Dictionary<string, object> sessionData, string studentId, string studentName, string? studentEmail = null)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var docRef = _firestoreDb.Collection(collectionPath).Document();
+            
+            var reportData = new Dictionary<string, object>
+            {
+                ["Id"] = docRef.Id,
+                ["ExamId"] = examId,
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["StudentEmail"] = studentEmail ?? "",
+                ["SessionData"] = sessionData,
+                ["EventType"] = "session_saved",
+                ["Timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["Status"] = "active"
+            };
+
+            await docRef.SetAsync(reportData);
+            Debug.WriteLine($"✅ Incident report saved: {docRef.Id}");
+            return docRef.Id;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to save incident report: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>
+    /// Retrieve active session for a student (cross-device support)
+    /// </summary>
+    public async Task<Dictionary<string, object>?> GetActiveSessionForStudentAsync(string examId, string studentId, string? studentEmail = null)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            Query query = _firestoreDb.Collection(collectionPath)
+                .WhereEqualTo("ExamId", examId)
+                .WhereEqualTo("Status", "active")
+                .OrderByDescending("Timestamp")
+                .Limit(1);
+
+            // Match by student ID or email
+            if (!string.IsNullOrEmpty(studentEmail))
+            {
+                query = query.WhereEqualTo("StudentEmail", studentEmail);
+            }
+            else
+            {
+                query = query.WhereEqualTo("StudentId", studentId);
+            }
+
+            var snapshot = await query.GetSnapshotAsync();
+            
+            if (snapshot.Documents.Count == 0)
+                return null;
+
+            var doc = snapshot.Documents[0];
+            var data = doc.ToDictionary();
+            
+            // Check if session is still valid (exam hasn't ended)
+            var exam = await GetPublishedExamAsync(examId);
+            if (exam != null && DateTime.UtcNow > exam.EndTime)
+            {
+                // Exam ended, mark session as expired and delete
+                await doc.Reference.UpdateAsync("Status", "expired");
+                await doc.Reference.DeleteAsync();
+                Debug.WriteLine($"⏰ Session expired for student {studentId}");
+                return null;
+            }
+
+            return data;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get active session: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Update session status (e.g., mark as resumed or expired)
+    /// </summary>
+    public async Task UpdateSessionStatusAsync(string reportId, string status)
+    {
+        try
+        {
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var docRef = _firestoreDb.Collection(collectionPath).Document(reportId);
+            
+            await docRef.UpdateAsync(new Dictionary<string, object>
+            {
+                ["Status"] = status,
+                ["UpdatedAt"] = Timestamp.FromDateTime(DateTime.UtcNow)
+            });
+            
+            Debug.WriteLine($"✅ Session {reportId} status updated to: {status}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to update session status: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Clean up expired sessions for an exam
+    /// </summary>
+    public async Task CleanupExpiredSessionsAsync(string examId)
+    {
+        try
+        {
+            var exam = await GetPublishedExamAsync(examId);
+            if (exam == null || DateTime.UtcNow <= exam.EndTime)
+                return; // Exam still active
+
+            var collectionPath = GetUserPath(IncidentReportsCollection);
+            var query = _firestoreDb.Collection(collectionPath)
+                .WhereEqualTo("ExamId", examId)
+                .WhereEqualTo("Status", "active");
+
+            var snapshot = await query.GetSnapshotAsync();
+            
+            foreach (var doc in snapshot.Documents)
+            {
+                await doc.Reference.UpdateAsync("Status", "expired");
+                await doc.Reference.DeleteAsync();
+            }
+
+            Debug.WriteLine($"🧹 Cleaned up {snapshot.Documents.Count} expired sessions for exam {examId}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to cleanup expired sessions: {ex.Message}");
         }
     }
 
