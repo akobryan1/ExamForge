@@ -645,7 +645,9 @@ public class ExamPublishingService
             ["TimeLimitValue"] = antiCheat?.TimeLimitValue ?? "60",
             ["DisableCopyPaste"] = antiCheat?.DisableCopyPaste ?? false,
             ["DisableScreenshot"] = antiCheat?.DisableScreenshot ?? false,
-            ["AutoResumeSession"] = antiCheat?.AutoResumeSession ?? false
+            ["AutoResumeSession"] = antiCheat?.AutoResumeSession ?? false,
+            ["LimitRetakeAttempts"] = antiCheat?.LimitRetakeAttempts ?? false,
+            ["RetakeAttemptsValue"] = antiCheat?.RetakeAttemptsValue ?? "3"
         };
 
         var antiCheatJson = System.Text.Json.JsonSerializer.Serialize(antiDict);
@@ -747,6 +749,7 @@ public class ExamPublishingService
         sb.AppendLine("                timeRemaining = data.timeRemaining || timeRemaining;");
         sb.AppendLine("                tabSwitchCount = data.tabSwitchCount || 0;");
         sb.AppendLine("                deductedPoints = data.deductedPoints || 0;");
+        sb.AppendLine("                examStarted = true;");
         sb.AppendLine("                document.getElementById('studentInfoSection').style.display = 'none';");
         sb.AppendLine("                document.getElementById('examSection').style.display = 'block';");
         sb.AppendLine("                setTimeout(function() {");
@@ -759,7 +762,10 @@ public class ExamPublishingService
         sb.AppendLine("                            } else { el.value = value; }");
         sb.AppendLine("                        }");
         sb.AppendLine("                    }");
-        sb.AppendLine("                    if (typeof currentQuestionIndex !== 'undefined' && typeof showQuestion === 'function') {");
+        sb.AppendLine("                    if (antiCheatConfig.OneQuestionAtATime) {");
+        sb.AppendLine("                        const submitContainer = document.querySelector('.submit-container');");
+        sb.AppendLine("                        if (submitContainer) submitContainer.style.display = 'none';");
+        sb.AppendLine("                        createNavigationBar();");
         sb.AppendLine("                        currentQuestionIndex = data.currentQuestionIndex || 0;");
         sb.AppendLine("                        showQuestion(currentQuestionIndex);");
         sb.AppendLine("                    }");
@@ -782,13 +788,21 @@ public class ExamPublishingService
             sb.AppendLine("                    email: payload.email");
             sb.AppendLine("                };");
             sb.AppendLine("                console.log('Google Sign-In successful:', window.studentInfo);");
+            sb.AppendLine("                if (!checkRetakeAttempts()) {");
+            sb.AppendLine("                    return;");
+            sb.AppendLine("                }");
             sb.AppendLine("                document.getElementById('studentInfoSection').style.display = 'none';");
             sb.AppendLine("                document.getElementById('examSection').style.display = 'block';");
             sb.AppendLine("                if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
             sb.AppendLine("                    window.signalRConnection.invoke('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email);");
             sb.AppendLine("                }");
             sb.AppendLine("                examStarted = true;");
-            sb.AppendLine("                startTimer();");
+            sb.AppendLine("                if (antiCheatConfig.OneQuestionAtATime) {");
+            sb.AppendLine("                    createNavigationBar();");
+            sb.AppendLine("                    showQuestion(0);");
+            sb.AppendLine("                } else {");
+            sb.AppendLine("                    startTimer();");
+            sb.AppendLine("                }");
             sb.AppendLine("            } catch(e) {");
             sb.AppendLine("                console.error('Google Sign-In error:', e);");
             sb.AppendLine("                alert('Sign-in failed. Please try again.');");
@@ -807,11 +821,14 @@ public class ExamPublishingService
         sb.AppendLine("                name: studentName ? studentName.value.trim() : '',");
         sb.AppendLine("                yearSection: yearSection ? yearSection.value.trim() : ''");
         sb.AppendLine("            };");
-        sb.AppendLine("            if (!window.studentInfo.studentId && !window.studentInfo.name) {");
-        sb.AppendLine("                alert('Please enter your information.');");
-        sb.AppendLine("                return;");
-        sb.AppendLine("            }");
-        sb.AppendLine("            console.log('Student info captured:', window.studentInfo);");
+            sb.AppendLine("            if (!window.studentInfo.studentId && !window.studentInfo.name) {");
+            sb.AppendLine("                alert('Please enter your information.');");
+            sb.AppendLine("                return;");
+            sb.AppendLine("            }");
+            sb.AppendLine("            if (!checkRetakeAttempts()) {");
+            sb.AppendLine("                return;");
+            sb.AppendLine("            }");
+            sb.AppendLine("            console.log('Student info captured:', window.studentInfo);");
         sb.AppendLine("            const savedSession = checkForSavedSession();");
         sb.AppendLine("            if (savedSession && confirm('A previous session was found. Do you want to resume where you left off?')) {");
         sb.AppendLine("                restoreSession(savedSession);");
@@ -824,9 +841,51 @@ public class ExamPublishingService
         sb.AppendLine("            }");
         sb.AppendLine("            examStarted = true;");
         sb.AppendLine("            if (antiCheatConfig.OneQuestionAtATime) {");
+        sb.AppendLine("                createNavigationBar();");
         sb.AppendLine("                showQuestion(0);");
+        sb.AppendLine("            } else {");
+        sb.AppendLine("                startTimer();");
         sb.AppendLine("            }");
-        sb.AppendLine("            startTimer();");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        
+        // Retake attempts validation
+        sb.AppendLine("        // Retake attempts validation");
+        sb.AppendLine("        const RETAKE_KEY = 'examRetakes_' + examId;");
+        sb.AppendLine();
+        sb.AppendLine("        function checkRetakeAttempts() {");
+        sb.AppendLine("            if (!antiCheatConfig.LimitRetakeAttempts) return true;");
+        sb.AppendLine("            try {");
+        sb.AppendLine("                const maxAttempts = parseInt(antiCheatConfig.RetakeAttemptsValue) || 3;");
+        sb.AppendLine("                if (maxAttempts === 0) return true;");
+        sb.AppendLine("                const retakeData = localStorage.getItem(RETAKE_KEY);");
+        sb.AppendLine("                if (!retakeData) {");
+        sb.AppendLine("                    const newData = { studentId: window.studentInfo.studentId || window.studentInfo.name, attempts: 1, lastAttempt: new Date().toISOString() };");
+        sb.AppendLine("                    localStorage.setItem(RETAKE_KEY, JSON.stringify(newData));");
+        sb.AppendLine("                    console.log('[Retake] First attempt recorded');");
+        sb.AppendLine("                    return true;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                const data = JSON.parse(retakeData);");
+        sb.AppendLine("                const currentStudent = window.studentInfo.studentId || window.studentInfo.name;");
+        sb.AppendLine("                if (data.studentId !== currentStudent) {");
+        sb.AppendLine("                    const newData = { studentId: currentStudent, attempts: 1, lastAttempt: new Date().toISOString() };");
+        sb.AppendLine("                    localStorage.setItem(RETAKE_KEY, JSON.stringify(newData));");
+        sb.AppendLine("                    console.log('[Retake] New student, attempt 1 recorded');");
+        sb.AppendLine("                    return true;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                if (data.attempts >= maxAttempts) {");
+        sb.AppendLine("                    alert('You have exceeded the maximum number of retake attempts (' + maxAttempts + ') for this exam.');");
+        sb.AppendLine("                    console.warn('[Retake] Max attempts exceeded:', data.attempts, '/', maxAttempts);");
+        sb.AppendLine("                    reportViolation('RETAKE_LIMIT_EXCEEDED', { attempts: data.attempts, max: maxAttempts });");
+        sb.AppendLine("                    return false;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                data.attempts++;");
+        sb.AppendLine("                data.lastAttempt = new Date().toISOString();");
+        sb.AppendLine("                localStorage.setItem(RETAKE_KEY, JSON.stringify(data));");
+        sb.AppendLine("                console.log('[Retake] Attempt', data.attempts, 'of', maxAttempts);");
+        sb.AppendLine("                reportViolation('RETAKE_ATTEMPT', { attempts: data.attempts, max: maxAttempts });");
+        sb.AppendLine("                return true;");
+        sb.AppendLine("            } catch(e) { console.error('[Retake] Check failed:', e); return true; }");
         sb.AppendLine("        }");
         sb.AppendLine();
         
@@ -962,6 +1021,12 @@ public class ExamPublishingService
             sb.AppendLine("            document.getElementById('questionCounter').textContent = 'Question ' + (index + 1) + '/' + totalQuestions;");
             sb.AppendLine("            const prevBtn = document.getElementById('prevBtn');");
             sb.AppendLine("            const nextBtn = document.getElementById('nextBtn');");
+            sb.AppendLine("            const submitContainer = document.querySelector('.submit-container');");
+            sb.AppendLine("            if (index === totalQuestions - 1) {");
+            sb.AppendLine("                if (submitContainer) submitContainer.style.display = 'block';");
+            sb.AppendLine("            } else {");
+            sb.AppendLine("                if (submitContainer) submitContainer.style.display = 'none';");
+            sb.AppendLine("            }");
             if (antiCheat?.DisableBacktrack == true)
             {
                 sb.AppendLine("            prevBtn.disabled = true;");
@@ -1141,6 +1206,10 @@ public class ExamPublishingService
         {
             sb.AppendLine("            const submitContainer = document.querySelector('.submit-container');");
             sb.AppendLine("            if (submitContainer) submitContainer.style.display = 'none';");
+            sb.AppendLine("            if (antiCheatConfig.OneQuestionAtATime && document.getElementById('examSection').style.display !== 'none') {");
+            sb.AppendLine("                createNavigationBar();");
+            sb.AppendLine("                showQuestion(0);");
+            sb.AppendLine("            }");
         }
         sb.AppendLine("        });");
         
