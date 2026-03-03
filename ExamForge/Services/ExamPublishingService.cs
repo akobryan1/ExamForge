@@ -546,6 +546,36 @@ public class ExamPublishingService
             transform: translateY(0);
         }
 
+        .navigation-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding: 10px;
@@ -601,6 +631,7 @@ public class ExamPublishingService
         sb.AppendLine($"        const examDuration = {examData.ExamDuration};");
         sb.AppendLine($"        const apiEndpoint = '{_apiEndpoint}';");
         sb.AppendLine($"        const useGoogleSignIn = {(loginConfig?.IsGoogleSignIn == true ? "true" : "false")};");
+        sb.AppendLine("        let examStarted = false;");
         var antiDict = new System.Collections.Generic.Dictionary<string, object?>
         {
             ["DetectTabbing"] = antiCheat?.DetectTabbing ?? false,
@@ -614,7 +645,9 @@ public class ExamPublishingService
             ["TimeLimitValue"] = antiCheat?.TimeLimitValue ?? "60",
             ["DisableCopyPaste"] = antiCheat?.DisableCopyPaste ?? false,
             ["DisableScreenshot"] = antiCheat?.DisableScreenshot ?? false,
-            ["AutoResumeSession"] = antiCheat?.AutoResumeSession ?? false
+            ["AutoResumeSession"] = antiCheat?.AutoResumeSession ?? false,
+            ["LimitRetakeAttempts"] = antiCheat?.LimitRetakeAttempts ?? false,
+            ["RetakeAttemptsValue"] = antiCheat?.RetakeAttemptsValue ?? "3"
         };
 
         var antiCheatJson = System.Text.Json.JsonSerializer.Serialize(antiDict);
@@ -716,6 +749,7 @@ public class ExamPublishingService
         sb.AppendLine("                timeRemaining = data.timeRemaining || timeRemaining;");
         sb.AppendLine("                tabSwitchCount = data.tabSwitchCount || 0;");
         sb.AppendLine("                deductedPoints = data.deductedPoints || 0;");
+        sb.AppendLine("                examStarted = true;");
         sb.AppendLine("                document.getElementById('studentInfoSection').style.display = 'none';");
         sb.AppendLine("                document.getElementById('examSection').style.display = 'block';");
         sb.AppendLine("                setTimeout(function() {");
@@ -728,430 +762,455 @@ public class ExamPublishingService
         sb.AppendLine("                            } else { el.value = value; }");
         sb.AppendLine("                        }");
         sb.AppendLine("                    }");
-        sb.AppendLine("                    if (typeof currentQuestionIndex !== 'undefined' && typeof showQuestion === 'function') {");
+        sb.AppendLine("                    if (antiCheatConfig.OneQuestionAtATime) {");
+        sb.AppendLine("                        const submitContainer = document.querySelector('.submit-container');");
+        sb.AppendLine("                        if (submitContainer) submitContainer.style.display = 'none';");
+        sb.AppendLine("                        createNavigationBar();");
         sb.AppendLine("                        currentQuestionIndex = data.currentQuestionIndex || 0;");
         sb.AppendLine("                        showQuestion(currentQuestionIndex);");
         sb.AppendLine("                    }");
         sb.AppendLine("                    startTimer();");
-        sb.AppendLine("                    setupAutoSave();");
-        sb.AppendLine("                    alert('✅ Session Restored\\n\\nYour exam has been restored from ' + new Date(data.timestamp).toLocaleString() + '.\\nYou may continue where you left off.');");
-        sb.AppendLine("                }, 500);");
-        sb.AppendLine("            } catch(e) { console.error('[Auto-Resume] Failed:', e); alert('Failed to restore session. Starting fresh.'); }");
-        sb.AppendLine("        }");
-        sb.AppendLine();
-        sb.AppendLine("        function setupAutoSave() {");
-        sb.AppendLine("            if (!antiCheatConfig.AutoResumeSession) return;");
-        sb.AppendLine("            const form = document.getElementById('examForm');");
-        sb.AppendLine("            if (form) {");
-        sb.AppendLine("                form.addEventListener('change', saveSessionProgress);");
-        sb.AppendLine("                form.addEventListener('input', saveSessionProgress);");
-        sb.AppendLine("            }");
-        sb.AppendLine("            window.addEventListener('beforeunload', function() {");
-        sb.AppendLine("                saveSessionProgress();");
-        sb.AppendLine("                reportViolation('session_disconnected', { timeRemaining: timeRemaining, timestamp: new Date().toISOString() });");
-        sb.AppendLine("            });");
-        sb.AppendLine("            console.log('[Auto-Save] Setup complete - saving on answer change');");
-        sb.AppendLine("        }");
-        sb.AppendLine();
-        sb.AppendLine("        function clearSavedSession() {");
-        sb.AppendLine("            try { localStorage.removeItem(SESSION_SAVE_KEY); console.log('[Auto-Save] Session cleared'); } catch(e) {}");
+        sb.AppendLine("                    console.log('[Auto-Resume] Session restored successfully');");
+        sb.AppendLine("                }, 100);");
+        sb.AppendLine("            } catch(e) { console.error('[Auto-Resume] Failed:', e); }");
         sb.AppendLine("        }");
         sb.AppendLine();
         
         // Google Sign-In Handler
         if (loginConfig?.IsGoogleSignIn == true)
         {
-            sb.AppendLine("        // Handle Google Sign-In");
             sb.AppendLine("        function handleGoogleSignIn(response) {");
-            sb.AppendLine("            const idToken = response.credential;");
-            sb.AppendLine("            ");
-            sb.AppendLine("            // Decode JWT token to get user info");
-            sb.AppendLine("            const base64Url = idToken.split('.')[1];");
-            sb.AppendLine("            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');");
-            sb.AppendLine("            const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => {");
-            sb.AppendLine("                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);");
-            sb.AppendLine("            }).join(''));");
-            sb.AppendLine("            ");
-            sb.AppendLine("            const userInfo = JSON.parse(jsonPayload);");
-            sb.AppendLine("            ");
-            sb.AppendLine("            window.studentInfo = {");
-            sb.AppendLine("                name: userInfo.name || '',");
-            sb.AppendLine("                email: userInfo.email || '',");
-            sb.AppendLine("                studentId: userInfo.email ? userInfo.email.split('@')[0] : '',");
-            sb.AppendLine("                yearSection: '',");
-            sb.AppendLine("                googleId: userInfo.sub || ''");
-            sb.AppendLine("            };");
-            sb.AppendLine("            ");
-            sb.AppendLine("            console.log('Google Sign-In successful:', window.studentInfo);");
-            sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
-            sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
-            sb.AppendLine("            startTimer();");
-            sb.AppendLine("            setupAutoSave();");
+            sb.AppendLine("            try {");
+            sb.AppendLine("                const payload = JSON.parse(atob(response.credential.split('.')[1]));");
+            sb.AppendLine("                window.studentInfo = {");
+            sb.AppendLine("                    studentId: payload.sub,");
+            sb.AppendLine("                    name: payload.name,");
+            sb.AppendLine("                    email: payload.email");
+            sb.AppendLine("                };");
+            sb.AppendLine("                console.log('Google Sign-In successful:', window.studentInfo);");
+            sb.AppendLine("                if (!checkRetakeAttempts()) {");
+            sb.AppendLine("                    return;");
+            sb.AppendLine("                }");
+            sb.AppendLine("                document.getElementById('studentInfoSection').style.display = 'none';");
+            sb.AppendLine("                document.getElementById('examSection').style.display = 'block';");
+            sb.AppendLine("                if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
+            sb.AppendLine("                    window.signalRConnection.invoke('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email);");
+            sb.AppendLine("                }");
+            sb.AppendLine("                examStarted = true;");
+            sb.AppendLine("                if (antiCheatConfig.OneQuestionAtATime) {");
+            sb.AppendLine("                    createNavigationBar();");
+            sb.AppendLine("                    showQuestion(0);");
+            sb.AppendLine("                } else {");
+            sb.AppendLine("                    startTimer();");
+            sb.AppendLine("                }");
+            sb.AppendLine("            } catch(e) {");
+            sb.AppendLine("                console.error('Google Sign-In error:', e);");
+            sb.AppendLine("                alert('Sign-in failed. Please try again.');");
+            sb.AppendLine("            }");
             sb.AppendLine("        }");
             sb.AppendLine();
         }
         
-        // Start Exam Function
+        // Start exam function (for guest login)
         sb.AppendLine("        function startExam() {");
-        
-        if (loginConfig?.IsGoogleSignIn == true)
-        {
-            sb.AppendLine("            // Google Sign-In is handled separately via handleGoogleSignIn callback");
-            sb.AppendLine("            return;");
-        }
-        else
-        {
-            sb.AppendLine("            const studentName = document.getElementById('studentName');");
-            sb.AppendLine("            const studentId = document.getElementById('studentId');");
-            sb.AppendLine("            const yearSection = document.getElementById('yearSection');");
-            sb.AppendLine();
-            sb.AppendLine("            let missingFields = [];" );
-            sb.AppendLine();
-            sb.AppendLine("            if (studentName && !studentName.value.trim()) {");
-            sb.AppendLine("                missingFields.push('Full Name');");
-            sb.AppendLine("            }");
-            sb.AppendLine("            if (studentId && !studentId.value.trim()) {");
-            sb.AppendLine("                missingFields.push('Student Number');");
-            sb.AppendLine("            }");
-            sb.AppendLine("            if (yearSection && !yearSection.value.trim()) {");
-            sb.AppendLine("                missingFields.push('Year and Section');");
-            sb.AppendLine("            }");
-            sb.AppendLine();
-            sb.AppendLine("            if (missingFields.length > 0) {");
-            sb.AppendLine("                alert('Please fill in: ' + missingFields.join(', '));");
+        sb.AppendLine("            const studentId = document.getElementById('studentId');");
+        sb.AppendLine("            const studentName = document.getElementById('studentName');");
+        sb.AppendLine("            const yearSection = document.getElementById('yearSection');");
+        sb.AppendLine("            window.studentInfo = {");
+        sb.AppendLine("                studentId: studentId ? studentId.value.trim() : '',");
+        sb.AppendLine("                name: studentName ? studentName.value.trim() : '',");
+        sb.AppendLine("                yearSection: yearSection ? yearSection.value.trim() : ''");
+        sb.AppendLine("            };");
+            sb.AppendLine("            if (!window.studentInfo.studentId && !window.studentInfo.name) {");
+            sb.AppendLine("                alert('Please enter your information.');");
             sb.AppendLine("                return;");
-            sb.AppendLine("            }" );
-            sb.AppendLine();
-            sb.AppendLine("            window.studentInfo = {");
-            sb.AppendLine("                name: studentName ? studentName.value : '',");
-            sb.AppendLine("                studentId: studentId ? studentId.value : '',");
-            sb.AppendLine("                yearSection: yearSection ? yearSection.value : '',");
-            sb.AppendLine("                email: ''");
-            sb.AppendLine("            };");
-            sb.AppendLine();
-            sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
-            sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
-            sb.AppendLine("            startTimer();");
-            sb.AppendLine("            setupAutoSave();");
-        }
-        
+            sb.AppendLine("            }");
+            sb.AppendLine("            if (!checkRetakeAttempts()) {");
+            sb.AppendLine("                return;");
+            sb.AppendLine("            }");
+            sb.AppendLine("            console.log('Student info captured:', window.studentInfo);");
+        sb.AppendLine("            const savedSession = checkForSavedSession();");
+        sb.AppendLine("            if (savedSession && confirm('A previous session was found. Do you want to resume where you left off?')) {");
+        sb.AppendLine("                restoreSession(savedSession);");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
+        sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
+        sb.AppendLine("            if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
+        sb.AppendLine("                window.signalRConnection.invoke('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email || '');");
+        sb.AppendLine("            }");
+        sb.AppendLine("            examStarted = true;");
+        sb.AppendLine("            if (antiCheatConfig.OneQuestionAtATime) {");
+        sb.AppendLine("                createNavigationBar();");
+        sb.AppendLine("                showQuestion(0);");
+        sb.AppendLine("            } else {");
+        sb.AppendLine("                startTimer();");
+        sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // Timer Function
-        sb.AppendLine("        function startTimer() {");
-        sb.AppendLine("            timerInterval = setInterval(() => {");
-        sb.AppendLine("                if (timeRemaining <= 0) {");
-        sb.AppendLine("                    clearInterval(timerInterval);");
-        sb.AppendLine("                    alert('Time is up! Submitting your exam...');");
-        sb.AppendLine("                    document.getElementById('examForm').dispatchEvent(new Event('submit'));");
-        sb.AppendLine("                    return;");
+        // Retake attempts validation
+        sb.AppendLine("        // Retake attempts validation");
+        sb.AppendLine("        const RETAKE_KEY = 'examRetakes_' + examId;");
+        sb.AppendLine();
+        sb.AppendLine("        function checkRetakeAttempts() {");
+        sb.AppendLine("            if (!antiCheatConfig.LimitRetakeAttempts) return true;");
+        sb.AppendLine("            try {");
+        sb.AppendLine("                const maxAttempts = parseInt(antiCheatConfig.RetakeAttemptsValue) || 3;");
+        sb.AppendLine("                if (maxAttempts === 0) return true;");
+        sb.AppendLine("                const retakeData = localStorage.getItem(RETAKE_KEY);");
+        sb.AppendLine("                if (!retakeData) {");
+        sb.AppendLine("                    const newData = { studentId: window.studentInfo.studentId || window.studentInfo.name, attempts: 1, lastAttempt: new Date().toISOString() };");
+        sb.AppendLine("                    localStorage.setItem(RETAKE_KEY, JSON.stringify(newData));");
+        sb.AppendLine("                    console.log('[Retake] First attempt recorded');");
+        sb.AppendLine("                    return true;");
         sb.AppendLine("                }");
-        sb.AppendLine();
-        sb.AppendLine("                timeRemaining--;");
-        sb.AppendLine("                const hours = Math.floor(timeRemaining / 3600);");
-        sb.AppendLine("                const minutes = Math.floor((timeRemaining % 3600) / 60);");
-        sb.AppendLine("                const seconds = timeRemaining % 60;");
-        sb.AppendLine();
-        sb.AppendLine("                document.getElementById('time').textContent = ");
-        sb.AppendLine("                    String(hours).padStart(2, '0') + ':' +");
-        sb.AppendLine("                    String(minutes).padStart(2, '0') + ':' +");
-        sb.AppendLine("                    String(seconds).padStart(2, '0');");
-        sb.AppendLine("            }, 1000);");
+        sb.AppendLine("                const data = JSON.parse(retakeData);");
+        sb.AppendLine("                const currentStudent = window.studentInfo.studentId || window.studentInfo.name;");
+        sb.AppendLine("                if (data.studentId !== currentStudent) {");
+        sb.AppendLine("                    const newData = { studentId: currentStudent, attempts: 1, lastAttempt: new Date().toISOString() };");
+        sb.AppendLine("                    localStorage.setItem(RETAKE_KEY, JSON.stringify(newData));");
+        sb.AppendLine("                    console.log('[Retake] New student, attempt 1 recorded');");
+        sb.AppendLine("                    return true;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                if (data.attempts >= maxAttempts) {");
+        sb.AppendLine("                    alert('You have exceeded the maximum number of retake attempts (' + maxAttempts + ') for this exam.');");
+        sb.AppendLine("                    console.warn('[Retake] Max attempts exceeded:', data.attempts, '/', maxAttempts);");
+        sb.AppendLine("                    reportViolation('RETAKE_LIMIT_EXCEEDED', { attempts: data.attempts, max: maxAttempts });");
+        sb.AppendLine("                    return false;");
+        sb.AppendLine("                }");
+        sb.AppendLine("                data.attempts++;");
+        sb.AppendLine("                data.lastAttempt = new Date().toISOString();");
+        sb.AppendLine("                localStorage.setItem(RETAKE_KEY, JSON.stringify(data));");
+        sb.AppendLine("                console.log('[Retake] Attempt', data.attempts, 'of', maxAttempts);");
+        sb.AppendLine("                reportViolation('RETAKE_ATTEMPT', { attempts: data.attempts, max: maxAttempts });");
+        sb.AppendLine("                return true;");
+        sb.AppendLine("            } catch(e) { console.error('[Retake] Check failed:', e); return true; }");
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // Anti-cheat: Detect tabbing
-        sb.AppendLine("        // Anti-cheat: Detect tabbing and copy/paste/screenshot prevention");
+        // Timer functions
+        sb.AppendLine("        function updateTimer() {");
+        sb.AppendLine("            const hours = Math.floor(timeRemaining / 3600);");
+        sb.AppendLine("            const minutes = Math.floor((timeRemaining % 3600) / 60);");
+        sb.AppendLine("            const seconds = timeRemaining % 60;");
+        sb.AppendLine("            document.getElementById('time').textContent = ");
+        sb.AppendLine("                String(hours).padStart(2, '0') + ':' +");
+        sb.AppendLine("                String(minutes).padStart(2, '0') + ':' +");
+        sb.AppendLine("                String(seconds).padStart(2, '0');");
+        sb.AppendLine("            if (timeRemaining <= 0) {");
+        sb.AppendLine("                clearInterval(timerInterval);");
+        sb.AppendLine("                autoSubmitExam();");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            if (timeRemaining === 300) {");
+        sb.AppendLine("                alert('Warning: 5 minutes remaining!');");
+        sb.AppendLine("            }");
+        sb.AppendLine("            timeRemaining--;");
+        sb.AppendLine("            if (antiCheatConfig.AutoResumeSession && timeRemaining % 30 === 0) {");
+        sb.AppendLine("                saveSessionProgress();");
+        sb.AppendLine("            }");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        function startTimer() {");
+        sb.AppendLine("            if (!examStarted) return;");
+        sb.AppendLine("            updateTimer();");
+        sb.AppendLine("            timerInterval = setInterval(updateTimer, 1000);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        
+        // Tab detection
         sb.AppendLine("        document.addEventListener('visibilitychange', function() {");
-        sb.AppendLine("            if (!antiCheatConfig.DetectTabbing) return;");
+        sb.AppendLine("            if (!examStarted || !antiCheatConfig.DetectTabbing) return;");
         sb.AppendLine("            if (document.hidden) {");
         sb.AppendLine("                tabSwitchCount++;");
-        sb.AppendLine("                console.warn('Tab switched. Count: ' + tabSwitchCount);");
-        sb.AppendLine("                ");
-        sb.AppendLine("                // Calculate deductions if enabled");
+        sb.AppendLine("                console.warn('[Anti-Cheat] Tab switch detected. Count:', tabSwitchCount);");
+        sb.AppendLine("                reportViolation('TAB_SWITCH', { count: tabSwitchCount, timestamp: new Date().toISOString() });");
         sb.AppendLine("                if (antiCheatConfig.DeductPoints) {");
-        sb.AppendLine("                    const pts = parseInt(antiCheatConfig.DeductPointsValue || '0', 10) || 0;");
-        sb.AppendLine("                    deductedPoints += pts;");
-        sb.AppendLine("                    console.warn('Deducted points: ' + pts + '. Total deducted: ' + deductedPoints);");
+        sb.AppendLine("                    const points = parseInt(antiCheatConfig.DeductPointsValue) || 0;");
+        sb.AppendLine("                    deductedPoints += points;");
+        sb.AppendLine("                    console.warn('[Anti-Cheat] Points deducted:', points, 'Total deducted:', deductedPoints);");
         sb.AppendLine("                }");
-        sb.AppendLine("                ");
-        sb.AppendLine("                // Report violation to server");
-        sb.AppendLine("                reportViolation('tab_switch', {");
-        sb.AppendLine("                    count: tabSwitchCount,");
-        sb.AppendLine("                    deductedPoints: deductedPoints,");
-        sb.AppendLine("                    timestamp: new Date().toISOString()");
-        sb.AppendLine("                });");
-        sb.AppendLine("                ");
-        sb.AppendLine("                // Show warning if enabled");
+        sb.AppendLine("                if (antiCheatConfig.AutoSubmit && tabSwitchCount >= 3) {");
+        sb.AppendLine("                    alert('You have switched tabs too many times. Your exam will be submitted automatically.');");
+        sb.AppendLine("                    autoSubmitExam();");
+        sb.AppendLine("                    return;");
+        sb.AppendLine("                }");
         sb.AppendLine("                if (antiCheatConfig.WarningOnly) {");
-        sb.AppendLine("                    alert('Warning: You switched away from the exam window. This incident has been recorded.');");
-        sb.AppendLine("                }");
-        sb.AppendLine("                ");
-        sb.AppendLine("                // Auto-submit if enabled");
-        sb.AppendLine("                if (antiCheatConfig.AutoSubmit) {");
-        sb.AppendLine("                    alert('You switched away from the exam. The exam will be submitted automatically.');");
-        sb.AppendLine("                    document.getElementById('examForm').dispatchEvent(new Event('submit'));");
+        sb.AppendLine("                    alert('Warning: Tab switching is being monitored. Count: ' + tabSwitchCount);");
         sb.AppendLine("                }");
         sb.AppendLine("            }");
         sb.AppendLine("        });");
         sb.AppendLine();
         
-        // Disable copy/paste if requested
+        // Copy/Paste prevention
         sb.AppendLine("        if (antiCheatConfig.DisableCopyPaste) {");
         sb.AppendLine("            document.addEventListener('copy', function(e) {");
-        sb.AppendLine("                e.preventDefault();");
-        sb.AppendLine("                copyPasteAttempts++;");
-        sb.AppendLine("                alert('Copying is disabled during the exam. This attempt has been recorded.');");
-        sb.AppendLine("                reportViolation('copy_attempt', { count: copyPasteAttempts, type: 'copy', timestamp: new Date().toISOString() });");
-        sb.AppendLine("            });");
-        sb.AppendLine("            document.addEventListener('cut', function(e) {");
-        sb.AppendLine("                e.preventDefault();");
-        sb.AppendLine("                copyPasteAttempts++;");
-        sb.AppendLine("                alert('Cut is disabled during the exam. This attempt has been recorded.');");
-        sb.AppendLine("                reportViolation('copy_attempt', { count: copyPasteAttempts, type: 'cut', timestamp: new Date().toISOString() });");
-        sb.AppendLine("            });");
-        sb.AppendLine("            document.addEventListener('paste', function(e) {");
-        sb.AppendLine("                e.preventDefault();");
-        sb.AppendLine("                copyPasteAttempts++;");
-        sb.AppendLine("                alert('Pasting is disabled during the exam. This attempt has been recorded.');");
-        sb.AppendLine("                reportViolation('copy_attempt', { count: copyPasteAttempts, type: 'paste', timestamp: new Date().toISOString() });");
-        sb.AppendLine("            });");
-        sb.AppendLine("            document.addEventListener('contextmenu', function(e) { e.preventDefault(); });");
-        sb.AppendLine("            document.addEventListener('keydown', function(e) {");
-        sb.AppendLine("                if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'x')) {");
+        sb.AppendLine("                if (examStarted) {");
         sb.AppendLine("                    e.preventDefault();");
         sb.AppendLine("                    copyPasteAttempts++;");
-        sb.AppendLine("                    alert('Keyboard copy/paste is disabled during the exam. This attempt has been recorded.');");
-        sb.AppendLine("                    reportViolation('copy_attempt', { count: copyPasteAttempts, type: 'keyboard', key: e.key, timestamp: new Date().toISOString() });");
+        sb.AppendLine("                    reportViolation('COPY_ATTEMPT', { count: copyPasteAttempts });");
+        sb.AppendLine("                    alert('Copying is disabled during the exam.');");
+        sb.AppendLine("                }");
+        sb.AppendLine("            });");
+        sb.AppendLine("            document.addEventListener('paste', function(e) {");
+        sb.AppendLine("                if (examStarted) {");
+        sb.AppendLine("                    e.preventDefault();");
+        sb.AppendLine("                    copyPasteAttempts++;");
+        sb.AppendLine("                    reportViolation('PASTE_ATTEMPT', { count: copyPasteAttempts });");
+        sb.AppendLine("                    alert('Pasting is disabled during the exam.');");
         sb.AppendLine("                }");
         sb.AppendLine("            });");
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // Disable screenshot/printscreen best-effort
-        sb.AppendLine("        // Detect screenshot/PrintScreen attempts (browser cannot prevent OS-level tools)");
+        // Screenshot prevention
         sb.AppendLine("        if (antiCheatConfig.DisableScreenshot) {");
         sb.AppendLine("            document.addEventListener('keyup', function(e) {");
-        sb.AppendLine("                // Detect PrintScreen key (keyCode 44 or key 'PrintScreen')");
-        sb.AppendLine("                if (e.key === 'PrintScreen' || e.keyCode === 44 || e.code === 'PrintScreen') {");
+        sb.AppendLine("                if (examStarted && (e.key === 'PrintScreen' || e.keyCode === 44)) {");
         sb.AppendLine("                    screenshotAttempts++;");
-        sb.AppendLine("                    console.warn('[Anti-Cheat] Screenshot attempt detected. Count: ' + screenshotAttempts);");
-        sb.AppendLine("                    alert('⚠️ Screenshot Detected\\n\\nScreenshot attempts are being monitored and recorded.\\n\\nAttempt #' + screenshotAttempts + ' has been logged.');");
-        sb.AppendLine("                    reportViolation('screenshot_attempt', {");
-        sb.AppendLine("                        count: screenshotAttempts,");
-        sb.AppendLine("                        timestamp: new Date().toISOString(),");
-        sb.AppendLine("                        note: 'PrintScreen key detected - OS-level screenshots cannot be prevented'");
-        sb.AppendLine("                    });");
-        sb.AppendLine("                }");
-        sb.AppendLine("            });");
-        sb.AppendLine("            // Also detect Windows Snipping Tool shortcuts (Win+Shift+S)");
-        sb.AppendLine("            document.addEventListener('keydown', function(e) {");
-        sb.AppendLine("                if (e.key === 's' && e.shiftKey && (e.metaKey || e.ctrlKey)) {");
-        sb.AppendLine("                    screenshotAttempts++;");
-        sb.AppendLine("                    console.warn('[Anti-Cheat] Snipping tool shortcut detected. Count: ' + screenshotAttempts);");
-        sb.AppendLine("                    alert('⚠️ Screenshot Tool Detected\\n\\nScreenshot tool usage is being monitored and recorded.\\n\\nAttempt #' + screenshotAttempts + ' has been logged.');");
-        sb.AppendLine("                    reportViolation('screenshot_attempt', {");
-        sb.AppendLine("                        count: screenshotAttempts,");
-        sb.AppendLine("                        timestamp: new Date().toISOString(),");
-        sb.AppendLine("                        shortcut: 'Snipping tool',");
-        sb.AppendLine("                        note: 'Screenshot tool shortcut detected'");
-        sb.AppendLine("                    });");
+        sb.AppendLine("                    reportViolation('SCREENSHOT_ATTEMPT', { count: screenshotAttempts });");
+        sb.AppendLine("                    alert('Screenshot/PrintScreen is disabled during the exam.');");
         sb.AppendLine("                }");
         sb.AppendLine("            });");
         sb.AppendLine("        }");
         sb.AppendLine();
         
-        // One question at a time: navigation and per-question timer
-        sb.AppendLine("        if (antiCheatConfig.OneQuestionAtATime) {");
-        sb.AppendLine("            const questions = Array.from(document.querySelectorAll('.question-container'));");
-        sb.AppendLine("            let currentQuestionIndex = 0;");
-        sb.AppendLine("            let perQuestionTimer = null;");
-        sb.AppendLine("            let perQuestionTimeRemaining = parseInt(antiCheatConfig.TimeLimitValue || '60', 10) || 60;");
-        sb.AppendLine("            let perQuestionPaused = false;");
-        sb.AppendLine();
-        sb.AppendLine("            function startPerQuestionTimer(display, onExpire) {");
-        sb.AppendLine("                if (!antiCheatConfig.TimeLimitPerQuestion) return;");
-        sb.AppendLine("                if (perQuestionTimer) clearInterval(perQuestionTimer);");
-        sb.AppendLine("                perQuestionTimeRemaining = parseInt(antiCheatConfig.TimeLimitValue || '60', 10) || 60;");
-        sb.AppendLine("                perQuestionPaused = false;");
-        sb.AppendLine("                display.textContent = perQuestionTimeRemaining + 's';");
-        sb.AppendLine("                perQuestionTimer = setInterval(() => {");
-        sb.AppendLine("                    if (perQuestionPaused) return;");
-        sb.AppendLine("                    perQuestionTimeRemaining--;");
-        sb.AppendLine("                    display.textContent = perQuestionTimeRemaining + 's';");
-        sb.AppendLine("                    if (perQuestionTimeRemaining === 10) {");
-        sb.AppendLine("                        display.style.color = '#b91c1c';");
-        sb.AppendLine("                    }");
-        sb.AppendLine("                    if (perQuestionTimeRemaining <= 0) {");
-        sb.AppendLine("                        clearInterval(perQuestionTimer);");
-        sb.AppendLine("                        onExpire();");
-        sb.AppendLine("                    }");
-        sb.AppendLine("                }, 1000);");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine("            function showQuestion(index) {");
-        sb.AppendLine("                questions.forEach((q, i) => {");
-        sb.AppendLine("                    q.style.display = (i === index) ? 'block' : 'none';");
-        sb.AppendLine("                });");
-        sb.AppendLine("                const nav = document.getElementById('questionNav');");
-        sb.AppendLine("                if (nav) {");
-        sb.AppendLine("                    nav.querySelector('#qIndex').textContent = (index + 1) + '/' + questions.length;");
-        sb.AppendLine("                    nav.querySelector('#prevBtn').disabled = (index === 0) || antiCheatConfig.DisableBacktrack;");
-        sb.AppendLine("                    nav.querySelector('#nextBtn').disabled = (index === questions.length - 1);");
-        sb.AppendLine("                }");
-        sb.AppendLine("                const display = document.getElementById('perQuestionTimer');");
-        sb.AppendLine("                if (display) { display.style.color = ''; }");
-        sb.AppendLine("                if (antiCheatConfig.TimeLimitPerQuestion) {");
-        sb.AppendLine("                    startPerQuestionTimer(display, () => {");
-        sb.AppendLine("                        if (currentQuestionIndex < questions.length - 1) {");
-        sb.AppendLine("                            currentQuestionIndex++;");
-        sb.AppendLine("                            showQuestion(currentQuestionIndex);");
-        sb.AppendLine("                        } else {");
-        sb.AppendLine("                            alert('Time for this question expired. Submitting exam.');");
-        sb.AppendLine("                            document.getElementById('examForm').dispatchEvent(new Event('submit'));");
-        sb.AppendLine("                        }");
-        sb.AppendLine("                    });");
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine("            const navContainer = document.createElement('div');");
-        sb.AppendLine("            navContainer.id = 'questionNav';");
-        sb.AppendLine("            navContainer.style.display = 'flex';");
-        sb.AppendLine("            navContainer.style.justifyContent = 'space-between';");
-        sb.AppendLine("            navContainer.style.alignItems = 'center';");
-        sb.AppendLine("            navContainer.style.padding = '12px 20px';");
-        sb.AppendLine("            navContainer.style.background = '#f3f4f6';");
-        sb.AppendLine("            navContainer.style.borderBottom = '1px solid #e5e7eb';");
-        sb.AppendLine("            navContainer.innerHTML = `<div style=\"display:flex;gap:8px;align-items:center\"><button id=\"prevBtn\" style=\"padding:8px 12px;border-radius:6px;\">Previous</button><button id=\"nextBtn\" style=\"padding:8px 12px;border-radius:6px;\">Next</button><span id=\"qIndex\" style=\"font-weight:600; margin-left:8px\"></span></div><div style=\"display:flex;gap:12px;align-items:center;\"><div style=\"font-size:14px;color:#374151\">Time: <span id=\"perQuestionTimer\"></span></div><button id=\"pauseBtn\" style=\"padding:6px 10px;border-radius:6px;\">Pause</button></div>`;");
-        sb.AppendLine("            const examContainer = document.querySelector('.exam-container');");
-        sb.AppendLine("            const examSection = document.getElementById('examSection');");
-        sb.AppendLine("            if (examSection && examContainer) {");
-        sb.AppendLine("                examContainer.insertBefore(navContainer, examSection);");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine("            navContainer.querySelector('#prevBtn').addEventListener('click', () => {");
-        sb.AppendLine("                if (antiCheatConfig.DisableBacktrack) return;");
-        sb.AppendLine("                if (currentQuestionIndex > 0) {");
-        sb.AppendLine("                    currentQuestionIndex--;");
-        sb.AppendLine("                    showQuestion(currentQuestionIndex);");
-        sb.AppendLine("                }");
-        sb.AppendLine("            });");
-        sb.AppendLine("            navContainer.querySelector('#nextBtn').addEventListener('click', () => {");
-        sb.AppendLine("                if (currentQuestionIndex < questions.length - 1) {");
-        sb.AppendLine("                    currentQuestionIndex++;");
-        sb.AppendLine("                    showQuestion(currentQuestionIndex);");
-        sb.AppendLine("                }");
-        sb.AppendLine("            });");
-        sb.AppendLine();
-        sb.AppendLine("            navContainer.querySelector('#pauseBtn').addEventListener('click', (e) => {");
-        sb.AppendLine("                perQuestionPaused = !perQuestionPaused;");
-        sb.AppendLine("                e.target.textContent = perQuestionPaused ? 'Resume' : 'Pause';");
-        sb.AppendLine("            });");
-        sb.AppendLine();
-        sb.AppendLine("            if (questions.length > 0) {");
-        sb.AppendLine("                showQuestion(0);");
-        sb.AppendLine("            }");
-        sb.AppendLine("        }");
-        sb.AppendLine();
-        
-        // Submit Function  
-        sb.AppendLine("        async function submitExam(event) {");
-        sb.AppendLine("            event.preventDefault();");
-        sb.AppendLine("            console.log('Submit button clicked');");
-        sb.AppendLine();
-        sb.AppendLine("            // Disable submit button to prevent double submission");
-        sb.AppendLine("            const submitButton = document.querySelector('.submit-button');");
-        sb.AppendLine("            submitButton.disabled = true;");
-        sb.AppendLine("            submitButton.textContent = 'Submitting...';");
-        sb.AppendLine();
-        sb.AppendLine("            try {");
-        sb.AppendLine("                // Collect all answers");
-        sb.AppendLine("                const formData = new FormData(event.target);");
-        sb.AppendLine("                const answers = {};");
-        sb.AppendLine();
-        sb.AppendLine("                for (let [key, value] of formData.entries()) {");
-        sb.AppendLine("                    answers[key] = value;");
-        sb.AppendLine("                }");
-        sb.AppendLine();
-        sb.AppendLine("                const submissionData = {");
-        sb.AppendLine("                    examId: examId,");
-        sb.AppendLine("                    studentName: window.studentInfo.name || '',");
-        sb.AppendLine("                    studentEmail: window.studentInfo.email || '',");
-        sb.AppendLine("                    studentId: window.studentInfo.studentId || '',");
-        sb.AppendLine("                    yearSection: window.studentInfo.yearSection || '',");
-        sb.AppendLine("                    answers: answers,");
-        sb.AppendLine("                    submittedAt: new Date().toISOString(),");
-        sb.AppendLine("                    timeElapsed: ((examDuration * 60) - timeRemaining),");
-        sb.AppendLine("                    status: 'Submitted'");
-        sb.AppendLine("                };");
-        sb.AppendLine();
-        sb.AppendLine("                console.log('Submitting exam data:', submissionData);");
-        sb.AppendLine();
-        sb.AppendLine("                // Submit to API endpoint");
-        sb.AppendLine("                const response = await fetch(apiEndpoint + '/api/submit', {");
-        sb.AppendLine("                    method: 'POST',");
-        sb.AppendLine("                    headers: {");
-        sb.AppendLine("                        'Content-Type': 'application/json'");
-        sb.AppendLine("                    },");
-        sb.AppendLine("                    body: JSON.stringify(submissionData)");
-        sb.AppendLine("                });");
-        sb.AppendLine();
-                sb.AppendLine("                if (response.ok) {");
-                sb.AppendLine("                    const result = await response.json();");
-                sb.AppendLine("                    console.log('Submission successful:', result);");
-                sb.AppendLine("                    clearInterval(timerInterval);");
-                sb.AppendLine("                    clearSavedSession();");
-                sb.AppendLine("                    showSuccessMessage();");
+        // One question at a time functionality
+        if (antiCheat?.OneQuestionAtATime == true)
+        {
+            var totalQuestions = examData.Contents.Count;
+            sb.AppendLine($"        const totalQuestions = {totalQuestions};");
+            sb.AppendLine("        let currentQuestionIndex = 0;");
+            sb.AppendLine("        let questionStartTime = null;");
+            sb.AppendLine("        let questionTimerInterval = null;");
+            sb.AppendLine("        let questionTimeRemaining = 0;");
+            sb.AppendLine();
+            
+            // Create navigation bar HTML dynamically (moved to after instructions)
+            sb.AppendLine("        function createNavigationBar() {");
+            sb.AppendLine("            const navBar = document.createElement('div');");
+            sb.AppendLine("            navBar.id = 'navigationBar';");
+            sb.AppendLine("            navBar.style.cssText = 'background: #ffffff; padding: 20px; border-bottom: 3px solid #3498db; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;';");
+            sb.AppendLine("            navBar.innerHTML = `");
+            sb.AppendLine("                <div style='display: flex; gap: 15px; align-items: center; flex-wrap: wrap;'>");
+            sb.AppendLine("                    <button id='prevBtn' onclick='previousQuestion()' style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;'>");
+            sb.AppendLine("                        ← Previous");
+            sb.AppendLine("                    </button>");
+            sb.AppendLine("                    <button id='nextBtn' onclick='nextQuestion()' style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 3px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;'>");
+            sb.AppendLine("                        Next →");
+            sb.AppendLine("                    </button>");
+            sb.AppendLine("                    <span id='questionCounter' style='font-size: 18px; font-weight: bold; color: #2c3e50;'>Question 1/${totalQuestions}</span>");
+            if (antiCheat?.TimeLimitPerQuestion == true)
+            {
+                sb.AppendLine("                    <span id='questionTimer' style='font-size: 18px; font-weight: bold; color: #e74c3c; margin-left: 20px;'>Time: " + (antiCheat?.TimeLimitValue ?? "60") + "s</span>");
+            }
+            sb.AppendLine("                </div>");
+            sb.AppendLine("            `;");
+            sb.AppendLine("            const examInstructions = document.querySelector('.exam-instructions');");
+            sb.AppendLine("            examInstructions.parentNode.insertBefore(navBar, examInstructions.nextSibling);");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            
+            // Show question function
+            sb.AppendLine("        function showQuestion(index) {");
+            sb.AppendLine("            const questions = document.querySelectorAll('.question-container');");
+            sb.AppendLine("            questions.forEach((q, i) => {");
+            sb.AppendLine("                q.style.display = i === index ? 'block' : 'none';");
+            sb.AppendLine("            });");
+            sb.AppendLine("            document.getElementById('questionCounter').textContent = 'Question ' + (index + 1) + '/' + totalQuestions;");
+            sb.AppendLine("            const prevBtn = document.getElementById('prevBtn');");
+            sb.AppendLine("            const nextBtn = document.getElementById('nextBtn');");
+            sb.AppendLine("            const submitContainer = document.querySelector('.submit-container');");
+            sb.AppendLine("            if (index === totalQuestions - 1) {");
+            sb.AppendLine("                if (submitContainer) submitContainer.style.display = 'block';");
+            sb.AppendLine("            } else {");
+            sb.AppendLine("                if (submitContainer) submitContainer.style.display = 'none';");
+            sb.AppendLine("            }");
+            if (antiCheat?.DisableBacktrack == true)
+            {
+                sb.AppendLine("            prevBtn.disabled = true;");
+                sb.AppendLine("            prevBtn.style.opacity = '0.5';");
+                sb.AppendLine("            prevBtn.style.cursor = 'not-allowed';");
+            }
+            else
+            {
+                sb.AppendLine("            prevBtn.disabled = index === 0;");
+                sb.AppendLine("            prevBtn.style.opacity = index === 0 ? '0.5' : '1';");
+                sb.AppendLine("            prevBtn.style.cursor = index === 0 ? 'not-allowed' : 'pointer';");
+            }
+            sb.AppendLine("            nextBtn.disabled = index === totalQuestions - 1;");
+            sb.AppendLine("            nextBtn.style.opacity = index === totalQuestions - 1 ? '0.5' : '1';");
+            sb.AppendLine("            nextBtn.style.cursor = index === totalQuestions - 1 ? 'not-allowed' : 'pointer';");
+            
+            if (antiCheat?.TimeLimitPerQuestion == true)
+            {
+                sb.AppendLine("            startQuestionTimer();");
+            }
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            
+            // Navigation functions
+            sb.AppendLine("        function nextQuestion() {");
+            sb.AppendLine("            if (currentQuestionIndex < totalQuestions - 1) {");
+            if (antiCheat?.TimeLimitPerQuestion == true)
+            {
+                sb.AppendLine("                stopQuestionTimer();");
+            }
+            sb.AppendLine("                currentQuestionIndex++;");
+            sb.AppendLine("                showQuestion(currentQuestionIndex);");
+            sb.AppendLine("                saveSessionProgress();");
+            sb.AppendLine("            }");
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            sb.AppendLine("        function previousQuestion() {");
+            if (antiCheat?.DisableBacktrack == true)
+            {
+                sb.AppendLine("            return;");
+            }
+            else
+            {
+                sb.AppendLine("            if (currentQuestionIndex > 0) {");
+                if (antiCheat?.TimeLimitPerQuestion == true)
+                {
+                    sb.AppendLine("                stopQuestionTimer();");
+                }
+                sb.AppendLine("                currentQuestionIndex--;");
+                sb.AppendLine("                showQuestion(currentQuestionIndex);");
+                sb.AppendLine("                saveSessionProgress();");
+                sb.AppendLine("            }");
+            }
+            sb.AppendLine("        }");
+            sb.AppendLine();
+            
+            // Per-question timer (only if enabled)
+            if (antiCheat?.TimeLimitPerQuestion == true)
+            {
+                var timeLimit = int.TryParse(antiCheat?.TimeLimitValue, out var limit) ? limit : 60;
+                sb.AppendLine("        function startQuestionTimer() {");
+                sb.AppendLine("            if (!examStarted) return;");
+                sb.AppendLine($"            questionTimeRemaining = {timeLimit};");
+                sb.AppendLine("            questionStartTime = Date.now();");
+                sb.AppendLine("            updateQuestionTimer();");
+                sb.AppendLine("            if (questionTimerInterval) clearInterval(questionTimerInterval);");
+                sb.AppendLine("            questionTimerInterval = setInterval(updateQuestionTimer, 1000);");
+                sb.AppendLine("        }");
+                sb.AppendLine();
+                sb.AppendLine("        function stopQuestionTimer() {");
+                sb.AppendLine("            if (questionTimerInterval) {");
+                sb.AppendLine("                clearInterval(questionTimerInterval);");
+                sb.AppendLine("                questionTimerInterval = null;");
+                sb.AppendLine("            }");
+                sb.AppendLine("        }");
+                sb.AppendLine();
+                sb.AppendLine("        function updateQuestionTimer() {");
+                sb.AppendLine("            const timerEl = document.getElementById('questionTimer');");
+                sb.AppendLine("            if (!timerEl) return;");
+                sb.AppendLine("            timerEl.textContent = 'Time: ' + questionTimeRemaining + 's';");
+                sb.AppendLine("            if (questionTimeRemaining <= 10) {");
+                sb.AppendLine("                timerEl.style.color = '#e74c3c';");
+                sb.AppendLine("                timerEl.style.fontWeight = 'bold';");
+                sb.AppendLine("            } else {");
+                sb.AppendLine("                timerEl.style.color = '#2c3e50';");
+                sb.AppendLine("            }");
+                sb.AppendLine("            if (questionTimeRemaining <= 0) {");
+                sb.AppendLine("                stopQuestionTimer();");
+                sb.AppendLine("                if (currentQuestionIndex < totalQuestions - 1) {");
+                sb.AppendLine("                    alert('Time is up for this question! Moving to next question.');");
+                sb.AppendLine("                    nextQuestion();");
                 sb.AppendLine("                } else {");
-        sb.AppendLine("                    const error = await response.text();");
-        sb.AppendLine("                    console.error('Submission failed:', error);");
-        sb.AppendLine("                    throw new Error('Submission failed: ' + error);");
+                sb.AppendLine("                    alert('Time is up for the last question!');");
+                sb.AppendLine("                }");
+                sb.AppendLine("                return;");
+                sb.AppendLine("            }");
+                sb.AppendLine("            questionTimeRemaining--;");
+                sb.AppendLine("        }");
+                sb.AppendLine();
+            }
+        }
+        
+        // Submit functions
+        sb.AppendLine("        function submitExam(event) {");
+        sb.AppendLine("            event.preventDefault();");
+        sb.AppendLine("            if (!confirm('Are you sure you want to submit your exam? This action cannot be undone.')) {");
+        sb.AppendLine("                return;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            clearInterval(timerInterval);");
+        if (antiCheat?.OneQuestionAtATime == true && antiCheat?.TimeLimitPerQuestion == true)
+        {
+            sb.AppendLine("            if (questionTimerInterval) clearInterval(questionTimerInterval);");
+        }
+        sb.AppendLine("            const formData = new FormData(event.target);");
+        sb.AppendLine("            const answers = {};");
+        sb.AppendLine("            for (let [key, value] of formData.entries()) {");
+        sb.AppendLine("                answers[key] = value;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            localStorage.removeItem(SESSION_SAVE_KEY);");
+        sb.AppendLine("            sendToApi(answers);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        sb.AppendLine("        function autoSubmitExam() {");
+        sb.AppendLine("            alert('Time is up! Your exam will be submitted automatically.');");
+        sb.AppendLine("            const form = document.getElementById('examForm');");
+        sb.AppendLine("            const formData = new FormData(form);");
+        sb.AppendLine("            const answers = {};");
+        sb.AppendLine("            for (let [key, value] of formData.entries()) {");
+        sb.AppendLine("                answers[key] = value;");
+        sb.AppendLine("            }");
+        sb.AppendLine("            localStorage.removeItem(SESSION_SAVE_KEY);");
+        sb.AppendLine("            sendToApi(answers);");
+        sb.AppendLine("        }");
+        sb.AppendLine();
+        
+        // Submit to API
+        sb.AppendLine("        async function sendToApi(answers) {");
+        sb.AppendLine("            const submission = {");
+        sb.AppendLine("                examId: examId,");
+        sb.AppendLine("                answers: answers,");
+        sb.AppendLine("                submittedAt: new Date().toISOString(),");
+        sb.AppendLine("                timeSpent: (examDuration * 60 - timeRemaining),");
+        sb.AppendLine("                studentInfo: window.studentInfo || {},");
+        sb.AppendLine("                tabSwitchCount: tabSwitchCount,");
+        sb.AppendLine("                deductedPoints: deductedPoints,");
+        sb.AppendLine("                screenshotAttempts: screenshotAttempts,");
+        sb.AppendLine("                copyPasteAttempts: copyPasteAttempts");
+        sb.AppendLine("            };");
+        sb.AppendLine("            try {");
+        sb.AppendLine("                const response = await fetch(apiEndpoint, {");
+        sb.AppendLine("                    method: 'POST',");
+        sb.AppendLine("                    headers: { 'Content-Type': 'application/json' },");
+        sb.AppendLine("                    body: JSON.stringify(submission)");
+        sb.AppendLine("                });");
+        sb.AppendLine("                if (response.ok) {");
+        sb.AppendLine("                    const studentName = (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : 'Student';");
+        sb.AppendLine("                    document.body.innerHTML = '<div style=\"display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; text-align: center; padding: 20px;\"><h1 style=\"font-size: clamp(24px, 5vw, 48px);\">✓ Exam Submitted Successfully!</h1><p style=\"font-size: clamp(16px, 3vw, 24px); margin-top: 20px;\">Thank you, ' + studentName + '!</p><p style=\"font-size: clamp(14px, 2.5vw, 18px); margin-top: 10px;\">Your answers have been recorded.</p></div>';");
+        sb.AppendLine("                    if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
+        sb.AppendLine("                        window.signalRConnection.invoke('LeaveExamSession', examId, window.studentInfo.studentId || '', window.studentInfo.name || '');");
+        sb.AppendLine("                    }");
+        sb.AppendLine("                } else {");
+        sb.AppendLine("                    const error = await response.json();");
+        sb.AppendLine("                    alert('Error submitting exam: ' + (error.message || 'Unknown error') + '. Please contact your instructor.');");
+        sb.AppendLine("                    console.error('Submission error:', error);");
         sb.AppendLine("                }");
         sb.AppendLine("            } catch (error) {");
-        sb.AppendLine("                console.error('Error submitting exam:', error);");
-        sb.AppendLine("                alert('Error submitting exam: ' + error.message + '\\nYour answers have been saved locally. Please contact your instructor.');");
-        sb.AppendLine("                // Save to local storage as backup");
-        sb.AppendLine("                localStorage.setItem('examBackup_' + examId, JSON.stringify(submissionData));");
-        sb.AppendLine("            } finally {");
-        sb.AppendLine("                submitButton.disabled = false;");
-        sb.AppendLine("                submitButton.textContent = 'Submit Exam';");
+        sb.AppendLine("                console.error('Submission error:', error);");
+        sb.AppendLine("                alert('Error submitting exam. Please contact your instructor.');");
         sb.AppendLine("            }");
         sb.AppendLine("        }");
         sb.AppendLine();
-        sb.AppendLine("        function showSuccessMessage() {");
-        sb.AppendLine("            document.body.innerHTML = `");
-        sb.AppendLine("                <div style='display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'>");
-        sb.AppendLine("                    <div style='background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); text-align: center; max-width: 500px;'>");
-        sb.AppendLine("                        <h1 style='color: #10b981; margin-bottom: 20px;'>✅ Exam Submitted Successfully!</h1>");
-        sb.AppendLine("                        <p style='color: #6b7280; font-size: 18px; margin-bottom: 30px;'>Thank you for completing the exam. Your answers have been recorded.</p>");
-        sb.AppendLine("                        <p style='color: #374151; font-size: 14px;'>You may now close this window.</p>");
-        sb.AppendLine("                    </div>");
-        sb.AppendLine("                </div>`;");
-        sb.AppendLine("        }");
-        sb.AppendLine();
-        sb.AppendLine("        // Add event listeners");
-        sb.AppendLine("        document.addEventListener('DOMContentLoaded', function() {");
-        sb.AppendLine("            // Check for saved session");
-        sb.AppendLine("            if (antiCheatConfig.AutoResumeSession) {");
-        sb.AppendLine("                const savedSession = checkForSavedSession();");
-        sb.AppendLine("                if (savedSession && confirm('Resume your previous exam session from ' + new Date(savedSession.timestamp).toLocaleString() + '?')) {");
-        sb.AppendLine("                    restoreSession(savedSession);");
-        sb.AppendLine("                    return;");
-        sb.AppendLine("                } else if (savedSession) {");
-        sb.AppendLine("                    clearSavedSession();");
-        sb.AppendLine("                }");
-        sb.AppendLine("            }");
-        sb.AppendLine("            ");
-        sb.AppendLine("            const examForm = document.getElementById('examForm');");
-        sb.AppendLine("            if (examForm) {");
-        sb.AppendLine("                examForm.addEventListener('submit', submitExam);");
-        sb.AppendLine("            }");
-        sb.AppendLine();
-        sb.AppendLine("            const startButton = document.getElementById('startExamButton');");
-        sb.AppendLine("            if (startButton) {");
-        sb.AppendLine("                startButton.addEventListener('click', startExam);");
-        sb.AppendLine("            }");
+        
+        // Initialize on page load
+        sb.AppendLine("        window.addEventListener('load', function() {");
+        sb.AppendLine("            console.log('[Exam] Page loaded, initializing...');");
+        if (antiCheat?.OneQuestionAtATime == true)
+        {
+            sb.AppendLine("            const submitContainer = document.querySelector('.submit-container');");
+            sb.AppendLine("            if (submitContainer) submitContainer.style.display = 'none';");
+            sb.AppendLine("            if (antiCheatConfig.OneQuestionAtATime && document.getElementById('examSection').style.display !== 'none') {");
+            sb.AppendLine("                createNavigationBar();");
+            sb.AppendLine("                showQuestion(0);");
+            sb.AppendLine("            }");
+        }
         sb.AppendLine("        });");
         
         return sb.ToString();

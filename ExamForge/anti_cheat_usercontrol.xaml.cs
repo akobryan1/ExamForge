@@ -59,6 +59,11 @@ namespace ExamForge
             time_limit_textbox.IsEnabled = time_limit_per_question_checkbox.IsChecked == true;
         }
 
+        private void RetakeAttempts_CheckedChanged(object sender, RoutedEventArgs e)
+        {
+            retake_attempts_textbox.IsEnabled = retake_attempts_checkbox.IsChecked == true;
+        }
+
         private void NumericOnly_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             Regex regex = new Regex("[^0-9]+");
@@ -80,7 +85,9 @@ namespace ExamForge
                 TimeLimitValue = time_limit_textbox.Text,
                 DisableCopyPaste = disable_copy_paste_checkbox.IsChecked == true,
                 DisableScreenshot = disable_screenshot_checkbox.IsChecked == true,
-                AutoResumeSession = auto_resume_session_checkbox.IsChecked == true
+                AutoResumeSession = auto_resume_session_checkbox.IsChecked == true,
+                LimitRetakeAttempts = retake_attempts_checkbox.IsChecked == true,
+                RetakeAttemptsValue = retake_attempts_textbox.Text
             };
             
             System.Diagnostics.Debug.WriteLine($"[DEBUG] SaveState called - DetectTabbing: {state.DetectTabbing}, WarningOnly: {state.WarningOnly}");
@@ -103,6 +110,8 @@ namespace ExamForge
                 disable_copy_paste_checkbox.IsChecked = savedState.DisableCopyPaste;
                 disable_screenshot_checkbox.IsChecked = savedState.DisableScreenshot;
                 auto_resume_session_checkbox.IsChecked = savedState.AutoResumeSession;
+                retake_attempts_checkbox.IsChecked = savedState.LimitRetakeAttempts;
+                retake_attempts_textbox.Text = savedState.RetakeAttemptsValue;
             }
         }
     }
@@ -145,5 +154,11 @@ namespace ExamForge
         
         [FirestoreProperty]
         public bool AutoResumeSession { get; set; }
+        
+        [FirestoreProperty]
+        public bool LimitRetakeAttempts { get; set; }
+        
+        [FirestoreProperty]
+        public string RetakeAttemptsValue { get; set; } = "3";
     }
 }

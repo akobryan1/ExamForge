@@ -195,9 +195,9 @@
                 </CheckBox.ToolTip>
             </CheckBox>
 
-            <!-- Disable Screenshot/PrintScreen Checkbox -->
+            <!-- Detect Screenshot/PrintScreen Checkbox -->
             <CheckBox x:Name="disable_screenshot_checkbox"
-                      Content="Disable Screenshot or PrintScreen"
+                      Content="Detect Screenshot or PrintScreen"
                       Foreground="{StaticResource TextPrimary}"
                       FontSize="15"
                       FontWeight="Medium"
@@ -205,7 +205,7 @@
                 <CheckBox.ToolTip>
                     <ToolTip Background="{StaticResource SurfaceDark}" 
                              BorderBrush="{StaticResource BorderColor}">
-                        <TextBlock Text="Blocks screenshot functionality and PrintScreen key during the exam."
+                        <TextBlock Text="Detects screenshot attempts and PrintScreen key during the exam. Violations are reported to incident reports."
                                    Foreground="{StaticResource TextSecondary}"
                                    MaxWidth="300"
                                    TextWrapping="Wrap"/>
@@ -230,6 +230,54 @@
                     </ToolTip>
                 </CheckBox.ToolTip>
             </CheckBox>
+
+            <!-- Retake Attempts -->
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                <CheckBox x:Name="retake_attempts_checkbox"
+                          Content="Limit Retake Attempts"
+                          Foreground="{StaticResource TextPrimary}"
+                          FontSize="15"
+                          FontWeight="Medium"
+                          VerticalAlignment="Center"
+                          Margin="0,0,12,0"
+                          Checked="RetakeAttempts_CheckedChanged"
+                          Unchecked="RetakeAttempts_CheckedChanged">
+                    <CheckBox.ToolTip>
+                        <ToolTip Background="{StaticResource SurfaceDark}" 
+                                 BorderBrush="{StaticResource BorderColor}">
+                            <TextBlock Text="Limits how many times an examinee can retake this exam. Set 0 for unlimited retakes."
+                                       Foreground="{StaticResource TextSecondary}"
+                                       MaxWidth="300"
+                                       TextWrapping="Wrap"/>
+                        </ToolTip>
+                    </CheckBox.ToolTip>
+                </CheckBox>
+                <TextBox x:Name="retake_attempts_textbox"
+                         Width="80"
+                         Height="36"
+                         Padding="12,8"
+                         FontSize="14"
+                         Background="{StaticResource SurfaceDark}"
+                         Foreground="{StaticResource TextPrimary}"
+                         VerticalContentAlignment="Center"
+                         BorderBrush="{StaticResource BorderColor}"
+                         BorderThickness="1"
+                         MaxLength="2"
+                         Text="3"
+                         IsEnabled="False"
+                         PreviewTextInput="NumericOnly_PreviewTextInput">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="8"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
+                <TextBlock Text="attempts"
+                           Foreground="{StaticResource TextTertiary}"
+                           FontSize="14"
+                           VerticalAlignment="Center"
+                           Margin="8,0,0,0"/>
+            </StackPanel>
         </StackPanel>
     </Grid>
 </UserControl>
