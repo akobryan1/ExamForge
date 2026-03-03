@@ -96,6 +96,41 @@ public class SessionHub : Hub
         });
     }
 
+    public async Task JoinExamSession(string examId, string studentId, string studentName, string email)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, examId);
+        Console.WriteLine($"[SessionHub] Student joined: {studentName} ({studentId}) for exam {examId}");
+        
+        await Clients.Group($"monitor_{examId}").SendAsync("StudentJoined", new
+        {
+            StudentId = studentId,
+            StudentName = studentName,
+            Email = email,
+            ConnectionId = Context.ConnectionId,
+            Timestamp = DateTime.UtcNow
+        });
+
+        await LogSessionEventAsync(examId, studentId, studentName, "STUDENT_JOINED", 
+            $"Student {studentName} joined exam session", "Info");
+    }
+
+    public async Task LeaveExamSession(string examId, string studentId, string studentName)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, examId);
+        Console.WriteLine($"[SessionHub] Student left: {studentName} ({studentId}) from exam {examId}");
+        
+        await Clients.Group($"monitor_{examId}").SendAsync("StudentLeft", new
+        {
+            StudentId = studentId,
+            StudentName = studentName,
+            ConnectionId = Context.ConnectionId,
+            Timestamp = DateTime.UtcNow
+        });
+
+        await LogSessionEventAsync(examId, studentId, studentName, "STUDENT_LEFT", 
+            $"Student {studentName} left exam session", "Info");
+    }
+
     public async Task SendHeartbeat(string sessionId, string studentId, object payload)
     {
         await Clients.Group($"monitor_{sessionId}").SendAsync("StudentHeartbeat", new
@@ -111,8 +146,12 @@ public class SessionHub : Hub
         var severity = eventType switch
         {
             "multiple_login" => "Critical",
-            "tab_switch" => "Warning",
+            "tab_switch" or "TAB_SWITCH" => "Warning",
             "disconnect" => "Warning",
+            "AUTO_SUBMIT" => "Critical",
+            "RETAKE_LIMIT_EXCEEDED" => "Critical",
+            "SCREENSHOT_ATTEMPT" => "Warning",
+            "COPY_ATTEMPT" or "PASTE_ATTEMPT" => "Warning",
             _ => "Info"
         };
 
@@ -126,8 +165,43 @@ public class SessionHub : Hub
             Timestamp = DateTime.UtcNow
         });
 
-        // Log to Firestore for auditing
-        _ = LogSessionEventAsync(sessionId, studentId, studentName, eventType, details, severity);
+        // Log to Firestore incident_reports collection
+        _ = LogIncidentToFirestoreAsync(sessionId, studentId, studentName, eventType, details, severity);
+    }
+
+    private async Task LogIncidentToFirestoreAsync(string examId, string studentId, string studentName, string eventType, string details, string severity)
+    {
+        try
+        {
+            var db = GetFirestoreDb();
+            if (db == null)
+            {
+                Console.WriteLine("? Firestore not initialized, cannot log incident");
+                return;
+            }
+
+            var docRef = db.Collection("integrity_incidents").Document();
+            var incident = new Dictionary<string, object>
+            {
+                ["ExamId"] = examId,
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["EventType"] = eventType,
+                ["Details"] = details,
+                ["Severity"] = severity,
+                ["Timestamp"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["IpAddress"] = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? "Unknown",
+                ["ConnectionId"] = Context.ConnectionId,
+                ["Resolved"] = false
+            };
+
+            await docRef.SetAsync(incident);
+            Console.WriteLine($"? Incident logged: {eventType} for {studentName}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"? Failed to log incident: {ex.Message}");
+        }
     }
 
     public async Task MonitorSession(string sessionId)
