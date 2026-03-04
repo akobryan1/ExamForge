@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  signalr-server:
+    build:
+      context: ./ExamForge.SignalRServer
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      REDIS_URL: "redis://redis:6379"
+      # Provide the following secrets via a .env file or your CI/CD environment:
+      # SERVICE_ACCOUNT_JSON: <base64-or-raw Google service-account JSON>
+      # JWT_SECRET: <your JWT signing secret>
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - examforge-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - examforge-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis-data:
+
+networks:
+  examforge-net:
+    driver: bridge
