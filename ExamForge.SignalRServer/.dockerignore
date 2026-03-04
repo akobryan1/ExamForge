@@ -1,0 +1,9 @@
+**/.git
+**/.gitignore
+**/.vs
+**/bin
+**/obj
+**/*.md
+**/*.user
+**/[Ll]og/
+**/[Ll]ogs/
