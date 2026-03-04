@@ -184,8 +184,8 @@ namespace ExamForge
             }).ToList();
 
             CriterionScoresList.ItemsSource = displayScores;
-            StrengthsList.ItemsSource = result.Strengths.Select(s => $"• {s}").ToList();
-            ImprovementsList.ItemsSource = result.AreasForImprovement.Select(a => $"• {a}").ToList();
+            StrengthsList.ItemsSource = result.Strengths;
+            ImprovementsList.ItemsSource = result.AreasForImprovement;
         }
     }
 

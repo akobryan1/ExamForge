@@ -22,14 +22,13 @@ namespace ExamForge.Services
     /// </summary>
     public class EssayCheckerService
     {
-        private readonly HttpClient _httpClient;
+        private static readonly HttpClient _httpClient = new();
         private string _apiKey;
         private string _apiEndpoint;
         private string _modelName;
 
         public EssayCheckerService()
         {
-            _httpClient = new HttpClient();
             _apiKey = "";
             _apiEndpoint = "https://api.openai.com/v1/chat/completions";
             _modelName = "gpt-4o-mini";

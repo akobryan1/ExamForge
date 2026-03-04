@@ -289,7 +289,7 @@
                             <ItemsControl x:Name="StrengthsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="12" 
+                                        <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" 
                                                    Foreground="{StaticResource TextSecondaryBrush}" 
                                                    TextWrapping="Wrap" Margin="0,0,0,4"/>
                                     </DataTemplate>
@@ -306,7 +306,7 @@
                             <ItemsControl x:Name="ImprovementsList">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock Text="{Binding}" FontSize="12" 
+                                        <TextBlock Text="{Binding StringFormat='• {0}'}" FontSize="12" 
                                                    Foreground="{StaticResource TextSecondaryBrush}" 
                                                    TextWrapping="Wrap" Margin="0,0,0,4"/>
                                     </DataTemplate>
