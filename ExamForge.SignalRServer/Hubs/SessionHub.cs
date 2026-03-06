@@ -114,11 +114,11 @@ public class SessionHub : Hub
             if (db == null) return null;
 
             var examSnapshot = await db.CollectionGroup(PublishedExamsCollection)
-                .WhereEqualTo("Id", examId)
-                .Limit(1)
                 .GetSnapshotAsync();
 
-            var examDoc = examSnapshot.Documents.FirstOrDefault();
+            var examDoc = examSnapshot.Documents.FirstOrDefault(d =>
+                string.Equals(d.Id, examId, StringComparison.Ordinal) ||
+                (d.TryGetValue("Id", out string storedId) && string.Equals(storedId, examId, StringComparison.Ordinal)));
             if (examDoc == null)
             {
                 Console.WriteLine($"[SessionHub] Could not resolve exam owner for examId={examId}");
