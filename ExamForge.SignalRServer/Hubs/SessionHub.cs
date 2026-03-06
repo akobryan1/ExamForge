@@ -114,7 +114,7 @@ public class SessionHub : Hub
             if (db == null) return null;
 
             var examSnapshot = await db.CollectionGroup(PublishedExamsCollection)
-                .WhereEqualTo(FieldPath.DocumentId, examId)
+                .WhereEqualTo("Id", examId)
                 .Limit(1)
                 .GetSnapshotAsync();
 
