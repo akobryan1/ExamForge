@@ -71,14 +71,17 @@ public class SessionHub : Hub
             var db = GetFirestoreDb();
             if (db == null) return;
 
-            var sessionEventsPath = await ResolveUserScopedCollectionPathAsync(sessionId, SessionEventsCollection);
-            if (string.IsNullOrWhiteSpace(sessionEventsPath))
+            var ownerUserId = await ResolveExamOwnerUserIdAsync(sessionId);
+            if (string.IsNullOrWhiteSpace(ownerUserId))
             {
                 Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {sessionId}; skipping session event log.");
                 return;
             }
 
-            var docRef = db.Collection(sessionEventsPath).Document();
+            var docRef = db.Collection(UsersRoot)
+                .Document(ownerUserId)
+                .Collection(SessionEventsCollection)
+                .Document();
             var payload = new Dictionary<string, object>
             {
                 ["SessionId"] = sessionId,
@@ -100,7 +103,7 @@ public class SessionHub : Hub
         }
     }
 
-    private async Task<string?> ResolveUserScopedCollectionPathAsync(string examId, string collectionName)
+    private async Task<string?> ResolveExamOwnerUserIdAsync(string examId)
     {
         if (string.IsNullOrWhiteSpace(examId)) return null;
 
@@ -132,7 +135,7 @@ public class SessionHub : Hub
             _examOwnerCache[examId] = ownerUserId;
         }
 
-        return $"{UsersRoot}/{ownerUserId}/{collectionName}";
+        return ownerUserId;
     }
     public async Task JoinSession(string sessionId, string studentId, string studentName)
     {
@@ -230,14 +233,17 @@ public class SessionHub : Hub
                 return;
             }
 
-            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
-            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            var ownerUserId = await ResolveExamOwnerUserIdAsync(examId);
+            if (string.IsNullOrWhiteSpace(ownerUserId))
             {
                 Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; skipping incident log.");
                 return;
             }
 
-            var docRef = db.Collection(incidentReportsPath).Document();
+            var docRef = db.Collection(UsersRoot)
+                .Document(ownerUserId)
+                .Collection(IncidentReportsCollection)
+                .Document();
             var incident = new Dictionary<string, object>
             {
                 ["ExamId"] = examId,
@@ -310,14 +316,17 @@ public class SessionHub : Hub
                 return;
             }
 
-            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
-            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            var ownerUserId = await ResolveExamOwnerUserIdAsync(examId);
+            if (string.IsNullOrWhiteSpace(ownerUserId))
             {
                 Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; skipping session save.");
                 return;
             }
 
-            var docRef = db.Collection(incidentReportsPath).Document($"{examId}_{studentId}");
+            var docRef = db.Collection(UsersRoot)
+                .Document(ownerUserId)
+                .Collection(IncidentReportsCollection)
+                .Document($"{examId}_{studentId}");
             
             var sessionDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
                 System.Text.Json.JsonSerializer.Serialize(sessionData)
@@ -354,14 +363,17 @@ public class SessionHub : Hub
             var db = GetFirestoreDb();
             if (db == null) return null;
 
-            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
-            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            var ownerUserId = await ResolveExamOwnerUserIdAsync(examId);
+            if (string.IsNullOrWhiteSpace(ownerUserId))
             {
                 Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; cannot check active session.");
                 return null;
             }
 
-            var docRef = db.Collection(incidentReportsPath).Document($"{examId}_{studentId}");
+            var docRef = db.Collection(UsersRoot)
+                .Document(ownerUserId)
+                .Collection(IncidentReportsCollection)
+                .Document($"{examId}_{studentId}");
             
             var snapshot = await docRef.GetSnapshotAsync();
             
