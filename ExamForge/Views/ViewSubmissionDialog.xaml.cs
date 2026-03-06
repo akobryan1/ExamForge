@@ -52,14 +52,19 @@ public partial class ViewSubmissionDialog : Window
         // Build question list
         var questions = new List<QuestionAnswerViewModel>();
         
-        foreach (var content in _exam.Contents)
+        for (int i = 0; i < _exam.Contents.Count; i++)
         {
-            var response = _submission.Responses.FirstOrDefault(r => r.QuestionId == content.ContentId);
+            var content = _exam.Contents[i];
+            var questionNumber = i + 1;
+            var response = _submission.Responses.FirstOrDefault(r =>
+                r.QuestionId == content.ContentId ||
+                r.QuestionNumber == questionNumber ||
+                string.Equals(r.QuestionId, $"question{questionNumber}", StringComparison.OrdinalIgnoreCase));
             
             var vm = new QuestionAnswerViewModel
             {
                 QuestionNumber = content.ContentId,
-                QuestionNumberText = $"Q{questions.Count + 1}",
+                QuestionNumberText = $"Q{questionNumber}",
                 QuestionType = content.QuestionType,
                 QuestionText = content.Question,
                 StudentAnswer = response?.Answer ?? "(No answer provided)",

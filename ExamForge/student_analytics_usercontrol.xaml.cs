@@ -608,10 +608,14 @@ namespace ExamForge
                     return insights;
 
                 // Calculate most missed items
-                var questionStats = exam.Contents.Select(q =>
+                var questionStats = exam.Contents.Select((q, index) =>
                 {
+                    var questionNumber = index + 1;
                     var responses = submissions.SelectMany(s => s.Responses)
-                                              .Where(r => r.QuestionId == q.Id)
+                                              .Where(r =>
+                                                  r.QuestionId == q.Id ||
+                                                  r.QuestionNumber == questionNumber ||
+                                                  string.Equals(r.QuestionId, $"question{questionNumber}", StringComparison.OrdinalIgnoreCase))
                                               .ToList();
                     var correctCount = responses.Count(r => r.IsCorrect);
                     var totalCount = responses.Count;
@@ -619,7 +623,7 @@ namespace ExamForge
 
                     return new QuestionInsight
                     {
-                        QuestionNumber = exam.Contents.IndexOf(q) + 1,
+                        QuestionNumber = questionNumber,
                         Topic = GetTopicFromQuestionId(q.Id),
                         CorrectPercentage = correctPercentage,
                         QuestionId = q.Id
@@ -1223,7 +1227,10 @@ namespace ExamForge
                 // Get all responses for this question
                 var responses = submissions
                     .SelectMany(s => s.Responses)
-                    .Where(r => r.QuestionId == content.ContentId)
+                    .Where(r =>
+                        r.QuestionId == content.ContentId ||
+                        r.QuestionNumber == questionNumber ||
+                        string.Equals(r.QuestionId, $"question{questionNumber}", StringComparison.OrdinalIgnoreCase))
                     .ToList();
 
                 if (responses.Any())
