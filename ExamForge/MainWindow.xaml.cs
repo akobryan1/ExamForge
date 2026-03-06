@@ -5,6 +5,10 @@ using System.Windows.Media;
 using System.Linq;
 using System.Collections.Generic;
 using System.Windows.Controls;
+using System.Windows.Threading;
+using System.Net.Http;
+using System.Diagnostics;
+using Microsoft.Extensions.Configuration;
 using ExamForge.Views;
 using ExamForge.Models;
 
@@ -18,6 +22,10 @@ public partial class MainWindow : Window
     private object? _currentExamBuilderView;
     private structure_builder_usercontrol? _structureBuilderInstance;
     private sidebar_usercontrol? _sidebar;
+    private DispatcherTimer? _signalTimer;
+    private readonly HttpClient _signalHttpClient = new() { Timeout = TimeSpan.FromSeconds(4) };
+    private bool _isCheckingSignal;
+    private string _signalCheckUrl = "https://examforge-signalr.onrender.com";
 
     public MainWindow()
     {
@@ -27,6 +35,8 @@ public partial class MainWindow : Window
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
     {
+        InitializeSignalStrengthMonitoring();
+
         // Get reference to sidebar
         _sidebar = this.FindName("Sidebar") as sidebar_usercontrol;
 
@@ -35,6 +45,85 @@ public partial class MainWindow : Window
         {
             MainContentHost.Content = new dashboard_usercontrol();
         }
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        _signalTimer?.Stop();
+        _signalTimer = null;
+        _signalHttpClient.Dispose();
+        base.OnClosed(e);
+    }
+
+    private void InitializeSignalStrengthMonitoring()
+    {
+        try
+        {
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                .Build();
+
+            var configuredUrl = configuration["Firebase:SignalRHubUrl"];
+            if (!string.IsNullOrWhiteSpace(configuredUrl))
+            {
+                _signalCheckUrl = configuredUrl.TrimEnd('/');
+            }
+        }
+        catch
+        {
+            // Keep fallback URL
+        }
+
+        _signalTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(8)
+        };
+        _signalTimer.Tick += async (_, _) => await UpdateSignalStrengthAsync();
+        _signalTimer.Start();
+
+        _ = UpdateSignalStrengthAsync();
+    }
+
+    private async Task UpdateSignalStrengthAsync()
+    {
+        if (_isCheckingSignal) return;
+
+        _isCheckingSignal = true;
+        try
+        {
+            var sw = Stopwatch.StartNew();
+            using var response = await _signalHttpClient.GetAsync(_signalCheckUrl);
+            sw.Stop();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                SignalStrengthText.Text = "Disconnected";
+                return;
+            }
+
+            var ms = sw.ElapsedMilliseconds;
+            SignalStrengthText.Text = ms switch
+            {
+                <= 180 => "Strong",
+                <= 450 => "Medium",
+                _ => "Poor"
+            };
+        }
+        catch
+        {
+            SignalStrengthText.Text = "Disconnected";
+        }
+        finally
+        {
+            _isCheckingSignal = false;
+        }
+    }
+
+    public void SetLoading(bool isLoading, string message = "Loading...")
+    {
+        LoadingOverlay.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        LoadingStatusText.Text = message;
     }
 
     private void sidebar_usercontrol_Loaded(object sender, RoutedEventArgs e)

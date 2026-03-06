@@ -40,6 +40,7 @@ public class ExamPublishingService
             var sanitizedExamData = new ExamReviewData
             {
                 Title = examData.Title,
+                OwnerUserId = _firestoreService.UserId,
                 Structures = examData.Structures,
                 Contents = examData.Contents.Select(c => new ExamContent
                 {
@@ -74,6 +75,7 @@ public class ExamPublishingService
                 ExamDuration = examData.ExamDuration,
                 PublishedDate = DateTime.UtcNow,
                 CreatedBy = creatorEmail,
+                OwnerUserId = _firestoreService.UserId,
                 ExamUrl = "",
                 Status = "Active",
                 LoginConfig = examData.LoginConfig,
@@ -84,8 +86,10 @@ public class ExamPublishingService
             System.Diagnostics.Debug.WriteLine("✅ Saved to Firestore");
             
             // ✅ Upload to Render.com server
-            var examUrl = await PublishToRenderAsync(examId, htmlContent);
-            System.Diagnostics.Debug.WriteLine($"✅ Uploaded to Render: {examUrl}");
+            var renderExamUrl = await PublishToRenderAsync(examId, htmlContent);
+            var reusableExamUrl = BuildReusableExamUrl(examId);
+            var examUrl = string.IsNullOrWhiteSpace(reusableExamUrl) ? renderExamUrl : reusableExamUrl;
+            System.Diagnostics.Debug.WriteLine($"✅ Uploaded to publishing server. Stored exam URL: {examUrl}");
             
             // Update exam URL in Firestore
             publishedExam.ExamUrl = examUrl;
@@ -99,6 +103,50 @@ public class ExamPublishingService
             System.Diagnostics.Debug.WriteLine($"❌ Publishing failed: {ex.Message}");
             throw;
         }
+    }
+
+    public string BuildReusableExamUrl(string examId)
+    {
+        if (string.IsNullOrWhiteSpace(_publishingServerUrl) || string.IsNullOrWhiteSpace(examId))
+            return string.Empty;
+
+        return $"{_publishingServerUrl.TrimEnd('/')}/exams/{examId}.html";
+    }
+
+    public async Task<string> RepublishExamAsync(PublishedExam exam)
+    {
+        if (exam == null) throw new ArgumentNullException(nameof(exam));
+        if (string.IsNullOrWhiteSpace(exam.Id)) throw new ArgumentException("Exam ID is required.", nameof(exam));
+
+        var examData = new ExamReviewData
+        {
+            Title = exam.Title,
+            Subject = exam.Subject,
+            OwnerUserId = string.IsNullOrWhiteSpace(exam.OwnerUserId) ? _firestoreService.UserId : exam.OwnerUserId,
+            Structures = exam.Structures,
+            Contents = exam.Contents,
+            StartTime = exam.StartTime,
+            EndTime = exam.EndTime,
+            ExamDuration = exam.ExamDuration,
+            LoginConfig = exam.LoginConfig,
+            AntiCheat = exam.AntiCheat
+        };
+
+        var htmlContent = GenerateExamHtml(examData, exam.Id);
+        var renderExamUrl = await PublishToRenderAsync(exam.Id, htmlContent);
+        var reusableExamUrl = BuildReusableExamUrl(exam.Id);
+
+        exam.ExamUrl = string.IsNullOrWhiteSpace(reusableExamUrl) ? renderExamUrl : reusableExamUrl;
+        exam.OwnerUserId = string.IsNullOrWhiteSpace(exam.OwnerUserId) ? _firestoreService.UserId : exam.OwnerUserId;
+        exam.PublishedDate = DateTime.UtcNow;
+        exam.LifecycleStatus = "Published";
+        if (string.Equals(exam.Status, "Unpublished", StringComparison.OrdinalIgnoreCase))
+        {
+            exam.Status = "Active";
+        }
+
+        await _firestoreService.SavePublishedExamAsync(exam);
+        return exam.ExamUrl;
     }
 
     /// <summary>
@@ -628,6 +676,7 @@ public class ExamPublishingService
         
         sb.AppendLine("        // Exam Configuration");
         sb.AppendLine($"        const examId = '{examId}';");
+        sb.AppendLine($"        const ownerUserId = '{examData.OwnerUserId}';");
         sb.AppendLine($"        const examDuration = {examData.ExamDuration};");
         sb.AppendLine($"        const apiEndpoint = '{_apiEndpoint}';");
         sb.AppendLine($"        const useGoogleSignIn = {(loginConfig?.IsGoogleSignIn == true ? "true" : "false")};");
@@ -1166,6 +1215,7 @@ public class ExamPublishingService
         sb.AppendLine("        async function sendToApi(answers) {");
         sb.AppendLine("            const submission = {");
         sb.AppendLine("                examId: examId,");
+        sb.AppendLine("                ownerUserId: ownerUserId,");
         sb.AppendLine("                answers: answers,");
         sb.AppendLine("                submittedAt: new Date().toISOString(),");
         sb.AppendLine("                timeSpent: (examDuration * 60 - timeRemaining),");

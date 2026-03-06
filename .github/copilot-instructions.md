@@ -3,6 +3,7 @@
 ## General Guidelines
 - First general instruction
 - Second general instruction
+- Avoid using command prompts in troubleshooting or implementation guidance.
 
 ## Code Style
 - Use specific formatting rules
@@ -25,4 +26,5 @@
 - Icons are stored under `Documents/ICONS`; adjust WPF image sources accordingly (pack URI or add to project).
 
 ## Firestore Configuration
-- On user sign-up, Firestore should create per-user collections named `exam_sessions`, `examinee_data`, `grading_queue`, and `published_exams`. Adjust system paths accordingly, using `examforge_users` as the root user collection.
+- On user sign-up, Firestore should create per-user collections named `exam_sessions`, `published_exams`, `examinee_data`, `incident_reports`, and `session_events`. Adjust system paths accordingly, using `examforge_users` as the root user collection. Avoid using `question_bank`, `grading_queue`, or `integrity_incidents`.
+- Use user-scoped Firestore paths; SessionHub should not read/write top-level collections.

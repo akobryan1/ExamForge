@@ -58,10 +58,18 @@ public partial class published_exams_usercontrol : UserControl
 
     public void ShowClosedTab()
     {
-        if (ClosedTab != null)
+        if (ScheduledTab != null)
         {
-            ClosedTab.IsChecked = true;
-            Tab_Changed(ClosedTab, new RoutedEventArgs());
+            ScheduledTab.IsChecked = true;
+            Tab_Changed(ScheduledTab, new RoutedEventArgs());
+        }
+    }
+
+    private void SetLoadingState(bool isLoading, string message = "Loading...")
+    {
+        if (Window.GetWindow(this) is MainWindow mainWindow)
+        {
+            mainWindow.SetLoading(isLoading, message);
         }
     }
 
@@ -86,8 +94,8 @@ public partial class published_exams_usercontrol : UserControl
                 ExamDuration = exam.ExamDuration,
                 PublishedDate = exam.PublishedDate,
                 CreatedBy = exam.CreatedBy,
-                ExamUrl = exam.ExamUrl,
-                    Subject = exam.Subject,
+                ExamUrl = ResolveExamUrl(exam.Id, exam.ExamUrl),
+                Subject = exam.Subject,
                 Status = DetermineStatus(exam),
                 ScheduleText = FormatSchedule(exam.StartTime, exam.EndTime),
                 DurationText = $"{exam.ExamDuration} minutes",
@@ -137,6 +145,162 @@ public partial class published_exams_usercontrol : UserControl
         return $"{start:MMM dd, h:mm tt} - {end:h:mm tt}";
     }
 
+    private string ResolveExamUrl(string examId, string? currentUrl)
+    {
+        var reusableUrl = App.PublishingService?.BuildReusableExamUrl(examId);
+        if (!string.IsNullOrWhiteSpace(reusableUrl))
+            return reusableUrl;
+
+        return currentUrl ?? string.Empty;
+    }
+
+    private static string MapQuestionTypeToTestType(string? questionType)
+    {
+        return questionType switch
+        {
+            "True/False" => "True or False",
+            "Modified True/False" => "Modified True or False",
+            "Short Answer" => "Identification",
+            "Essay" => "Essay",
+            "Multiple Choice" => "Multiple Choice",
+            _ => "Multiple Choice"
+        };
+    }
+
+    private static string GetTestGroupLabel(int index)
+    {
+        string[] groups = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII" };
+        return index < groups.Length ? groups[index] : $"G{index + 1}";
+    }
+
+    private ExamConfiguration BuildTemplateConfiguration(PublishedExam exam)
+    {
+        var contents = exam.Contents ?? new List<ExamContent>();
+        var totalItems = Math.Max(1, contents.Count);
+
+        var rows = new List<ExamStructureRow>();
+        int currentStart = 1;
+        int groupIndex = 0;
+
+        if (exam.Structures != null && exam.Structures.Count > 0)
+        {
+            foreach (var structure in exam.Structures)
+            {
+                if (currentStart > totalItems) break;
+
+                var count = Math.Max(1, structure.QuestionCount);
+                var end = Math.Min(totalItems, currentStart + count - 1);
+                var firstItem = contents.ElementAtOrDefault(currentStart - 1);
+                var testType = MapQuestionTypeToTestType(firstItem?.QuestionType ?? structure.Description);
+                var pointsPerItem = Math.Max(1, firstItem?.Points ?? (count > 0 ? structure.Points / count : 1));
+
+                rows.Add(new ExamStructureRow
+                {
+                    TestGroup = GetTestGroupLabel(groupIndex++),
+                    TestType = testType,
+                    Start = currentStart.ToString(),
+                    End = end.ToString(),
+                    Points = pointsPerItem.ToString()
+                });
+
+                currentStart = end + 1;
+            }
+        }
+
+        if (rows.Count == 0)
+        {
+            rows.Add(new ExamStructureRow
+            {
+                TestGroup = "I",
+                TestType = MapQuestionTypeToTestType(contents.FirstOrDefault()?.QuestionType),
+                Start = "1",
+                End = totalItems.ToString(),
+                Points = Math.Max(1, contents.FirstOrDefault()?.Points ?? 1).ToString()
+            });
+        }
+
+        var contentItems = contents.Select((content, idx) =>
+        {
+            var number = idx + 1;
+            var matchedRow = rows.FirstOrDefault(r => int.TryParse(r.Start, out var s) && int.TryParse(r.End, out var e) && number >= s && number <= e);
+            var testType = MapQuestionTypeToTestType(content.QuestionType);
+            var options = content.Options ?? new List<string>();
+
+            return new ExamItem
+            {
+                Number = number,
+                Title = $"Item {number}",
+                TestGroup = matchedRow?.TestGroup ?? "I",
+                TestType = testType,
+                Points = Math.Max(1, content.Points).ToString(),
+                Status = string.IsNullOrWhiteSpace(content.QuestionText) ? "Incomplete" : "Complete",
+                Question = content.QuestionText,
+                OptionA = options.ElementAtOrDefault(0) ?? string.Empty,
+                OptionB = options.ElementAtOrDefault(1) ?? string.Empty,
+                OptionC = options.ElementAtOrDefault(2) ?? string.Empty,
+                OptionD = options.ElementAtOrDefault(3) ?? string.Empty,
+                CorrectAnswer = content.CorrectAnswer,
+                TrueFalseAnswer = string.Equals(content.CorrectAnswer, "True", StringComparison.OrdinalIgnoreCase),
+                ModifiedAnswer = content.CorrectAnswer,
+                TextAnswer = content.CorrectAnswer,
+                EnumerationAnswers = string.IsNullOrWhiteSpace(content.CorrectAnswer)
+                    ? new List<string>()
+                    : content.CorrectAnswer.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).ToList()
+            };
+        }).ToList();
+
+        var duration = Math.Max(1, exam.ExamDuration);
+        var config = new ExamConfiguration
+        {
+            ExamName = exam.Title,
+            SubjectName = string.IsNullOrWhiteSpace(exam.Subject) ? "General" : exam.Subject,
+            NumberOfItems = totalItems,
+            DataGridState = new DataGridState
+            {
+                Rows = rows,
+                TotalItems = totalItems
+            },
+            TimingState = new TimingState
+            {
+                Hours = (duration / 60).ToString(),
+                Minutes = (duration % 60).ToString("00"),
+                Seconds = "00",
+                StartDateTime = exam.StartTime,
+                EndDateTime = exam.EndTime
+            },
+            LoginConfigState = exam.LoginConfig ?? new LoginConfigState { IsGoogleSignIn = true },
+            AntiCheatState = exam.AntiCheat ?? new AntiCheatState(),
+            ContentBuilderState = contentItems
+        };
+
+        return config;
+    }
+
+    private void OpenExamTemplateInBuilder(PublishedExam exam)
+    {
+        var mainWindow = Window.GetWindow(this) as MainWindow;
+        if (mainWindow == null)
+        {
+            ShowError("Unable to access main window.");
+            return;
+        }
+
+        if (mainWindow.FindName("MainContentHost") is not ContentControl contentHost)
+        {
+            ShowError("Unable to access content host.");
+            return;
+        }
+
+        var configuration = BuildTemplateConfiguration(exam);
+        var structureBuilder = new structure_builder_usercontrol();
+        structureBuilder.RestoreFromConfiguration(configuration);
+        mainWindow.SetStructureBuilder(structureBuilder);
+
+        var contentBuilder = new content_builder();
+        contentBuilder.LoadConfiguration(configuration);
+        contentHost.Content = contentBuilder;
+    }
+
     private void ApplyFilters()
     {
         if (ExamCardsContainer == null || EmptyState == null)
@@ -183,6 +347,7 @@ public partial class published_exams_usercontrol : UserControl
 
     private async void Tab_Changed(object sender, RoutedEventArgs e)
     {
+        SetLoadingState(true, "Loading tab...");
         try
         {
             // Hide all panels first
@@ -210,12 +375,6 @@ public partial class published_exams_usercontrol : UserControl
                 await LoadExamBankAsync();
                 Debug.WriteLine("?? Exam Bank tab activated");
             }
-            else if (ClosedTab?.IsChecked == true && ClosedPanel != null)
-            {
-                ClosedPanel.Visibility = Visibility.Visible;
-                await LoadClosedExamsAsync();
-                Debug.WriteLine("?? Closed tab activated");
-            }
             
             // Stop live data refresh if not on live tab
             if (LiveTab?.IsChecked != true)
@@ -226,6 +385,10 @@ public partial class published_exams_usercontrol : UserControl
         catch (Exception ex)
         {
             Debug.WriteLine($"Error in Tab_Changed: {ex.Message}");
+        }
+        finally
+        {
+            SetLoadingState(false);
         }
     }
 
@@ -946,17 +1109,90 @@ public partial class published_exams_usercontrol : UserControl
                     return;
                 }
 
-                // Navigate to exam creation and load the exam data as a template
-                var mainWindow = Window.GetWindow(this) as MainWindow;
-                if (mainWindow != null)
-                {
-                    await mainWindow.LoadExamForEditing(examId);
-                }
+                OpenExamTemplateInBuilder(exam);
             }
             catch (Exception ex)
             {
                 ShowError($"Failed to reuse exam: {ex.Message}");
             }
+        }
+    }
+
+    private async void RepublishExam_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string examId)
+            return;
+
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            var publishingService = App.PublishingService;
+            if (publishingService == null)
+            {
+                ShowError("Publishing service not initialized");
+                return;
+            }
+
+            var exam = await firestoreService.GetPublishedExamAsync(examId);
+            if (exam == null)
+            {
+                ShowError("Exam not found");
+                return;
+            }
+
+            await publishingService.RepublishExamAsync(exam);
+            await LoadPublishedExamsAsync();
+            await LoadExamBankAsync();
+
+            MessageBox.Show("Exam republished successfully.", "Republish",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to republish exam: {ex.Message}");
+        }
+    }
+
+    private async void DeleteExam_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button btn || btn.Tag is not string examId)
+            return;
+
+        try
+        {
+            var firestoreService = App.FirestoreService;
+            if (firestoreService == null)
+            {
+                ShowError("Firestore service not initialized");
+                return;
+            }
+
+            var exam = await firestoreService.GetPublishedExamAsync(examId);
+            var title = exam?.Title ?? examId;
+
+            var result = MessageBox.Show(
+                $"Delete exam '{title}'?\n\nThis will permanently remove it from Exam Bank.",
+                "Delete Exam",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes) return;
+
+            await firestoreService.DeletePublishedExamAsync(examId);
+            await LoadPublishedExamsAsync();
+            await LoadExamBankAsync();
+
+            MessageBox.Show("Exam deleted.", "Delete Exam", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError($"Failed to delete exam: {ex.Message}");
         }
     }
 
@@ -977,14 +1213,21 @@ public partial class published_exams_usercontrol : UserControl
                 var publishedExams = await firestoreService.GetAllPublishedExamsAsync();
                 var exam = publishedExams.FirstOrDefault(e => e.Id == examId);
 
-                if (exam == null || string.IsNullOrEmpty(exam.ExamUrl))
+                if (exam == null)
+                {
+                    ShowError("Exam not found");
+                    return;
+                }
+
+                var examUrl = ResolveExamUrl(exam.Id, exam.ExamUrl);
+                if (string.IsNullOrWhiteSpace(examUrl))
                 {
                     ShowError("Exam URL not found");
                     return;
                 }
 
                 // Copy to clipboard
-                Clipboard.SetText(exam.ExamUrl);
+                Clipboard.SetText(examUrl);
                 MessageBox.Show("Exam URL copied to clipboard!", "Success",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -1241,9 +1484,16 @@ public partial class published_exams_usercontrol : UserControl
             {
                 try
                 {
+                    var examUrl = ResolveExamUrl(exam.Id, exam.ExamUrl);
+                    if (string.IsNullOrWhiteSpace(examUrl))
+                    {
+                        ShowError("Exam URL not found.");
+                        return;
+                    }
+
                     Process.Start(new ProcessStartInfo
                     {
-                        FileName = exam.ExamUrl,
+                        FileName = examUrl,
                         UseShellExecute = true
                     });
                 }
@@ -1296,14 +1546,16 @@ public partial class published_exams_usercontrol : UserControl
 
     private void CopyUrl_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is Button btn && btn.Tag is string examId)
+        if (sender is Button btn && btn.Tag is string examTag)
         {
-            var exam = _allExams.FirstOrDefault(e => e.Id == examId);
-            if (exam != null)
+            var exam = _allExams.FirstOrDefault(e => e.Id == examTag);
+            var url = exam != null ? ResolveExamUrl(exam.Id, exam.ExamUrl) : examTag;
+
+            if (!string.IsNullOrWhiteSpace(url))
             {
                 try
                 {
-                    Clipboard.SetText(exam.ExamUrl);
+                    Clipboard.SetText(url);
                     MessageBox.Show("Exam URL copied to clipboard!", "Success", 
                         MessageBoxButton.OK, MessageBoxImage.Information);
                 }

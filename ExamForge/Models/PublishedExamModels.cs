@@ -27,6 +27,9 @@ namespace ExamForge.Models
         
         [FirestoreProperty]
         public string CreatedBy { get; set; } = "";
+
+        [FirestoreProperty]
+        public string OwnerUserId { get; set; } = "";
         
         [FirestoreProperty]
         public string ExamUrl { get; set; } = "";

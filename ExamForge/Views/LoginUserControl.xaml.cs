@@ -69,6 +69,7 @@ namespace ExamForge.Views
                     if (!string.IsNullOrEmpty(_authService.UserId))
                     {
                         App.FirestoreService = new FirestoreService(_authService.UserId);
+                        await App.FirestoreService.InitializeUserCollectionsAsync();
                         // Configure publishing service if present
                         try
                         {

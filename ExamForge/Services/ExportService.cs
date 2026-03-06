@@ -261,43 +261,6 @@ namespace ExamForge.Services
         }
 
         /// <summary>
-        /// Export item analysis metrics to CSV
-        /// </summary>
-        public async Task<string> ExportItemAnalysisAsync(string examId, string examTitle)
-        {
-            try
-            {
-                var analytics = new AnalyticsService();
-                var items = await analytics.AnalyzeExamItemsAsync(examId);
-                if (!items.Any())
-                    throw new InvalidOperationException("No item analysis data available.");
-
-                var exportsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "ExamForge_Exports");
-                Directory.CreateDirectory(exportsDir);
-
-                var fileName = $"ItemAnalysis_{examTitle}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
-                var filePath = Path.Combine(exportsDir, fileName);
-
-                var csv = new List<string>
-                {
-                    "Question #,Question Type,Difficulty %,Discrimination,Point Biserial,No Response %,Quality"
-                };
-
-                foreach (var item in items)
-                {
-                    csv.Add($"{item.QuestionNumber},{item.QuestionType},{item.DifficultyPercent:F1},{item.Discrimination:F2},{item.PointBiserial:F2},{item.NoResponsePercent:F1},{item.QualityIndicator}");
-                }
-
-                await File.WriteAllLinesAsync(filePath, csv);
-                return filePath;
-            }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to export item analysis: {ex.Message}", ex);
-            }
-        }
-
-        /// <summary>
         /// Generic CSV export method
         /// </summary>
         public async Task<string> ExportToCsvAsync(List<Dictionary<string, string>> data, string fileName)
