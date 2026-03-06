@@ -19,6 +19,7 @@ public class SessionHub : Hub
     private const string PublishedExamsCollection = "published_exams";
     private const string SessionEventsCollection = "session_events";
     private const string IncidentReportsCollection = "incident_reports";
+    private const string ExamSessionsCollection = "exam_sessions";
 
     private static FirestoreDb GetFirestoreDb()
     {
@@ -113,18 +114,25 @@ public class SessionHub : Hub
             if (db == null) return null;
 
             var examSnapshot = await db.CollectionGroup(PublishedExamsCollection)
-                .WhereEqualTo(FieldPath.DocumentId, examId)
-                .Limit(1)
                 .GetSnapshotAsync();
 
-            var examDoc = examSnapshot.Documents.FirstOrDefault();
+            var examDoc = examSnapshot.Documents.FirstOrDefault(d =>
+                string.Equals(d.Id, examId, StringComparison.Ordinal) ||
+                (d.TryGetValue("Id", out string storedId) && string.Equals(storedId, examId, StringComparison.Ordinal)));
             if (examDoc == null)
             {
                 Console.WriteLine($"[SessionHub] Could not resolve exam owner for examId={examId}");
                 return null;
             }
 
-            var pathSegments = examDoc.Reference.Path.Split('/');
+            var referencePath = examDoc.Reference.Path;
+            var marker = "/documents/";
+            var markerIndex = referencePath.IndexOf(marker, StringComparison.Ordinal);
+            var relativePath = markerIndex >= 0
+                ? referencePath[(markerIndex + marker.Length)..]
+                : referencePath.Trim('/');
+
+            var pathSegments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (pathSegments.Length < 4 || !string.Equals(pathSegments[0], UsersRoot, StringComparison.Ordinal))
             {
                 Console.WriteLine($"[SessionHub] Unexpected exam path format: {examDoc.Reference.Path}");
@@ -136,6 +144,186 @@ public class SessionHub : Hub
         }
 
         return ownerUserId;
+    }
+
+    private async Task<DocumentReference?> GetExamSessionDocumentAsync(string examId)
+    {
+        var db = GetFirestoreDb();
+        if (db == null) return null;
+
+        var ownerUserId = await ResolveExamOwnerUserIdAsync(examId);
+        if (string.IsNullOrWhiteSpace(ownerUserId))
+        {
+            Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; skipping session update.");
+            return null;
+        }
+
+        return db.Collection(UsersRoot)
+            .Document(ownerUserId)
+            .Collection(ExamSessionsCollection)
+            .Document(examId);
+    }
+
+    private static int TryGetIntFromPayload(Dictionary<string, object> payload, params string[] keys)
+    {
+        foreach (var key in keys)
+        {
+            if (!payload.TryGetValue(key, out var value) || value == null) continue;
+
+            if (value is int i) return i;
+            if (value is long l && l <= int.MaxValue && l >= int.MinValue) return (int)l;
+            if (value is double d && d <= int.MaxValue && d >= int.MinValue) return (int)d;
+            if (value is float f && f <= int.MaxValue && f >= int.MinValue) return (int)f;
+            if (value is string s && int.TryParse(s, out var parsed)) return parsed;
+            if (value is System.Text.Json.JsonElement je)
+            {
+                if (je.ValueKind == System.Text.Json.JsonValueKind.Number && je.TryGetInt32(out var jeInt))
+                    return jeInt;
+
+                if (je.ValueKind == System.Text.Json.JsonValueKind.String && int.TryParse(je.GetString(), out var jeParsed))
+                    return jeParsed;
+            }
+        }
+
+        return 0;
+    }
+
+    private static Dictionary<string, object> ToDictionary(object payload)
+    {
+        if (payload is Dictionary<string, object> dict) return dict;
+
+        try
+        {
+            var json = System.Text.Json.JsonSerializer.Serialize(payload);
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(json)
+                   ?? new Dictionary<string, object>();
+        }
+        catch
+        {
+            return new Dictionary<string, object>();
+        }
+    }
+
+    private async Task UpsertExamSessionParticipantAsync(string examId, string studentId, string studentName, string connectionStatus, object? heartbeatPayload = null)
+    {
+        try
+        {
+            var sessionDoc = await GetExamSessionDocumentAsync(examId);
+            if (sessionDoc == null) return;
+
+            var snapshot = await sessionDoc.GetSnapshotAsync();
+            var now = Timestamp.FromDateTime(DateTime.UtcNow);
+
+            var participants = new Dictionary<string, object>();
+            if (snapshot.Exists && snapshot.TryGetValue("Participants", out Dictionary<string, object> existingParticipants) && existingParticipants != null)
+            {
+                participants = existingParticipants;
+            }
+
+            var participantData = new Dictionary<string, object>
+            {
+                ["StudentId"] = studentId,
+                ["StudentName"] = studentName,
+                ["ConnectionStatus"] = connectionStatus,
+                ["ProgressPercent"] = 0,
+                ["QuestionsAnswered"] = 0,
+                ["TimeRemaining"] = 0,
+                ["FlagCount"] = 0,
+                ["LastHeartbeat"] = now,
+                ["IpAddress"] = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? ""
+            };
+
+            if (participants.TryGetValue(studentId, out var existingParticipantObj) && existingParticipantObj is Dictionary<string, object> existingParticipant)
+            {
+                foreach (var kv in existingParticipant)
+                {
+                    participantData[kv.Key] = kv.Value;
+                }
+
+                participantData["StudentId"] = studentId;
+                participantData["StudentName"] = studentName;
+                participantData["ConnectionStatus"] = connectionStatus;
+                participantData["LastHeartbeat"] = now;
+                participantData["IpAddress"] = Context.GetHttpContext()?.Connection?.RemoteIpAddress?.ToString() ?? "";
+            }
+
+            if (heartbeatPayload != null)
+            {
+                var payloadMap = ToDictionary(heartbeatPayload);
+                var progress = TryGetIntFromPayload(payloadMap, "ProgressPercent", "progressPercent", "progress");
+                var answered = TryGetIntFromPayload(payloadMap, "QuestionsAnswered", "questionsAnswered", "answered");
+                var remaining = TryGetIntFromPayload(payloadMap, "TimeRemaining", "timeRemaining", "remainingSeconds");
+
+                if (progress > 0) participantData["ProgressPercent"] = progress;
+                if (answered > 0) participantData["QuestionsAnswered"] = answered;
+                if (remaining > 0) participantData["TimeRemaining"] = remaining;
+            }
+
+            participants[studentId] = participantData;
+
+            var onlineCount = participants.Values
+                .OfType<Dictionary<string, object>>()
+                .Count(p => p.TryGetValue("ConnectionStatus", out var statusObj)
+                         && string.Equals(statusObj?.ToString(), "Online", StringComparison.OrdinalIgnoreCase));
+
+            var sessionData = new Dictionary<string, object>
+            {
+                ["Id"] = examId,
+                ["ExamId"] = examId,
+                ["Status"] = "Running",
+                ["LastHeartbeat"] = now,
+                ["Participants"] = participants,
+                ["TotalParticipants"] = participants.Count,
+                ["OnlineCount"] = onlineCount,
+                ["StartedAt"] = snapshot.Exists && snapshot.TryGetValue("StartedAt", out Timestamp existingStartedAt)
+                    ? existingStartedAt
+                    : now
+            };
+
+            await sessionDoc.SetAsync(sessionData, SetOptions.MergeAll);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SessionHub] Failed to update exam session state: {ex.Message}");
+        }
+    }
+
+    private async Task IncrementParticipantFlagAsync(string examId, string studentId)
+    {
+        try
+        {
+            var sessionDoc = await GetExamSessionDocumentAsync(examId);
+            if (sessionDoc == null) return;
+
+            var snapshot = await sessionDoc.GetSnapshotAsync();
+            if (!snapshot.Exists || !snapshot.TryGetValue("Participants", out Dictionary<string, object> participants))
+                return;
+
+            if (!participants.TryGetValue(studentId, out var participantObj) || participantObj is not Dictionary<string, object> participant)
+                return;
+
+            var currentFlags = 0;
+            if (participant.TryGetValue("FlagCount", out var currentFlagObj))
+            {
+                if (currentFlagObj is long l && l <= int.MaxValue) currentFlags = (int)l;
+                else if (currentFlagObj is int i) currentFlags = i;
+                else if (int.TryParse(currentFlagObj?.ToString(), out var parsed)) currentFlags = parsed;
+            }
+
+            participant["FlagCount"] = currentFlags + 1;
+            participant["LastHeartbeat"] = Timestamp.FromDateTime(DateTime.UtcNow);
+            participants[studentId] = participant;
+
+            await sessionDoc.UpdateAsync(new Dictionary<string, object>
+            {
+                ["Participants"] = participants,
+                ["LastHeartbeat"] = Timestamp.FromDateTime(DateTime.UtcNow)
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SessionHub] Failed to increment participant flag count: {ex.Message}");
+        }
     }
     public async Task JoinSession(string sessionId, string studentId, string studentName)
     {
@@ -153,6 +341,7 @@ public class SessionHub : Hub
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, examId);
         Console.WriteLine($"[SessionHub] Student joined: {studentName} ({studentId}) for exam {examId}");
+        await UpsertExamSessionParticipantAsync(examId, studentId, studentName, "Online");
         
         await Clients.Group($"monitor_{examId}").SendAsync("StudentJoined", new
         {
@@ -171,6 +360,7 @@ public class SessionHub : Hub
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, examId);
         Console.WriteLine($"[SessionHub] Student left: {studentName} ({studentId}) from exam {examId}");
+        await UpsertExamSessionParticipantAsync(examId, studentId, studentName, "Disconnected");
         
         await Clients.Group($"monitor_{examId}").SendAsync("StudentLeft", new
         {
@@ -186,6 +376,15 @@ public class SessionHub : Hub
 
     public async Task SendHeartbeat(string sessionId, string studentId, object payload)
     {
+        var studentName = "Unknown";
+        var payloadMap = ToDictionary(payload);
+        if (payloadMap.TryGetValue("StudentName", out var nameObj) && !string.IsNullOrWhiteSpace(nameObj?.ToString()))
+            studentName = nameObj!.ToString()!;
+        else if (payloadMap.TryGetValue("studentName", out var lowerNameObj) && !string.IsNullOrWhiteSpace(lowerNameObj?.ToString()))
+            studentName = lowerNameObj!.ToString()!;
+
+        await UpsertExamSessionParticipantAsync(sessionId, studentId, studentName, "Online", payload);
+
         await Clients.Group($"monitor_{sessionId}").SendAsync("StudentHeartbeat", new
         {
             StudentId = studentId,
@@ -219,6 +418,7 @@ public class SessionHub : Hub
         });
 
         // Log to Firestore incident_reports collection
+        await IncrementParticipantFlagAsync(sessionId, studentId);
         _ = LogIncidentToFirestoreAsync(sessionId, studentId, studentName, eventType, details, severity);
     }
 
