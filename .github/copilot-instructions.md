@@ -27,4 +27,4 @@
 
 ## Firestore Configuration
 - On user sign-up, Firestore should create per-user collections named `exam_sessions`, `published_exams`, `examinee_data`, `incident_reports`, and `session_events`. Adjust system paths accordingly, using `examforge_users` as the root user collection. Avoid using `question_bank`, `grading_queue`, or `integrity_incidents`.
-- Use user-scoped Firestore paths; SessionHub should not read/write top-level collections.
+- Store integrity incidents under the user-scoped subcollection named `incident_reports` (not top-level `integrity_incidents`), and ensure `session_events` are also user-scoped under `examforge_users/{userId}`. Use user-scoped Firestore paths; SessionHub should not read/write top-level collections.

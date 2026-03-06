@@ -226,7 +226,7 @@ export default {
       return handleOptions(request);
     }
 
-    if (url.pathname === '/api/submit' && request.method === 'POST') {
+    if ((url.pathname === '/api/submit' || url.pathname === '/') && request.method === 'POST') {
       return submitExam(request, env);
     }
 
