@@ -125,7 +125,14 @@ public class SessionHub : Hub
                 return null;
             }
 
-            var pathSegments = examDoc.Reference.Path.Split('/');
+            var referencePath = examDoc.Reference.Path;
+            var marker = "/documents/";
+            var markerIndex = referencePath.IndexOf(marker, StringComparison.Ordinal);
+            var relativePath = markerIndex >= 0
+                ? referencePath[(markerIndex + marker.Length)..]
+                : referencePath.Trim('/');
+
+            var pathSegments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
             if (pathSegments.Length < 4 || !string.Equals(pathSegments[0], UsersRoot, StringComparison.Ordinal))
             {
                 Console.WriteLine($"[SessionHub] Unexpected exam path format: {examDoc.Reference.Path}");
