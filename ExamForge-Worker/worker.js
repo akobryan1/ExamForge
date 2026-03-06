@@ -87,6 +87,69 @@ function pemToArrayBuffer(pem) {
   return bytes.buffer;
 }
 
+function fromFirestoreValue(value) {
+  if (!value || typeof value !== 'object') return null;
+
+  if (Object.prototype.hasOwnProperty.call(value, 'stringValue')) return value.stringValue;
+  if (Object.prototype.hasOwnProperty.call(value, 'integerValue')) return Number.parseInt(value.integerValue, 10) || 0;
+  if (Object.prototype.hasOwnProperty.call(value, 'doubleValue')) return Number(value.doubleValue) || 0;
+  if (Object.prototype.hasOwnProperty.call(value, 'booleanValue')) return !!value.booleanValue;
+  if (Object.prototype.hasOwnProperty.call(value, 'timestampValue')) return value.timestampValue;
+
+  if (Object.prototype.hasOwnProperty.call(value, 'mapValue')) {
+    const fields = value.mapValue?.fields || {};
+    const obj = {};
+    for (const [k, v] of Object.entries(fields)) obj[k] = fromFirestoreValue(v);
+    return obj;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, 'arrayValue')) {
+    const values = value.arrayValue?.values || [];
+    return values.map(fromFirestoreValue);
+  }
+
+  return null;
+}
+
+function fromFirestoreDocument(doc) {
+  const fields = doc?.fields || {};
+  const parsed = {};
+  for (const [key, value] of Object.entries(fields)) {
+    parsed[key] = fromFirestoreValue(value);
+  }
+  return parsed;
+}
+
+function normalizeAnswer(input) {
+  return (input ?? '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function isEssayType(questionType) {
+  const qt = normalizeAnswer(questionType);
+  return qt === 'essay';
+}
+
+function isCorrectAnswer(questionType, expectedAnswer, answerValue, correctionValue) {
+  const qt = normalizeAnswer(questionType);
+  const expected = normalizeAnswer(expectedAnswer);
+  const answer = normalizeAnswer(answerValue);
+  const correction = normalizeAnswer(correctionValue);
+
+  if (!expected) return false;
+
+  if (qt === 'modified true/false') {
+    if (answer === 'true') return expected === 'true';
+    if (answer === 'false') return correction === expected;
+    return false;
+  }
+
+  return answer === expected;
+}
+
 async function submitExam(request, env) {
   try {
     const origin = request.headers.get('Origin') || '';
@@ -109,19 +172,56 @@ async function submitExam(request, env) {
     const studentId = studentInfo.studentId || submission.studentId || '';
     const yearSection = studentInfo.yearSection || submission.yearSection || '';
 
-    const responseEntries = Object.entries(submission.answers || {});
-    const responses = responseEntries.map(([key, value], index) => {
-      const match = key.match(/question(\d+)/i);
-      const questionNumber = match ? Number.parseInt(match[1], 10) : index + 1;
+    const examDocUrl = `https://firestore.googleapis.com/v1/projects/${env.PROJECT_ID}/databases/(default)/documents/examforge_users/${submission.ownerUserId}/published_exams/${submission.examId}`;
+    const examDocResponse = await fetch(examDocUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`
+      }
+    });
 
-      return {
-        QuestionId: key,
-        QuestionNumber: Number.isFinite(questionNumber) ? questionNumber : index + 1,
-        Answer: value == null ? '' : String(value),
-        PointsEarned: 0,
-        PointsPossible: 0,
-        IsCorrect: false
-      };
+    if (!examDocResponse.ok) {
+      const err = await examDocResponse.text();
+      console.error('Failed to load published exam for grading:', err);
+      throw new Error('Failed to load published exam for grading');
+    }
+
+    const examDoc = await examDocResponse.json();
+    const examData = fromFirestoreDocument(examDoc);
+    const contents = Array.isArray(examData.Contents) ? examData.Contents : [];
+    const answerMap = submission.answers || {};
+
+    const responses = [];
+    let totalScore = 0;
+    let totalPossiblePoints = 0;
+
+    contents.forEach((content, index) => {
+      const questionNumber = index + 1;
+      const questionKey = `question${questionNumber}`;
+      const correctionKey = `question${questionNumber}_correction`;
+
+      const questionType = content.QuestionType || content.questionType || '';
+      const correctAnswer = content.Answer || content.CorrectAnswer || content.answer || '';
+      const points = Number(content.Points || content.points || 0) || 0;
+
+      const answerValue = answerMap[questionKey] ?? '';
+      const correctionValue = answerMap[correctionKey] ?? '';
+
+      const essay = isEssayType(questionType);
+      const isCorrect = !essay && isCorrectAnswer(questionType, correctAnswer, answerValue, correctionValue);
+      const pointsEarned = isCorrect ? points : 0;
+
+      totalScore += pointsEarned;
+      totalPossiblePoints += points;
+
+      responses.push({
+        QuestionId: content.ContentId || content.Id || questionKey,
+        QuestionNumber: questionNumber,
+        Answer: answerValue == null ? '' : String(answerValue),
+        PointsEarned: pointsEarned,
+        PointsPossible: points,
+        IsCorrect: isCorrect
+      });
     });
 
     const submissionData = {
@@ -134,8 +234,8 @@ async function submitExam(request, env) {
       studentId,
       yearSection,
       responses,
-      totalScore: 0,
-      totalPossiblePoints: 0,
+      totalScore,
+      totalPossiblePoints,
       status: 'Submitted'
     };
 
