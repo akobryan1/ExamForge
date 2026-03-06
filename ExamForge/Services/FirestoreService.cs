@@ -21,11 +21,10 @@ public class FirestoreService
     private const string PublishedExamsCollection = "published_exams";
     private const string ExamSessionsCollection = "exam_sessions";
     private const string ExamineeDataCollection = "examinee_data";
-    private const string GradingQueueCollection = "grading_queue";
-    private const string QuestionBankCollection = "question_bank";
-    private const string IntegrityIncidentsCollection = "integrity_incidents";
     private const string SessionEventsCollection = "session_events";
     private const string IncidentReportsCollection = "incident_reports";
+
+    public string UserId => _userId;
 
     // Constructor with userId for user-scoped collections
     public FirestoreService(string userId)
@@ -334,60 +333,31 @@ public class FirestoreService
 
     #endregion
 
-    #region QuestionBank Methods
+    #region Deprecated Collections + Incident Mapping
 
-    public async Task<string> SaveQuestionAsync(QuestionBankItem question)
+    public Task<string> SaveQuestionAsync(QuestionBankItem question)
     {
-        try
-        {
-            var docRef = _firestoreDb.Collection(GetUserPath(QuestionBankCollection)).Document();
-            question.Id = docRef.Id;
-            await docRef.SetAsync(question);
-            return question.Id;
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Failed to save question: {ex.Message}", ex);
-        }
+        throw new NotSupportedException("question_bank collection is deprecated and no longer used.");
     }
 
-    public async Task<List<QuestionBankItem>> SearchQuestionsAsync(
+    public Task<List<QuestionBankItem>> SearchQuestionsAsync(
         string? subject = null,
         string? difficulty = null,
         List<string>? tags = null)
     {
-        try
-        {
-            Query query = _firestoreDb.Collection(GetUserPath("question_bank"));
-
-            if (!string.IsNullOrEmpty(subject))
-                query = query.WhereEqualTo("Subject", subject);
-
-            if (!string.IsNullOrEmpty(difficulty))
-                query = query.WhereEqualTo("Difficulty", difficulty);
-
-            if (tags != null && tags.Count > 0)
-                query = query.WhereArrayContainsAny("Tags", tags);
-
-            var snapshot = await query.GetSnapshotAsync();
-            return snapshot.Documents.Select(d => d.ConvertTo<QuestionBankItem>()).ToList();
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Failed to search questions: {ex.Message}", ex);
-        }
+        return Task.FromResult(new List<QuestionBankItem>());
     }
 
     public async Task<List<IntegrityIncident>> GetIntegrityIncidentsAsync(string examId)
     {
         try
         {
-            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
+            var query = _firestoreDb.Collection(GetUserPath(IncidentReportsCollection))
                 .WhereEqualTo("ExamId", examId)
                 .OrderByDescending("Timestamp");
                 
             var snapshot = await query.GetSnapshotAsync();
-            return snapshot.Documents.Select(d => d.ConvertTo<IntegrityIncident>()).ToList();
+            return snapshot.Documents.Select(ConvertIncidentReportToIntegrityIncident).ToList();
         }
         catch (Exception ex)
         {
@@ -400,7 +370,7 @@ public class FirestoreService
     {
         try
         {
-            var query = _firestoreDb.Collection(GetUserPath("sessions"))
+            var query = _firestoreDb.Collection(GetUserPath(ExamSessionsCollection))
                 .WhereEqualTo("IsActive", true)
                 .OrderBy("StartTime");
                 
@@ -419,13 +389,13 @@ public class FirestoreService
         try
         {
             var cutoffTime = DateTime.UtcNow.Subtract(timeSpan);
-            var query = _firestoreDb.Collection(GetUserPath("integrity_incidents"))
+            var query = _firestoreDb.Collection(GetUserPath(IncidentReportsCollection))
                 .WhereGreaterThan("Timestamp", Timestamp.FromDateTime(cutoffTime))
                 .OrderByDescending("Timestamp")
                 .Limit(50);
                 
             var snapshot = await query.GetSnapshotAsync();
-            return snapshot.Documents.Select(d => d.ConvertTo<IntegrityIncident>()).ToList();
+            return snapshot.Documents.Select(ConvertIncidentReportToIntegrityIncident).ToList();
         }
         catch (Exception ex)
         {
@@ -442,7 +412,22 @@ public class FirestoreService
     {
         try
         {
-            var collections = new[] { "exam_sessions", "examinee_data", "grading_queue", "published_exams" };
+            var userDocRef = _firestoreDb.Collection(UsersRoot).Document(_userId);
+            await userDocRef.SetAsync(new Dictionary<string, object>
+            {
+                ["user_id"] = _userId,
+                ["initialized_at"] = Timestamp.FromDateTime(DateTime.UtcNow),
+                ["initialized"] = true
+            }, SetOptions.MergeAll);
+
+            var collections = new[]
+            {
+                ExamSessionsCollection,
+                PublishedExamsCollection,
+                ExamineeDataCollection,
+                IncidentReportsCollection,
+                SessionEventsCollection
+            };
 
             foreach (var col in collections)
             {
@@ -466,72 +451,23 @@ public class FirestoreService
 
     #endregion
 
-    #region Grading Queue Methods
+    #region Grading Queue Methods (Deprecated)
 
-    public async Task<List<GradingQueueItem>> GetGradingQueueItemsAsync(string? examId = null)
+    public Task<List<GradingQueueItem>> GetGradingQueueItemsAsync(string? examId = null)
     {
-        try
-        {
-            Query query = _firestoreDb.Collection(GetUserPath("grading_queue"));
-            
-            if (!string.IsNullOrEmpty(examId))
-            {
-                query = query.WhereEqualTo("ExamId", examId);
-            }
-            
-            query = query.OrderBy("SubmittedAt");
-            
-            var snapshot = await query.GetSnapshotAsync();
-            return snapshot.Documents.Select(d => d.ConvertTo<GradingQueueItem>()).ToList();
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Failed to get grading queue items: {ex.Message}", ex);
-        }
+        return Task.FromResult(new List<GradingQueueItem>());
     }
 
-    public async Task UpdateGradingQueueItemAsync(string itemId, int pointsAwarded, string? feedback = null, string? gradedBy = null)
+    public Task UpdateGradingQueueItemAsync(string itemId, int pointsAwarded, string? feedback = null, string? gradedBy = null)
     {
-        try
-        {
-            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
-            
-            var updates = new Dictionary<string, object>
-            {
-                { "PointsAwarded", pointsAwarded },
-                { "Status", "Graded" },
-                { "GradedAt", Timestamp.GetCurrentTimestamp() }
-            };
-            
-            if (!string.IsNullOrEmpty(feedback))
-            {
-                updates["Feedback"] = feedback;
-            }
-            
-            if (!string.IsNullOrEmpty(gradedBy))
-            {
-                updates["GradedBy"] = gradedBy;
-            }
-            
-            await docRef.UpdateAsync(updates);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Failed to update grading queue item: {ex.Message}", ex);
-        }
+        Debug.WriteLine("grading_queue is deprecated and updates are skipped.");
+        return Task.CompletedTask;
     }
 
-    public async Task RemoveGradingQueueItemAsync(string itemId)
+    public Task RemoveGradingQueueItemAsync(string itemId)
     {
-        try
-        {
-            var docRef = _firestoreDb.Collection(GetUserPath("grading_queue")).Document(itemId);
-            await docRef.DeleteAsync();
-        }
-        catch (Exception ex)
-        {
-            throw new Exception($"Failed to remove grading queue item: {ex.Message}", ex);
-        }
+        Debug.WriteLine("grading_queue is deprecated and removals are skipped.");
+        return Task.CompletedTask;
     }
 
     #endregion
@@ -680,6 +616,28 @@ public class FirestoreService
     }
 
     #endregion
+
+    private static IntegrityIncident ConvertIncidentReportToIntegrityIncident(DocumentSnapshot doc)
+    {
+        var data = doc.ToDictionary();
+
+        return new IntegrityIncident
+        {
+            Id = doc.Id,
+            ExamId = data.TryGetValue("ExamId", out var examId) ? examId?.ToString() ?? "" : "",
+            StudentId = data.TryGetValue("StudentId", out var studentId) ? studentId?.ToString() ?? "" : "",
+            StudentName = data.TryGetValue("StudentName", out var studentName) ? studentName?.ToString() ?? "" : "",
+            IncidentType = data.TryGetValue("IncidentType", out var incidentType)
+                ? incidentType?.ToString() ?? ""
+                : data.TryGetValue("EventType", out var eventType) ? eventType?.ToString() ?? "unknown" : "unknown",
+            Severity = data.TryGetValue("Severity", out var severity) ? severity?.ToString() ?? "Info" : "Info",
+            Timestamp = data.TryGetValue("Timestamp", out var ts) && ts is Timestamp timestamp
+                ? timestamp.ToDateTime()
+                : DateTime.UtcNow,
+            Details = data.TryGetValue("Details", out var details) ? details?.ToString() ?? "" : "",
+            Status = data.TryGetValue("Status", out var status) ? status?.ToString() ?? "Pending" : "Pending"
+        };
+    }
 
     private PublishedExam ConvertSnapshotToPublishedExam(DocumentSnapshot doc)
     {

@@ -161,10 +161,6 @@
                              Content="📚 Exam Bank"
                              Style="{StaticResource TabButtonStyle}"
                              Checked="Tab_Changed"/>
-                <RadioButton x:Name="ClosedTab"
-                             Content="📊 Closed and Grading"
-                             Style="{StaticResource TabButtonStyle}"
-                             Checked="Tab_Changed"/>
             </StackPanel>
         </Border>
 
@@ -558,11 +554,13 @@
                                     <DataGridTextColumn Header="Questions" Binding="{Binding QuestionCount}" Width="80"/>
                                     <DataGridTextColumn Header="Usage" Binding="{Binding TimesUsed}" Width="60"/>
                                     <DataGridTextColumn Header="Last Used" Binding="{Binding LastUsed, StringFormat='{}{0:MM/dd}'}" Width="80"/>
-                                    <DataGridTemplateColumn Header="Actions" Width="180">
+                                    <DataGridTemplateColumn Header="Actions" Width="360">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate>
                                                 <StackPanel Orientation="Horizontal">
-                                                    <Button Content="Reuse" FontSize="10" Padding="6,3" Click="ReuseExam_Click" Tag="{Binding Id}" ToolTip="Load this exam as a template for a new exam"/>
+                                                    <Button Content="Reuse Template" FontSize="10" Padding="6,3" Click="ReuseExam_Click" Tag="{Binding Id}" ToolTip="Reuse exam structure and content as a template"/>
+                                                    <Button Content="Republish" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="RepublishExam_Click" Tag="{Binding Id}" ToolTip="Republish this exam"/>
+                                                    <Button Content="Delete" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="DeleteExam_Click" Tag="{Binding Id}" ToolTip="Delete this exam"/>
                                                     <Button Content="📋 Copy Link" FontSize="10" Padding="6,3" Margin="4,0,0,0" Click="CopyExamLink_Click" Tag="{Binding Id}" ToolTip="Copy exam URL to clipboard"/>
                                                 </StackPanel>
                                             </DataTemplate>

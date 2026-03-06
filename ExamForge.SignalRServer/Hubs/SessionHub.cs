@@ -3,6 +3,8 @@ using Google.Cloud.Firestore;
 using System.Net;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Linq;
 using System;
 
 namespace ExamForge.SignalRServer.Hubs;
@@ -11,6 +13,12 @@ public class SessionHub : Hub
 {
     private static readonly object _fsLock = new();
     private static FirestoreDb? _firestoreDb;
+    private static readonly ConcurrentDictionary<string, string> _examOwnerCache = new();
+
+    private const string UsersRoot = "examforge_users";
+    private const string PublishedExamsCollection = "published_exams";
+    private const string SessionEventsCollection = "session_events";
+    private const string IncidentReportsCollection = "incident_reports";
 
     private static FirestoreDb GetFirestoreDb()
     {
@@ -63,7 +71,14 @@ public class SessionHub : Hub
             var db = GetFirestoreDb();
             if (db == null) return;
 
-            var docRef = db.Collection("session_events").Document();
+            var sessionEventsPath = await ResolveUserScopedCollectionPathAsync(sessionId, SessionEventsCollection);
+            if (string.IsNullOrWhiteSpace(sessionEventsPath))
+            {
+                Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {sessionId}; skipping session event log.");
+                return;
+            }
+
+            var docRef = db.Collection(sessionEventsPath).Document();
             var payload = new Dictionary<string, object>
             {
                 ["SessionId"] = sessionId,
@@ -83,6 +98,41 @@ public class SessionHub : Hub
         {
             Console.WriteLine($"Failed to write session event: {ex.Message}");
         }
+    }
+
+    private async Task<string?> ResolveUserScopedCollectionPathAsync(string examId, string collectionName)
+    {
+        if (string.IsNullOrWhiteSpace(examId)) return null;
+
+        if (!_examOwnerCache.TryGetValue(examId, out var ownerUserId))
+        {
+            var db = GetFirestoreDb();
+            if (db == null) return null;
+
+            var examSnapshot = await db.CollectionGroup(PublishedExamsCollection)
+                .WhereEqualTo(FieldPath.DocumentId, examId)
+                .Limit(1)
+                .GetSnapshotAsync();
+
+            var examDoc = examSnapshot.Documents.FirstOrDefault();
+            if (examDoc == null)
+            {
+                Console.WriteLine($"[SessionHub] Could not resolve exam owner for examId={examId}");
+                return null;
+            }
+
+            var pathSegments = examDoc.Reference.Path.Split('/');
+            if (pathSegments.Length < 4 || !string.Equals(pathSegments[0], UsersRoot, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[SessionHub] Unexpected exam path format: {examDoc.Reference.Path}");
+                return null;
+            }
+
+            ownerUserId = pathSegments[1];
+            _examOwnerCache[examId] = ownerUserId;
+        }
+
+        return $"{UsersRoot}/{ownerUserId}/{collectionName}";
     }
     public async Task JoinSession(string sessionId, string studentId, string studentName)
     {
@@ -180,7 +230,14 @@ public class SessionHub : Hub
                 return;
             }
 
-            var docRef = db.Collection("integrity_incidents").Document();
+            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
+            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            {
+                Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; skipping incident log.");
+                return;
+            }
+
+            var docRef = db.Collection(incidentReportsPath).Document();
             var incident = new Dictionary<string, object>
             {
                 ["ExamId"] = examId,
@@ -253,9 +310,14 @@ public class SessionHub : Hub
                 return;
             }
 
-            // Save to a temporary collection that can be queried by examId and studentId
-            var collectionPath = $"temp_sessions/{examId}/students";
-            var docRef = db.Collection(collectionPath).Document(studentId);
+            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
+            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            {
+                Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; skipping session save.");
+                return;
+            }
+
+            var docRef = db.Collection(incidentReportsPath).Document($"{examId}_{studentId}");
             
             var sessionDict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(
                 System.Text.Json.JsonSerializer.Serialize(sessionData)
@@ -292,8 +354,14 @@ public class SessionHub : Hub
             var db = GetFirestoreDb();
             if (db == null) return null;
 
-            var collectionPath = $"temp_sessions/{examId}/students";
-            var docRef = db.Collection(collectionPath).Document(studentId);
+            var incidentReportsPath = await ResolveUserScopedCollectionPathAsync(examId, IncidentReportsCollection);
+            if (string.IsNullOrWhiteSpace(incidentReportsPath))
+            {
+                Console.WriteLine($"[SessionHub] Unable to resolve owner path for exam {examId}; cannot check active session.");
+                return null;
+            }
+
+            var docRef = db.Collection(incidentReportsPath).Document($"{examId}_{studentId}");
             
             var snapshot = await docRef.GetSnapshotAsync();
             

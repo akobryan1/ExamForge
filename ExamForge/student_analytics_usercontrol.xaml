@@ -108,7 +108,7 @@
                 Padding="30,0">
             <StackPanel Orientation="Horizontal">
                 <RadioButton x:Name="ClassOverviewTab"
-                             Content="?? Class Overview"
+                             Content="?? Class Performance"
                              Style="{StaticResource AnalyticsTabButtonStyle}"
                              IsChecked="True"
                              Checked="AnalyticsTab_Changed"/>
@@ -116,16 +116,12 @@
                              Content="?? Item Analysis"
                              Style="{StaticResource AnalyticsTabButtonStyle}"
                              Checked="AnalyticsTab_Changed"/>
-                <RadioButton x:Name="StudentDrilldownTab"
-                             Content="?? Student Drilldown"
-                             Style="{StaticResource AnalyticsTabButtonStyle}"
-                             Checked="AnalyticsTab_Changed"/>
                 <RadioButton x:Name="IntegrityTab"
-                             Content="?? Integrity and Incidents"
+                             Content="?? Incident Reports"
                              Style="{StaticResource AnalyticsTabButtonStyle}"
                              Checked="AnalyticsTab_Changed"/>
-                <RadioButton x:Name="TrendsTab"
-                             Content="?? Trends Over Time"
+                <RadioButton x:Name="ExamineeDataTab"
+                             Content="?? Examinee Data"
                              Style="{StaticResource AnalyticsTabButtonStyle}"
                              Checked="AnalyticsTab_Changed"/>
             </StackPanel>
@@ -186,7 +182,7 @@
 
                         <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="78.5%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="ClassAverageMetricText" Text="0.0%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Class Average" FontSize="12" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="? 3.2% from last exam" FontSize="10" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
@@ -194,7 +190,7 @@
 
                         <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="82%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="PassRateMetricText" Text="0%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Pass Rate" FontSize="12" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="24 of 29 students" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
@@ -202,7 +198,7 @@
 
                         <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Margin="4,0">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="96%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="CompletionRateMetricText" Text="0%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Completion Rate" FontSize="12" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="28 of 29 submitted" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
@@ -210,7 +206,7 @@
 
                         <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock Text="3.2%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="FlaggedRateMetricText" Text="0.0%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource WarningYellow}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Flagged Rate" FontSize="12" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
                                 <TextBlock Text="5 integrity incidents" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
@@ -259,168 +255,143 @@
 
                 <!-- Item Analysis Panel -->
                 <StackPanel x:Name="ItemAnalysisPanel" Visibility="Collapsed">
-                    <Border Style="{StaticResource AnalyticsCardStyle}">
+                    <!-- Item Analysis Header -->
+                    <Border Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,0,16">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-                                <TextBlock Text="?? Exam Item Analysis" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
-                                <Button Content="Export Analysis" Margin="16,0,0,0" Padding="12,6" Background="{StaticResource AccentBlue}" Foreground="White" BorderThickness="0" Style="{StaticResource RoundedButtonStyle}" Click="ExportItemAnalysis_Click"/>
+                                <TextBlock Text="?? Item Analysis Report" FontSize="20" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" VerticalAlignment="Center"/>
+                                <Button Content="?? Export Report" Margin="16,0,0,0" Padding="12,6" Style="{StaticResource PrimaryButtonStyle}" Click="ExportItemAnalysis_Click"/>
                             </StackPanel>
+                            
+                            <!-- Item Analysis Summary Cards -->
+                            <Grid Margin="0,0,0,16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
 
-                            <!-- Item Analysis Grid -->
-                            <DataGrid x:Name="ItemAnalysisGrid" 
-                                     Background="Transparent"
-                                     GridLinesVisibility="None"
-                                     HeadersVisibility="Column"
-                                     AutoGenerateColumns="False"
-                                     CanUserAddRows="False"
-                                     CanUserDeleteRows="False"
-                                     IsReadOnly="True"
-                                     SelectionMode="Single"
-                                     Height="500">
-                                <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Question #" Binding="{Binding QuestionNumber}" Width="80"/>
-                                    <DataGridTextColumn Header="Question Type" Binding="{Binding QuestionType}" Width="100"/>
-                                    <DataGridTextColumn Header="Difficulty %" Binding="{Binding DifficultyPercent}" Width="90"/>
-                                    <DataGridTextColumn Header="Discrimination" Binding="{Binding Discrimination}" Width="100"/>
-                                    <DataGridTextColumn Header="Point Biserial" Binding="{Binding PointBiserial}" Width="100"/>
-                                    <DataGridTextColumn Header="No Response %" Binding="{Binding NoResponsePercent}" Width="100"/>
-                                    <DataGridTextColumn Header="Avg Time (sec)" Binding="{Binding AverageTime}" Width="100"/>
-                                    <DataGridTextColumn Header="Quality" Binding="{Binding QualityIndicator}" Width="80"/>
-                                    <DataGridTemplateColumn Header="Actions" Width="100">
-                                        <DataGridTemplateColumn.CellTemplate>
-                                            <DataTemplate>
-                                                <Button Content="Details" FontSize="10" Padding="6,3" Click="ItemDetails_Click" Tag="{Binding QuestionId}"/>
-                                            </DataTemplate>
-                                        </DataGridTemplateColumn.CellTemplate>
-                                    </DataGridTemplateColumn>
-                                </DataGrid.Columns>
-                            </DataGrid>
+                                <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock x:Name="EasyItemsCount" Text="0" FontSize="32" FontWeight="Bold" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Easy Items" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="?70% correct" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock x:Name="ModerateItemsCount" Text="0" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Moderate Items" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="30-70% correct" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Margin="4,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock x:Name="DifficultItemsCount" Text="0" FontSize="32" FontWeight="Bold" Foreground="{StaticResource ErrorRed}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Difficult Items" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="?30% correct" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
+                                    <StackPanel HorizontalAlignment="Center">
+                                        <TextBlock x:Name="AverageDifficultyIndex" Text="0%" FontSize="32" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Avg Difficulty" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="Class average" FontSize="10" Foreground="{StaticResource TextMuted}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
                         </StackPanel>
                     </Border>
-                </StackPanel>
 
-                <!-- Student Drilldown Panel -->
-                <StackPanel x:Name="StudentDrilldownPanel" Visibility="Collapsed">
+                    <!-- Item Analysis Chart and Table -->
                     <Grid>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="300"/>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Student List -->
-                        <Border Grid.Column="0" Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,12,0">
+                        <!-- Difficulty Index Chart -->
+                        <Border Grid.Column="0" Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,8,0">
                             <StackPanel>
-                                <TextBlock Text="?? Select Student" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                
-                                <TextBox x:Name="StudentSearchBox" Text="Search students..." Padding="8" Background="{StaticResource SurfaceLight}" Foreground="{StaticResource TextPrimary}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" FontSize="12" Margin="0,0,0,12" GotFocus="StudentSearchBox_GotFocus" LostFocus="StudentSearchBox_LostFocus"/>
-                                
-                                <ListBox x:Name="StudentListBox" Height="400" Background="{StaticResource SurfaceLight}" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" SelectionChanged="StudentListBox_SelectionChanged">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="8">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="{StaticResource TextPrimary}"/>
-                                                <TextBlock Text="{Binding ScoreText}" FontSize="11" Foreground="{StaticResource TextSecondary}"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
+                                <TextBlock Text="?? Difficulty Index by Question" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <Canvas x:Name="ItemAnalysisChart" Height="300" Background="{StaticResource HeaderBackgroundBrush}"/>
                             </StackPanel>
                         </Border>
 
-                        <!-- Student Details -->
-                        <Border Grid.Column="1" Style="{StaticResource AnalyticsCardStyle}">
-                            <StackPanel x:Name="StudentDetailsPanel">
-                                <DockPanel Margin="0,0,0,16">
-                                    <TextBlock x:Name="SelectedStudentName" Text="Select a student to view details" FontSize="18" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" DockPanel.Dock="Left"/>
-                                    <Button Content="?? View Full Submission" Width="180" Height="35" HorizontalAlignment="Right"
-                                            Style="{StaticResource PrimaryButtonStyle}" Click="ViewSubmission_Click"
-                                            x:Name="ViewSubmissionButton" Visibility="Collapsed"/>
-                                </DockPanel>
-                                
-                                <!-- Student performance details will be populated here -->
-                                <Grid x:Name="StudentPerformanceGrid" Visibility="Collapsed">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-
-                                    <!-- Performance Summary -->
-                                    <Grid Grid.Row="0" Margin="0,0,0,20">
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-
-                                        <Border Grid.Column="0" Style="{StaticResource MetricCardStyle}" Margin="0,0,8,0">
-                                            <StackPanel HorizontalAlignment="Center">
-                                                <TextBlock x:Name="StudentScore" Text="85%" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentGold}" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="Total Score" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Grid.Column="1" Style="{StaticResource MetricCardStyle}" Margin="4,0">
-                                            <StackPanel HorizontalAlignment="Center">
-                                                <TextBlock x:Name="StudentRank" Text="7th" FontSize="24" FontWeight="Bold" Foreground="{StaticResource AccentBlue}" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="Class Rank" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Grid.Column="2" Style="{StaticResource MetricCardStyle}" Margin="4,0">
-                                            <StackPanel HorizontalAlignment="Center">
-                                                <TextBlock x:Name="StudentTime" Text="45:32" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="Time Taken" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-
-                                        <Border Grid.Column="3" Style="{StaticResource MetricCardStyle}" Margin="8,0,0,0">
-                                            <StackPanel HorizontalAlignment="Center">
-                                                <TextBlock x:Name="StudentFlags" Text="0" FontSize="24" FontWeight="Bold" Foreground="{StaticResource SuccessGreen}" HorizontalAlignment="Center"/>
-                                                <TextBlock Text="Flags" FontSize="11" Foreground="{StaticResource TextSecondary}" HorizontalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
-                                    </Grid>
-
-                                    <!-- Mastery Breakdown -->
-                                    <Border Grid.Row="1" Background="{StaticResource SurfaceLight}" CornerRadius="8" Padding="16" Margin="0,0,0,16">
-                                        <StackPanel>
-                                            <TextBlock Text="?? Mastery Breakdown" FontSize="14" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                            <Grid x:Name="MasteryGrid">
-                                                <!-- Mastery data will be populated dynamically -->
-                                            </Grid>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <!-- Missed Items -->
-                                    <Border Grid.Row="2" Background="{StaticResource SurfaceLight}" CornerRadius="8" Padding="16">
-                                        <StackPanel>
-                                            <TextBlock Text="? Missed Items" FontSize="14" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,12"/>
-                                            <DataGrid x:Name="MissedItemsGrid" 
-                                                     Background="Transparent"
-                                                     GridLinesVisibility="None"
-                                                     HeadersVisibility="Column"
-                                                     AutoGenerateColumns="False"
-                                                     CanUserAddRows="False"
-                                                     CanUserDeleteRows="False"
-                                                     IsReadOnly="True"
-                                                     SelectionMode="Single"
-                                                     Height="200">
-                                                <DataGrid.Columns>
-                                                    <DataGridTextColumn Header="Q#" Binding="{Binding QuestionNumber}" Width="40"/>
-                                                    <DataGridTextColumn Header="Topic" Binding="{Binding Topic}" Width="120"/>
-                                                    <DataGridTextColumn Header="Student Answer" Binding="{Binding StudentAnswer}" Width="120"/>
-                                                    <DataGridTextColumn Header="Correct Answer" Binding="{Binding CorrectAnswer}" Width="120"/>
-                                                    <DataGridTextColumn Header="Points Lost" Binding="{Binding PointsLost}" Width="80"/>
-                                                </DataGrid.Columns>
-                                            </DataGrid>
-                                        </StackPanel>
-                                    </Border>
-                                </Grid>
+                        <!-- Item Analysis Table -->
+                        <Border Grid.Column="1" Style="{StaticResource AnalyticsCardStyle}" Margin="8,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="?? Detailed Item Analysis" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,16"/>
+                                <DataGrid x:Name="ItemAnalysisGrid"
+                                         Background="Transparent"
+                                         GridLinesVisibility="None"
+                                         HeadersVisibility="Column"
+                                         AutoGenerateColumns="False"
+                                         CanUserAddRows="False"
+                                         CanUserDeleteRows="False"
+                                         IsReadOnly="True"
+                                         SelectionMode="Single"
+                                         Height="300">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="Q#" Binding="{Binding QuestionNumber}" Width="40"/>
+                                        <DataGridTextColumn Header="Difficulty %" Binding="{Binding DifficultyIndex, StringFormat='{}{0:F1}%'}" Width="80"/>
+                                        <DataGridTextColumn Header="Classification" Binding="{Binding Classification}" Width="90"/>
+                                        <DataGridTextColumn Header="Correct" Binding="{Binding CorrectCount}" Width="60"/>
+                                        <DataGridTextColumn Header="Total" Binding="{Binding TotalCount}" Width="50"/>
+                                        <DataGridTemplateColumn Header="Actions" Width="60">
+                                            <DataGridTemplateColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <Button Content="??" FontSize="10" Padding="4,2" Click="ViewQuestionDetails_Click" Tag="{Binding QuestionId}" ToolTip="View question details"/>
+                                                </DataTemplate>
+                                            </DataGridTemplateColumn.CellTemplate>
+                                        </DataGridTemplateColumn>
+                                    </DataGrid.Columns>
+                                </DataGrid>
                             </StackPanel>
                         </Border>
                     </Grid>
+
+                    <!-- Item Classification Legend -->
+                    <Border Style="{StaticResource AnalyticsCardStyle}" Margin="0,16,0,0">
+                        <StackPanel>
+                            <TextBlock Text="?? Classification Guidelines" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,12"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+
+                                <Border Grid.Column="0" Background="#10B981" CornerRadius="6" Padding="12" Margin="0,0,8,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Easy Items" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="?70% Correct" FontSize="12" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Consider making more challenging" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="1" Background="#3B82F6" CornerRadius="6" Padding="12" Margin="4,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Moderate Items" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="30-70% Correct" FontSize="12" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Good discrimination level" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <Border Grid.Column="2" Background="#EF4444" CornerRadius="6" Padding="12" Margin="8,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Difficult Items" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center"/>
+                                        <TextBlock Text="?30% Correct" FontSize="12" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                                        <TextBlock Text="Review for errors or clarity" FontSize="10" Foreground="White" HorizontalAlignment="Center" Margin="0,4,0,0" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <!-- Integrity & Incidents Panel -->
@@ -510,67 +481,147 @@
                     </Grid>
                 </StackPanel>
 
-                <!-- Trends Over Time Panel -->
-                <StackPanel x:Name="TrendsPanel" Visibility="Collapsed">
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-
-                        <!-- Trend Controls -->
-                        <Border Grid.Row="0" Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,0,16">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <TextBlock Grid.Column="0" Text="?? Performance Trends" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Center"/>
-                                
-                                <ComboBox x:Name="TrendPeriodFilter" Grid.Column="1" Width="120" Margin="12,0,0,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="Last 6 months"/>
-                                    <ComboBoxItem Content="This semester"/>
-                                    <ComboBoxItem Content="This year"/>
-                                </ComboBox>
-                                
-                                <ComboBox x:Name="TrendMetricFilter" Grid.Column="2" Width="150" Margin="8,0,0,0" SelectedIndex="0">
-                                    <ComboBoxItem Content="Class Average"/>
-                                    <ComboBoxItem Content="Pass Rate"/>
-                                    <ComboBoxItem Content="Completion Rate"/>
-                                </ComboBox>
-                                
-                                <Button Grid.Column="3" Content="Update Chart" Margin="12,0,0,0" Padding="12,6" Background="{StaticResource AccentGold}" Foreground="{StaticResource BackgroundDark}" BorderThickness="0" Style="{StaticResource RoundedButtonStyle}" Click="UpdateTrendChart_Click"/>
-                            </Grid>
-                        </Border>
-
-                        <!-- Trend Charts -->
-                        <Grid Grid.Row="1">
+                <!-- Examinee Data Panel -->
+                <StackPanel x:Name="ExamineeDataPanel" Visibility="Collapsed">
+                    <!-- Search Bar -->
+                    <Border Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,0,16">
+                        <Grid>
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2*"/>
                                 <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-
-                            <!-- Main Trend Chart -->
-                            <Border Grid.Column="0" Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,12,0">
-                                <StackPanel>
-                                    <TextBlock Text="Class Performance Trends" FontSize="16" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
-                                    <Canvas x:Name="TrendChart" Height="300" Background="{StaticResource SurfaceLight}"/>
-                                </StackPanel>
-                            </Border>
-
-                            <!-- Trend Insights -->
-                            <Border Grid.Column="1" Style="{StaticResource AnalyticsCardStyle}">
-                                <StackPanel x:Name="TrendInsightsPanel">
-                                    <!-- Trend insights content will be populated dynamically -->
-                                    <TextBlock Text="?? Trend Insights" FontSize="16" FontWeight="Medium" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,16"/>
-                                    <TextBlock Text="Loading trend insights..." FontSize="12" Foreground="{StaticResource TextSecondary}"/>
-                                </StackPanel>
-                            </Border>
+                            
+                            <TextBox x:Name="ExamineeSearchBox"
+                                     Grid.Column="0"
+                                     Padding="12,8"
+                                     Background="{StaticResource HeaderBackgroundBrush}"
+                                     Foreground="{StaticResource TextMuted}"
+                                     BorderBrush="{StaticResource BorderBrushLight}"
+                                     BorderThickness="1"
+                                     FontSize="13"
+                                     Text="Search examinees by name, exam, or email..."
+                                     GotFocus="ExamineeSearchBox_GotFocus"
+                                     LostFocus="ExamineeSearchBox_LostFocus"
+                                     TextChanged="ExamineeSearchBox_TextChanged">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="6"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
+                            
+                            <Button Grid.Column="1"
+                                    Content="?? Search"
+                                    Margin="12,0,0,0"
+                                    Padding="16,8"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="SearchExaminees_Click"/>
                         </Grid>
-                    </Grid>
+                    </Border>
+
+                    <!-- Examinee Data by Exam -->
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" MaxHeight="600">
+                        <ItemsControl x:Name="ExamineeDataContainer">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource AnalyticsCardStyle}" Margin="0,0,0,16">
+                                        <StackPanel>
+                                            <!-- Exam Title Header -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
+                                                <TextBlock Text="??"
+                                                          FontSize="16"
+                                                          Margin="0,0,8,0"/>
+                                                <TextBlock Text="{Binding ExamTitle}"
+                                                          FontSize="16"
+                                                          FontWeight="SemiBold"
+                                                          Foreground="{StaticResource TextPrimaryBrush}"/>
+                                                <Border Background="{StaticResource AccentBlue}"
+                                                       CornerRadius="12"
+                                                       Padding="8,4"
+                                                       Margin="12,0,0,0">
+                                                    <TextBlock Text="{Binding ExamineeCount, StringFormat='{}{0} examinees'}"
+                                                              FontSize="10"
+                                                              FontWeight="Medium"
+                                                              Foreground="White"/>
+                                                </Border>
+                                            </StackPanel>
+                                            
+                                            <!-- Examinee Data Grid -->
+                                            <DataGrid ItemsSource="{Binding Examinees}"
+                                                     Background="Transparent"
+                                                     GridLinesVisibility="None"
+                                                     HeadersVisibility="Column"
+                                                     AutoGenerateColumns="False"
+                                                     CanUserAddRows="False"
+                                                     CanUserDeleteRows="False"
+                                                     IsReadOnly="True"
+                                                     SelectionMode="Single"
+                                                     MaxHeight="300">
+                                                <DataGrid.Columns>
+                                                    <DataGridTextColumn Header="Student Name" Binding="{Binding StudentName}" Width="150"/>
+                                                    <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="200"/>
+                                                    <DataGridTextColumn Header="Score" Binding="{Binding Score, StringFormat='{}{0:F1}%'}" Width="80"/>
+                                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="100"/>
+                                                    <DataGridTextColumn Header="Started" Binding="{Binding StartTime, StringFormat='{}{0:MM/dd HH:mm}'}" Width="100"/>
+                                                    <DataGridTextColumn Header="Submitted" Binding="{Binding EndTime, StringFormat='{}{0:MM/dd HH:mm}'}" Width="100"/>
+                                                    <DataGridTextColumn Header="Time Taken" Binding="{Binding TimeTaken}" Width="90"/>
+                                                    <DataGridTemplateColumn Header="Actions" Width="120">
+                                                        <DataGridTemplateColumn.CellTemplate>
+                                                            <DataTemplate>
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <Button Content="?? View"
+                                                                           FontSize="10"
+                                                                           Padding="6,3"
+                                                                           Click="ViewExamineeDetails_Click"
+                                                                           Tag="{Binding Id}"
+                                                                           ToolTip="View detailed submission"/>
+                                                                    <Button Content="?? Export"
+                                                                           FontSize="10"
+                                                                           Padding="6,3"
+                                                                           Margin="4,0,0,0"
+                                                                           Click="ExportExamineeData_Click"
+                                                                           Tag="{Binding Id}"
+                                                                           ToolTip="Export examinee report"/>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </DataGridTemplateColumn.CellTemplate>
+                                                    </DataGridTemplateColumn>
+                                                </DataGrid.Columns>
+                                            </DataGrid>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <!-- Empty State -->
+                    <Border x:Name="ExamineeDataEmptyState"
+                           Background="{StaticResource CardBackgroundBrush}"
+                           BorderBrush="{StaticResource BorderBrushLight}"
+                           BorderThickness="1"
+                           CornerRadius="8"
+                           Padding="40"
+                           Visibility="Collapsed"
+                           HorizontalAlignment="Center"
+                           Margin="0,40,0,0">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="??"
+                                      FontSize="48"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,0,0,16"/>
+                            <TextBlock Text="No examinee data found"
+                                      FontSize="16"
+                                      FontWeight="SemiBold"
+                                      Foreground="{StaticResource TextPrimaryBrush}"
+                                      HorizontalAlignment="Center"/>
+                            <TextBlock Text="Examinee data will appear here once students start taking exams"
+                                      FontSize="12"
+                                      Foreground="{StaticResource TextSecondaryBrush}"
+                                      HorizontalAlignment="Center"
+                                      Margin="0,8,0,0"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Grid>
         </ScrollViewer>

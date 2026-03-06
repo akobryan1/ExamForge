@@ -1,15 +1,24 @@
 ﻿// Cloudflare Worker for ExamForge API - SECURED VERSION
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://examforge-201e8.web.app',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
-};
+const allowedOrigins = new Set([
+  'https://examforge-201e8.web.app',
+  'https://examforge-publisher.onrender.com'
+]);
+
+function buildCorsHeaders(origin) {
+  const safeOrigin = allowedOrigins.has(origin) ? origin : 'https://examforge-201e8.web.app';
+  return {
+    'Access-Control-Allow-Origin': safeOrigin,
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+}
 
 // Handle OPTIONS request for CORS
 function handleOptions(request) {
+  const origin = request.headers.get('Origin') || '';
   return new Response(null, {
-    headers: corsHeaders
+    headers: buildCorsHeaders(origin)
   });
 }
 
@@ -80,9 +89,11 @@ function pemToArrayBuffer(pem) {
 
 async function submitExam(request, env) {
   try {
+    const origin = request.headers.get('Origin') || '';
+    const corsHeaders = buildCorsHeaders(origin);
     const submission = await request.json();
-    
-    if (!submission.examId || !submission.answers || !submission.studentEmail) {
+
+    if (!submission.examId || !submission.ownerUserId || !submission.answers) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -92,18 +103,43 @@ async function submitExam(request, env) {
     const serviceAccount = JSON.parse(env.SERVICE_ACCOUNT_JSON);
     const accessToken = await getAccessToken(serviceAccount);
 
+    const studentInfo = submission.studentInfo || {};
+    const studentName = studentInfo.name || submission.studentName || 'Anonymous';
+    const studentEmail = studentInfo.email || submission.studentEmail || '';
+    const studentId = studentInfo.studentId || submission.studentId || '';
+    const yearSection = studentInfo.yearSection || submission.yearSection || '';
+
+    const responseEntries = Object.entries(submission.answers || {});
+    const responses = responseEntries.map(([key, value], index) => {
+      const match = key.match(/question(\d+)/i);
+      const questionNumber = match ? Number.parseInt(match[1], 10) : index + 1;
+
+      return {
+        QuestionId: key,
+        QuestionNumber: Number.isFinite(questionNumber) ? questionNumber : index + 1,
+        Answer: value == null ? '' : String(value),
+        PointsEarned: 0,
+        PointsPossible: 0,
+        IsCorrect: false
+      };
+    });
+
     const submissionData = {
       id: crypto.randomUUID(),
       examId: submission.examId,
-      answers: submission.answers,
       submittedAt: new Date().toISOString(),
       timeSpent: submission.timeSpent || 0,
-      studentEmail: submission.studentEmail,
-      studentName: submission.studentName || 'Anonymous'
+      studentEmail,
+      studentName,
+      studentId,
+      yearSection,
+      responses,
+      totalScore: 0,
+      totalPossiblePoints: 0,
+      status: 'Submitted'
     };
 
-    // ✅ FIXED: Now uses examinee_data collection
-    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${env.PROJECT_ID}/databases/(default)/documents/examinee_data?documentId=${submissionData.id}`;
+    const firestoreUrl = `https://firestore.googleapis.com/v1/projects/${env.PROJECT_ID}/databases/(default)/documents/examforge_users/${submission.ownerUserId}/examinee_data?documentId=${submissionData.id}`;
     
     const firestoreResponse = await fetch(firestoreUrl, {
       method: 'POST',
@@ -113,13 +149,32 @@ async function submitExam(request, env) {
       },
       body: JSON.stringify({
         fields: {
-          id: { stringValue: submissionData.id },
-          examId: { stringValue: submissionData.examId },
-          answers: { mapValue: { fields: convertToFirestoreMap(submissionData.answers) } },
-          submittedAt: { timestampValue: submissionData.submittedAt },
-          timeSpent: { integerValue: submissionData.timeSpent.toString() },
-          studentEmail: { stringValue: submissionData.studentEmail },
-          studentName: { stringValue: submissionData.studentName }
+          Id: { stringValue: submissionData.id },
+          ExamId: { stringValue: submissionData.examId },
+          StudentName: { stringValue: submissionData.studentName },
+          StudentEmail: { stringValue: submissionData.studentEmail },
+          StudentId: { stringValue: submissionData.studentId },
+          YearSection: { stringValue: submissionData.yearSection },
+          SubmittedAt: { timestampValue: submissionData.submittedAt },
+          Responses: {
+            arrayValue: {
+              values: submissionData.responses.map(r => ({
+                mapValue: {
+                  fields: {
+                    QuestionId: { stringValue: r.QuestionId },
+                    QuestionNumber: { integerValue: r.QuestionNumber.toString() },
+                    Answer: { stringValue: r.Answer },
+                    PointsEarned: { doubleValue: r.PointsEarned },
+                    PointsPossible: { doubleValue: r.PointsPossible },
+                    IsCorrect: { booleanValue: r.IsCorrect }
+                  }
+                }
+              }))
+            }
+          },
+          TotalScore: { doubleValue: submissionData.totalScore },
+          TotalPossiblePoints: { doubleValue: submissionData.totalPossiblePoints },
+          Status: { stringValue: submissionData.status }
         }
       })
     });
@@ -140,34 +195,30 @@ async function submitExam(request, env) {
 
   } catch (error) {
     console.error('Submission error:', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    const fallbackOrigin = request.headers.get('Origin') || '';
+    const fallbackCorsHeaders = buildCorsHeaders(fallbackOrigin);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message 
+      message
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...fallbackCorsHeaders, 'Content-Type': 'application/json' }
     });
   }
-}
-
-function convertToFirestoreMap(obj) {
-  const fields = {};
-  for (const [key, value] of Object.entries(obj)) {
-    fields[key] = { stringValue: value.toString() };
-  }
-  return fields;
 }
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    const origin = request.headers.get('Origin') || '';
+    const corsHeaders = buildCorsHeaders(origin);
 
     // ✅ SECURITY: Verify origin
-    const origin = request.headers.get('Origin');
-    if (origin && origin !== 'https://examforge-201e8.web.app') {
+    if (origin && !allowedOrigins.has(origin)) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
-        headers: { 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 

@@ -20,7 +20,6 @@ namespace ExamForge
         private List<PublishedExam> _exams = new();
         private List<ExamSession> _liveSessions = new();
         private List<IntegrityIncident> _recentIncidents = new();
-        private List<GradingQueueItem> _gradingQueue = new();
         private bool _signalrSubscribed = false;
 
         public dashboard_usercontrol()
@@ -43,14 +42,12 @@ namespace ExamForge
                 var examsTask = _firestoreService.GetAllPublishedExamsAsync();
                 var sessionsTask = _firestoreService.GetActiveExamSessionsAsync();
                 var incidentsTask = _firestoreService.GetRecentIntegrityIncidentsAsync(TimeSpan.FromDays(7));
-                var gradingTask = _firestoreService.GetGradingQueueItemsAsync();
 
-                await Task.WhenAll(examsTask, sessionsTask, incidentsTask, gradingTask);
+                await Task.WhenAll(examsTask, sessionsTask, incidentsTask);
 
                 _exams = examsTask.Result ?? new();
                 _liveSessions = sessionsTask.Result ?? new();
                 _recentIncidents = incidentsTask.Result ?? new();
-                _gradingQueue = gradingTask.Result ?? new();
 
                 UpdateDashboard();
                 await EnsureSignalRAsync();
@@ -140,24 +137,20 @@ namespace ExamForge
         {
             UpdateKpis();
             UpdateScheduleAndLiveMonitor();
-            UpdateGradingQueue();
         }
 
         private void UpdateKpis()
         {
             var upcoming = _exams.Count(e => e.StartTime >= DateTime.UtcNow && e.StartTime <= DateTime.UtcNow.AddDays(7));
             var liveCount = _liveSessions.Count;
-            var pendingGrading = _gradingQueue.Count(g => !g.PointsAwarded.HasValue);
             var flags = _recentIncidents.Count;
 
             UpcomingCountText.Text = upcoming > 0 ? upcoming.ToString() : "–";
             LiveCountText.Text = liveCount > 0 ? liveCount.ToString() : "–";
-            GradingCountText.Text = pendingGrading > 0 ? pendingGrading.ToString() : "–";
             FlagsCountText.Text = flags > 0 ? flags.ToString() : "–";
 
             UpcomingSubtitle.Text = upcoming > 0 ? "Scheduled this week" : "Nothing scheduled";
             LiveSubtitle.Text = liveCount > 0 ? "Monitoring active" : "No live exams";
-            GradingSubtitle.Text = pendingGrading > 0 ? "Needs review" : "All graded";
             FlagsSubtitle.Text = flags > 0 ? "Review incidents" : "No alerts";
         }
 
@@ -203,50 +196,6 @@ namespace ExamForge
             }
         }
 
-        private void UpdateGradingQueue()
-        {
-            var items = _gradingQueue.Take(5).Select(g => 
-            {
-                var isGraded = g.PointsAwarded.HasValue;
-                var item = new GradingDisplayItem
-                {
-                    Id = g.Id,
-                    ExamId = g.ExamId,
-                    ExamTitle = g.ExamTitle,
-                    Student = $"{g.StudentName} • Q{g.QuestionNumber}",
-                    Due = g.SubmittedAt == default ? "Submitted" : $"Submitted {g.SubmittedAt:g}",
-                    QuestionNumber = g.QuestionNumber,
-                    QuestionText = g.QuestionText,
-                    StudentAnswer = g.StudentAnswer,
-                    MaxPoints = g.MaxPoints,
-                    IsGraded = isGraded
-                };
-
-                // Set status text and color
-                if (isGraded)
-                {
-                    item.StatusText = $"✓ Graded ({g.PointsAwarded}/{g.MaxPoints} pts)";
-                    item.StatusColor = (System.Windows.Media.Brush)FindResource("SuccessTextBrush");
-                    item.ButtonText = "Review";
-                    item.ButtonStyle = (Style)FindResource("SecondaryButtonStyle");
-                    item.RemoveButtonVisibility = Visibility.Visible;
-                }
-                else
-                {
-                    item.StatusText = "Pending";
-                    item.StatusColor = (System.Windows.Media.Brush)FindResource("WarningTextBrush");
-                    item.ButtonText = "Grade";
-                    item.ButtonStyle = (Style)FindResource("PrimaryButtonStyle");
-                    item.RemoveButtonVisibility = Visibility.Collapsed;
-                }
-
-                return item;
-            }).ToList();
-
-            GradingQueueList.ItemsSource = items;
-            GradingEmpty.Visibility = items.Any() ? Visibility.Collapsed : Visibility.Visible;
-        }
-
         private void UpcomingCard_Click(object sender, MouseButtonEventArgs e)
         {
             NavigateToPublishedExams();
@@ -255,11 +204,6 @@ namespace ExamForge
         private void LiveCard_Click(object sender, MouseButtonEventArgs e)
         {
             NavigateToAnalytics();
-        }
-
-        private void GradingCard_Click(object sender, MouseButtonEventArgs e)
-        {
-            NavigateToGrading();
         }
 
         private void FlagsCard_Click(object sender, MouseButtonEventArgs e)
@@ -288,109 +232,25 @@ namespace ExamForge
             NavigateToAnalytics();
         }
 
-        private void OpenGrading_Click(object sender, RoutedEventArgs e)
+        // New Quick Action Methods
+        private void CreateExam_Click(object sender, RoutedEventArgs e)
         {
-            NavigateToGrading();
+            NavigateToStructureBuilder();
         }
 
-        private async void GradeQueueItem_Click(object sender, RoutedEventArgs e)
+        private void ViewAnalytics_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Button btn || btn.Tag is not string id)
-                return;
-
-            var gradingItem = _gradingQueue.FirstOrDefault(g => g.Id == id);
-            if (gradingItem == null)
-            {
-                MessageBox.Show("Grading item not found.", "Grading", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var dialog = new Views.GradingDialog(
-                gradingItem.Id,
-                gradingItem.StudentName,
-                gradingItem.QuestionNumber,
-                gradingItem.QuestionText,
-                gradingItem.StudentAnswer,
-                gradingItem.MaxPoints)
-            {
-                Owner = Window.GetWindow(this)
-            };
-
-            var result = dialog.ShowDialog();
-            if (result == true && dialog.PointsAwarded.HasValue)
-            {
-                try
-                {
-                    await _firestoreService.UpdateGradingQueueItemAsync(gradingItem.Id, dialog.PointsAwarded.Value, dialog.Feedback, "Instructor");
-                    await RefreshGradingQueueAsync();
-                    MessageBox.Show("Grade saved.", "Grading", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to save grade: {ex.Message}", "Grading", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+            NavigateToAnalytics();
         }
 
-        private async void RemoveGraded_Click(object sender, RoutedEventArgs e)
+        private void ManageExamBank_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                var gradedItems = _gradingQueue.Where(g => g.PointsAwarded.HasValue).ToList();
-                if (!gradedItems.Any())
-                {
-                    MessageBox.Show("No graded items to remove.", "Remove Graded", MessageBoxButton.OK, MessageBoxImage.Information);
-                    return;
-                }
-
-                var result = MessageBox.Show($"Remove {gradedItems.Count} graded item(s) from the queue?", 
-                    "Remove Graded", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                
-                if (result != MessageBoxResult.Yes) return;
-
-                // Remove graded items from Firestore
-                foreach (var item in gradedItems)
-                {
-                    await _firestoreService.RemoveGradingQueueItemAsync(item.Id);
-                }
-
-                // Refresh the queue
-                await RefreshGradingQueueAsync();
-                MessageBox.Show($"Removed {gradedItems.Count} graded item(s).", "Remove Graded", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to remove graded items: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            NavigateToPublishedExams();
         }
 
-        private async void RemoveQueueItem_Click(object sender, RoutedEventArgs e)
+        private void OpenSettings_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is not Button btn || btn.Tag is not string id)
-                return;
-
-            var gradingItem = _gradingQueue.FirstOrDefault(g => g.Id == id);
-            if (gradingItem == null)
-            {
-                MessageBox.Show("Grading item not found.", "Remove Item", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
-            }
-
-            var result = MessageBox.Show($"Remove graded item for {gradingItem.StudentName}?", 
-                "Remove Item", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            
-            if (result != MessageBoxResult.Yes) return;
-
-            try
-            {
-                await _firestoreService.RemoveGradingQueueItemAsync(id);
-                await RefreshGradingQueueAsync();
-                MessageBox.Show("Item removed.", "Remove Item", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to remove item: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            MessageBox.Show("Settings panel coming soon!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private async void ExtendTime_Click(object sender, RoutedEventArgs e)
@@ -468,34 +328,13 @@ namespace ExamForge
             }
         }
 
-        private void NavigateToGrading()
+        private void NavigateToStructureBuilder()
         {
             if (Window.GetWindow(this) is MainWindow main && main.FindName("MainContentHost") is ContentControl host)
             {
-                var control = new published_exams_usercontrol();
-                control.Loaded += (_, __) => control.ShowClosedTab();
-                host.Content = control;
+                host.Content = new structure_builder_usercontrol();
             }
         }
-
-        private async Task RefreshGradingQueueAsync()
-        {
-            try
-            {
-                _gradingQueue = await _firestoreService.GetGradingQueueItemsAsync();
-                UpdateDashboard();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"RefreshGradingQueue failed: {ex.Message}");
-            }
-        }
-
-        
-
-        
-
-        
 
         private class TodayScheduleItem
         {
@@ -505,23 +344,5 @@ namespace ExamForge
             public string Meta { get; set; } = string.Empty;
         }
 
-        private class GradingDisplayItem
-        {
-            public string Id { get; set; } = string.Empty;
-            public string ExamId { get; set; } = string.Empty;
-            public string ExamTitle { get; set; } = string.Empty;
-            public string Student { get; set; } = string.Empty;
-            public string Due { get; set; } = string.Empty;
-            public int QuestionNumber { get; set; }
-            public string QuestionText { get; set; } = string.Empty;
-            public string StudentAnswer { get; set; } = string.Empty;
-            public int MaxPoints { get; set; }
-            public bool IsGraded { get; set; }
-            public string StatusText { get; set; } = string.Empty;
-            public System.Windows.Media.Brush StatusColor { get; set; } = System.Windows.Media.Brushes.Gray;
-            public string ButtonText { get; set; } = "Grade";
-            public Style ButtonStyle { get; set; } = null!;
-            public Visibility RemoveButtonVisibility { get; set; } = Visibility.Collapsed;
-        }
     }
 }

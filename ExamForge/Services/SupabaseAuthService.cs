@@ -22,6 +22,7 @@ namespace ExamForge.Services
         private const string SupabaseUrl = "https://poscguejitgziwppvmaa.supabase.co";
         private const string SupabasePublishableKey = "sb_publishable_BkPl7IllMvQXkp2AjQCI6A_uijmz04B";
         // Use anon/public key for client operations only.
+        // This shit temp.
         private const string SupabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvc2NndWVqaXRneml3cHB2bWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1MDY1MTIsImV4cCI6MjA4NzA4MjUxMn0.9Xg4iESEBhfaaGwq4omfPB4lGp1HKDoKCBLbyA9lwwY";
 
         public Session? CurrentSession { get; private set; }
