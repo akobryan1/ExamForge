@@ -6,6 +6,10 @@
         WindowStartupLocation="CenterOwner"
         Background="{StaticResource AppBackgroundBrush}"
         ResizeMode="CanResize">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     
     <Grid Margin="0">
         <Grid.RowDefinitions>

@@ -113,6 +113,17 @@ public class ExamPublishingService
         return $"{_publishingServerUrl.TrimEnd('/')}/exams/{examId}.html";
     }
 
+    private string ResolveSubmissionApiEndpoint()
+    {
+        var endpoint = (_apiEndpoint ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(endpoint)) return endpoint;
+
+        if (endpoint.EndsWith("/api/submit", StringComparison.OrdinalIgnoreCase))
+            return endpoint;
+
+        return $"{endpoint.TrimEnd('/')}/api/submit";
+    }
+
     public async Task<string> RepublishExamAsync(PublishedExam exam)
     {
         if (exam == null) throw new ArgumentNullException(nameof(exam));
@@ -678,7 +689,7 @@ public class ExamPublishingService
         sb.AppendLine($"        const examId = '{examId}';");
         sb.AppendLine($"        const ownerUserId = '{examData.OwnerUserId}';");
         sb.AppendLine($"        const examDuration = {examData.ExamDuration};");
-        sb.AppendLine($"        const apiEndpoint = '{_apiEndpoint}';");
+        sb.AppendLine($"        const apiEndpoint = '{ResolveSubmissionApiEndpoint()}';");
         sb.AppendLine($"        const useGoogleSignIn = {(loginConfig?.IsGoogleSignIn == true ? "true" : "false")};");
         sb.AppendLine("        let examStarted = false;");
         var antiDict = new System.Collections.Generic.Dictionary<string, object?>
@@ -720,6 +731,28 @@ public class ExamPublishingService
         var hubUrlJson = System.Text.Json.JsonSerializer.Serialize(hubUrl);
         sb.AppendLine("        const signalRHubUrl = " + hubUrlJson + ";");
         sb.AppendLine("        console.log('[SignalR] Hub URL:', signalRHubUrl);");
+        sb.AppendLine("        function invokeSignalR(methodName) {");
+        sb.AppendLine("            var args = Array.prototype.slice.call(arguments, 1);");
+        sb.AppendLine("            if (!window.signalRConnection || typeof window.signalRConnection.invoke !== 'function') {");
+        sb.AppendLine("                return Promise.reject(new Error('SignalR connection is not initialized.'));");
+        sb.AppendLine("            }");
+        sb.AppendLine("            var invokeNow = function(){ return window.signalRConnection.invoke.apply(window.signalRConnection, [methodName].concat(args)); };");
+        sb.AppendLine("            if (window.signalRConnection.state === 'Connected') {");
+        sb.AppendLine("                return invokeNow();");
+        sb.AppendLine("            }");
+        sb.AppendLine("            if (window.signalRConnection.state === 'Disconnected') {");
+        sb.AppendLine("                return window.signalRConnection.start().then(function(){ return invokeNow(); });");
+        sb.AppendLine("            }");
+        sb.AppendLine("            return new Promise(function(resolve, reject){");
+        sb.AppendLine("                setTimeout(function(){");
+        sb.AppendLine("                    if (window.signalRConnection.state === 'Connected') {");
+        sb.AppendLine("                        invokeNow().then(resolve).catch(reject);");
+        sb.AppendLine("                    } else {");
+        sb.AppendLine("                        reject(new Error('SignalR connection is not ready yet.'));");
+        sb.AppendLine("                    }");
+        sb.AppendLine("                }, 1200);");
+        sb.AppendLine("            });");
+        sb.AppendLine("        }");
         sb.AppendLine("        // Load SignalR client dynamically and connect (best-effort)");
         sb.AppendLine("        (function(){\n            try {\n                var script = document.createElement('script');\n                script.src = 'https://cdn.jsdelivr.net/npm/@microsoft/signalr@7.0.7/dist/browser/signalr.min.js';\n                script.onload = function() {\n                    try {\n                        if (typeof signalR === 'undefined') return;\n                        window.signalRConnection = new signalR.HubConnectionBuilder().withUrl(signalRHubUrl).withAutomaticReconnect().build();\n                        window.signalRConnection.start().then(function(){\n                            console.log('✅ Connected to SignalR hub');\n                            // Will join when student info is available after startExam/GoogleSignIn\n                        }).catch(function(err){ console.warn('SignalR start failed', err); });\n                    } catch (e) { console.warn('SignalR init error', e); }\n                };\n                script.onerror = function(e){ console.warn('Failed to load SignalR client', e); };\n                document.head.appendChild(script);\n            } catch (e) { console.warn('Failed to inject SignalR script', e); }\n        })();");
         sb.AppendLine();
@@ -729,18 +762,9 @@ public class ExamPublishingService
         sb.AppendLine("        function reportViolation(eventType, details) {");
         sb.AppendLine("            try {");
         sb.AppendLine("                console.warn('[Anti-Cheat] ' + eventType + ':', details);");
-        sb.AppendLine("                if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
-        sb.AppendLine("                    window.signalRConnection.invoke('ReportEvent', ");
-        sb.AppendLine("                        examId,");
-        sb.AppendLine("                        (window.studentInfo && window.studentInfo.studentId) ? window.studentInfo.studentId : 'unknown',");
-        sb.AppendLine("                        (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : 'Unknown Student',");
-        sb.AppendLine("                        eventType,");
-        sb.AppendLine("                        JSON.stringify(details)");
-        sb.AppendLine("                    );");
-        sb.AppendLine("                    console.log('[Anti-Cheat] Violation reported to server');");
-        sb.AppendLine("                } else {");
-        sb.AppendLine("                    console.warn('[Anti-Cheat] SignalR not available, violation not reported to server');");
-        sb.AppendLine("                }");
+        sb.AppendLine("                invokeSignalR('ReportEvent', examId, (window.studentInfo && window.studentInfo.studentId) ? window.studentInfo.studentId : 'unknown', (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : 'Unknown Student', eventType, JSON.stringify(details))");
+        sb.AppendLine("                    .then(function(){ console.log('[Anti-Cheat] Violation reported to server'); })");
+        sb.AppendLine("                    .catch(function(err){ console.warn('[Anti-Cheat] SignalR not available, violation not reported to server', err); });");
         sb.AppendLine("            } catch(e) {");
         sb.AppendLine("                console.error('[Anti-Cheat] Failed to report violation:', e);");
         sb.AppendLine("            }");
@@ -771,11 +795,8 @@ public class ExamPublishingService
         sb.AppendLine("                };");
         sb.AppendLine("                localStorage.setItem(SESSION_SAVE_KEY, JSON.stringify(sessionData));");
         sb.AppendLine("                console.log('[Auto-Save] Progress saved');");
-        sb.AppendLine("                if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
-        sb.AppendLine("                    window.signalRConnection.invoke('SaveSessionProgress', examId, sessionData, (window.studentInfo && window.studentInfo.studentId) ? window.studentInfo.studentId : '', (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : '', (window.studentInfo && window.studentInfo.email) ? window.studentInfo.email : '').catch(function(err) {");
-        sb.AppendLine("                        console.warn('[Auto-Save] Server save failed:', err);");
-        sb.AppendLine("                    });");
-        sb.AppendLine("                }");
+        sb.AppendLine("                invokeSignalR('SaveSessionProgress', examId, sessionData, (window.studentInfo && window.studentInfo.studentId) ? window.studentInfo.studentId : '', (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : '', (window.studentInfo && window.studentInfo.email) ? window.studentInfo.email : '')");
+        sb.AppendLine("                    .catch(function(err) { console.warn('[Auto-Save] Server save failed:', err); });");
         sb.AppendLine("            } catch(e) { console.error('[Auto-Save] Failed:', e); }");
         sb.AppendLine("        }");
         sb.AppendLine();
@@ -842,9 +863,8 @@ public class ExamPublishingService
             sb.AppendLine("                }");
             sb.AppendLine("                document.getElementById('studentInfoSection').style.display = 'none';");
             sb.AppendLine("                document.getElementById('examSection').style.display = 'block';");
-            sb.AppendLine("                if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
-            sb.AppendLine("                    window.signalRConnection.invoke('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email);");
-            sb.AppendLine("                }");
+            sb.AppendLine("                invokeSignalR('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email)");
+            sb.AppendLine("                    .catch(function(err){ console.warn('[SignalR] JoinExamSession failed:', err); });");
             sb.AppendLine("                examStarted = true;");
             sb.AppendLine("                if (antiCheatConfig.OneQuestionAtATime) {");
             sb.AppendLine("                    createNavigationBar();");
@@ -885,9 +905,8 @@ public class ExamPublishingService
         sb.AppendLine("            }");
         sb.AppendLine("            document.getElementById('studentInfoSection').style.display = 'none';");
         sb.AppendLine("            document.getElementById('examSection').style.display = 'block';");
-        sb.AppendLine("            if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
-        sb.AppendLine("                window.signalRConnection.invoke('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email || '');");
-        sb.AppendLine("            }");
+        sb.AppendLine("            invokeSignalR('JoinExamSession', examId, window.studentInfo.studentId, window.studentInfo.name, window.studentInfo.email || '')");
+        sb.AppendLine("                .catch(function(err){ console.warn('[SignalR] JoinExamSession failed:', err); });");
         sb.AppendLine("            examStarted = true;");
         sb.AppendLine("            if (antiCheatConfig.OneQuestionAtATime) {");
         sb.AppendLine("                createNavigationBar();");
@@ -1234,9 +1253,8 @@ public class ExamPublishingService
         sb.AppendLine("                if (response.ok) {");
         sb.AppendLine("                    const studentName = (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : 'Student';");
         sb.AppendLine("                    document.body.innerHTML = '<div style=\"display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; text-align: center; padding: 20px;\"><h1 style=\"font-size: clamp(24px, 5vw, 48px);\">✓ Exam Submitted Successfully!</h1><p style=\"font-size: clamp(16px, 3vw, 24px); margin-top: 20px;\">Thank you, ' + studentName + '!</p><p style=\"font-size: clamp(14px, 2.5vw, 18px); margin-top: 10px;\">Your answers have been recorded.</p></div>';");
-        sb.AppendLine("                    if (window.signalRConnection && typeof window.signalRConnection.invoke === 'function') {");
-        sb.AppendLine("                        window.signalRConnection.invoke('LeaveExamSession', examId, window.studentInfo.studentId || '', window.studentInfo.name || '');");
-        sb.AppendLine("                    }");
+        sb.AppendLine("                    invokeSignalR('LeaveExamSession', examId, window.studentInfo.studentId || '', window.studentInfo.name || '')");
+        sb.AppendLine("                        .catch(function(err){ console.warn('[SignalR] LeaveExamSession failed:', err); });");
         sb.AppendLine("                } else {");
         sb.AppendLine("                    const error = await response.json();");
         sb.AppendLine("                    alert('Error submitting exam: ' + (error.message || 'Unknown error') + '. Please contact your instructor.');");
