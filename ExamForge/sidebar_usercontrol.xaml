@@ -153,7 +153,8 @@
                            TextTrimming="CharacterEllipsis"/>
                 
                 <Button x:Name="settings_button"
-                        Style="{StaticResource SidebarButtonStyle}">
+                        Style="{StaticResource SidebarButtonStyle}"
+                        Click="Settings_Button_Click">
                     <StackPanel Orientation="Horizontal">
                         <Image Source="pack://application:,,,/ICONS/setting_grey32.png"
                                Width="20" Height="20" Stretch="Uniform"/>

@@ -128,12 +128,28 @@ function normalizeAnswer(input) {
     .replace(/\s+/g, ' ');
 }
 
+function normalizeBooleanValue(input) {
+  const value = normalizeAnswer(input);
+  if (['true', 't', '1', 'yes', 'y'].includes(value)) return 'true';
+  if (['false', 'f', '0', 'no', 'n'].includes(value)) return 'false';
+  return value;
+}
+
+function normalizeListAnswer(input) {
+  return (input ?? '')
+    .toString()
+    .split(/[\n,;|]+/)
+    .map(item => normalizeAnswer(item))
+    .filter(Boolean)
+    .sort();
+}
+
 function isEssayType(questionType) {
   const qt = normalizeAnswer(questionType);
   return qt === 'essay';
 }
 
-function isCorrectAnswer(questionType, expectedAnswer, answerValue, correctionValue) {
+function isCorrectAnswer(questionType, expectedAnswer, answerValue, correctionValue, options = []) {
   const qt = normalizeAnswer(questionType);
   const expected = normalizeAnswer(expectedAnswer);
   const answer = normalizeAnswer(answerValue);
@@ -141,10 +157,42 @@ function isCorrectAnswer(questionType, expectedAnswer, answerValue, correctionVa
 
   if (!expected) return false;
 
+  if (qt === 'multiple choice') {
+    if (['a', 'b', 'c', 'd'].includes(expected) && Array.isArray(options) && options.length > 0) {
+      const optionIndex = expected.charCodeAt(0) - 97;
+      const expectedOption = optionIndex >= 0 && optionIndex < options.length
+        ? normalizeAnswer(options[optionIndex])
+        : expected;
+      return answer === expectedOption || answer === expected;
+    }
+    return answer === expected;
+  }
+
+  if (qt === 'true/false') {
+    return normalizeBooleanValue(answer) === normalizeBooleanValue(expected);
+  }
+
   if (qt === 'modified true/false') {
-    if (answer === 'true') return expected === 'true';
-    if (answer === 'false') return correction === expected;
+    const normalizedAnswer = normalizeBooleanValue(answer);
+    const normalizedExpected = normalizeBooleanValue(expected);
+
+    if (normalizedExpected === 'true' || normalizedExpected === 'false') {
+      return normalizedAnswer === normalizedExpected;
+    }
+
+    if (normalizedAnswer === 'false') {
+      return correction === expected;
+    }
+
     return false;
+  }
+
+  if (qt === 'short answer') {
+    const expectedList = normalizeListAnswer(expectedAnswer);
+    const answerList = normalizeListAnswer(answerValue);
+    if (expectedList.length > 1 || answerList.length > 1) {
+      return expectedList.length === answerList.length && expectedList.every((value, index) => value === answerList[index]);
+    }
   }
 
   return answer === expected;
@@ -192,8 +240,9 @@ async function submitExam(request, env) {
     const answerMap = submission.answers || {};
 
     const responses = [];
-    let totalScore = 0;
+    let rawTotalScore = 0;
     let totalPossiblePoints = 0;
+    const deductedPoints = Math.max(0, Number(submission.deductedPoints || 0) || 0);
 
     contents.forEach((content, index) => {
       const questionNumber = index + 1;
@@ -203,15 +252,16 @@ async function submitExam(request, env) {
       const questionType = content.QuestionType || content.questionType || '';
       const correctAnswer = content.Answer || content.CorrectAnswer || content.answer || '';
       const points = Number(content.Points || content.points || 0) || 0;
+      const options = Array.isArray(content.Options) ? content.Options : [];
 
       const answerValue = answerMap[questionKey] ?? '';
       const correctionValue = answerMap[correctionKey] ?? '';
 
       const essay = isEssayType(questionType);
-      const isCorrect = !essay && isCorrectAnswer(questionType, correctAnswer, answerValue, correctionValue);
+      const isCorrect = !essay && isCorrectAnswer(questionType, correctAnswer, answerValue, correctionValue, options);
       const pointsEarned = isCorrect ? points : 0;
 
-      totalScore += pointsEarned;
+      rawTotalScore += pointsEarned;
       totalPossiblePoints += points;
 
       responses.push({
@@ -224,6 +274,8 @@ async function submitExam(request, env) {
       });
     });
 
+    const finalTotalScore = Math.max(0, rawTotalScore - deductedPoints);
+
     const submissionData = {
       id: crypto.randomUUID(),
       examId: submission.examId,
@@ -234,8 +286,10 @@ async function submitExam(request, env) {
       studentId,
       yearSection,
       responses,
-      totalScore,
+      totalScore: finalTotalScore,
       totalPossiblePoints,
+      deductedPoints,
+      rawTotalScore,
       status: 'Submitted'
     };
 
@@ -274,6 +328,8 @@ async function submitExam(request, env) {
           },
           TotalScore: { doubleValue: submissionData.totalScore },
           TotalPossiblePoints: { doubleValue: submissionData.totalPossiblePoints },
+          DeductedPoints: { doubleValue: submissionData.deductedPoints },
+          RawTotalScore: { doubleValue: submissionData.rawTotalScore },
           Status: { stringValue: submissionData.status }
         }
       })

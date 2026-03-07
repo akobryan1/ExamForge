@@ -21,6 +21,7 @@
 
 ## UserControl Layout Rules
 - Apply the 'no margin' rule exclusively to UserControls; panels within MainWindow may retain margins as necessary. Ensure UserControls avoid internal margins while respecting the layout of the host panel.
+- Implement seamless fade transitions on radio-button toggles for theme switching UX without reloading or causing spasms in the Settings UserControl.
 
 ## Resource Management
 - Icons are stored under `Documents/ICONS`; adjust WPF image sources accordingly (pack URI or add to project).

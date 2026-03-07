@@ -19,7 +19,6 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 
                 <Border Grid.Column="0" Style="{StaticResource CardStyle}" Margin="0,0,10,0" Cursor="Hand" MouseLeftButtonUp="UpcomingCard_Click">
@@ -30,15 +29,7 @@
                     </StackPanel>
                 </Border>
                 
-                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="10,0,10,0" Cursor="Hand" MouseLeftButtonUp="LiveCard_Click">
-                    <StackPanel>
-                        <TextBlock Text="Live Now" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
-                        <TextBlock x:Name="LiveCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
-                        <TextBlock x:Name="LiveSubtitle" Style="{StaticResource SmallTextStyle}" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </Border>
-                
-                <Border Grid.Column="2" Style="{StaticResource CardStyle}" Margin="10,0,0,0" Cursor="Hand" MouseLeftButtonUp="FlagsCard_Click">
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="10,0,0,0" Cursor="Hand" MouseLeftButtonUp="FlagsCard_Click">
                     <StackPanel>
                         <TextBlock Text="Flags / Incidents" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,8"/>
                         <TextBlock x:Name="FlagsCountText" Style="{StaticResource KpiValueStyle}" Text="0"/>
@@ -124,19 +115,19 @@
                             <TextBlock Text="Quick Actions" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,15"/>
                             
                             <StackPanel>
-                                <Button Content="?? Create New Exam" 
+                                <Button Content="Create New Exam" 
                                         Style="{StaticResource PrimaryButtonStyle}" 
                                         Margin="0,0,0,10"
                                         Click="CreateExam_Click"/>
-                                <Button Content="?? View Analytics" 
+                                <Button Content="View Analytics" 
                                         Style="{StaticResource SecondaryButtonStyle}" 
                                         Margin="0,0,0,10"
                                         Click="ViewAnalytics_Click"/>
-                                <Button Content="?? Manage Exam Bank" 
+                                <Button Content="Manage Exam Bank" 
                                         Style="{StaticResource SecondaryButtonStyle}" 
                                         Margin="0,0,0,10"
                                         Click="ManageExamBank_Click"/>
-                                <Button Content="?? Settings" 
+                                <Button Content="Settings" 
                                         Style="{StaticResource SecondaryButtonStyle}"
                                         Click="OpenSettings_Click"/>
                             </StackPanel>

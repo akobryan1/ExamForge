@@ -100,7 +100,7 @@
                 <Border Background="{StaticResource WarningBackgroundBrush}" 
                         CornerRadius="6" Padding="15" Margin="0,0,0,10">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="??" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="?" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center"/>
                         <TextBlock Text="Changing the schedule will affect all students. Active exam sessions will not be interrupted."
                                    FontSize="12" Foreground="{StaticResource WarningTextBrush}" TextWrapping="Wrap"/>
                     </StackPanel>

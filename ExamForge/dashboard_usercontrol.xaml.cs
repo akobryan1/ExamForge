@@ -142,15 +142,12 @@ namespace ExamForge
         private void UpdateKpis()
         {
             var upcoming = _exams.Count(e => e.StartTime >= DateTime.UtcNow && e.StartTime <= DateTime.UtcNow.AddDays(7));
-            var liveCount = _liveSessions.Count;
             var flags = _recentIncidents.Count;
 
             UpcomingCountText.Text = upcoming > 0 ? upcoming.ToString() : "–";
-            LiveCountText.Text = liveCount > 0 ? liveCount.ToString() : "–";
             FlagsCountText.Text = flags > 0 ? flags.ToString() : "–";
 
             UpcomingSubtitle.Text = upcoming > 0 ? "Scheduled this week" : "Nothing scheduled";
-            LiveSubtitle.Text = liveCount > 0 ? "Monitoring active" : "No live exams";
             FlagsSubtitle.Text = flags > 0 ? "Review incidents" : "No alerts";
         }
 

@@ -134,7 +134,7 @@
                            FontSize="24"
                            FontWeight="SemiBold"
                            Foreground="{StaticResource TextPrimary}"/>
-                <TextBlock Text="Manage exam delivery, monitor live sessions, and analyze results"
+                <TextBlock Text="Manage exam delivery, maintain your exam bank, and analyze results"
                            FontSize="13"
                            Foreground="{StaticResource TextSecondary}"
                            Margin="0,4,0,0"/>
@@ -152,10 +152,6 @@
                              Content="📋 Scheduled Exams"
                              Style="{StaticResource TabButtonStyle}"
                              IsChecked="True"
-                             Checked="Tab_Changed"/>
-                <RadioButton x:Name="LiveTab"
-                             Content="🔴 Live Exams"
-                             Style="{StaticResource TabButtonStyle}"
                              Checked="Tab_Changed"/>
                 <RadioButton x:Name="ExamBankTab"
                              Content="📚 Exam Bank"

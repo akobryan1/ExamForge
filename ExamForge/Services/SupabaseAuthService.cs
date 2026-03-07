@@ -226,6 +226,28 @@ namespace ExamForge.Services
         }
 
         /// <summary>
+        /// Send password reset email directly to the supplied email.
+        /// Useful for authenticated recovery flows where username lookup can be stale.
+        /// </summary>
+        public async Task<(bool Success, string Message)> ResetPasswordByEmailAsync(string email)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(email))
+                {
+                    return (false, "Email is required");
+                }
+
+                await _supabase.Auth.ResetPasswordForEmail(email);
+                return (true, $"Password reset email sent to {email}");
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Password reset failed: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Sign out the current user
         /// </summary>
         public async Task SignOutAsync()
