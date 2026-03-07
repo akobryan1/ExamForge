@@ -82,6 +82,10 @@ public class EssayCheckerQueueItem
     public double ThesisWeight { get; set; } = 33;
     public double EvidenceWeight { get; set; } = 34;
     public double ClarityWeight { get; set; } = 33;
+
+    public EssayGradeRecord? ExistingGrade { get; set; }
+
+    public string DisplayLabel => $"{StudentName} • Q{QuestionNumber}";
 }
 
 public class EssayAutoGradeResult

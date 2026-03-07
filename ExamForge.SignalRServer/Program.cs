@@ -164,9 +164,14 @@ static async Task<IResult> GradeEssayCoreAsync(EssayGradeApiRequest request)
             PropertyNameCaseInsensitive = true
         });
 
-        if (result == null)
+        if (result == null || IsEmptyAiResult(result))
         {
-            return Results.Ok(GradeWithHeuristic(request, "DeepSeek returned an empty response payload."));
+            result = TryParseFlexibleAiResponse(cleanedJson, request.MaxPoints);
+        }
+
+        if (result == null || IsEmptyAiResult(result))
+        {
+            return Results.Ok(GradeWithHeuristic(request, "DeepSeek returned an unrecognized response shape."));
         }
 
         result.UsedDeepSeek = true;
@@ -195,7 +200,20 @@ static string? ResolveDeepSeekApiKey()
 
 static string BuildEssayPrompt(EssayGradeApiRequest item)
 {
-    return $@"Grade this essay using rubric and return JSON matching EssayGradeApiResponse fields.
+    return $@"Grade this essay using rubric and return JSON only.
+
+Required JSON format:
+{{
+  AiScore: number,
+  MaxScore: number,
+  ConfidencePercent: number,
+  FlagForReview: boolean,
+  Justification: string explaining why this score was awarded,
+  RubricBreakdown: [
+    {{ Criterion: string, Weight: number, MaxPoints: number, PointsAwarded: number, Reason: string }}
+  ]
+}}
+
 Exam: {item.ExamTitle}
 Subject: {item.Subject}
 Question: {item.EssayQuestion}
@@ -205,6 +223,100 @@ KeyPoints: {item.KeyPoints}
 Weights: Thesis={item.ThesisWeight}, Evidence={item.EvidenceWeight}, Clarity={item.ClarityWeight}
 StudentAnswer: {item.EssayAnswer}
 MaxPoints: {item.MaxPoints}";
+}
+
+static bool IsEmptyAiResult(EssayGradeApiResponse result)
+{
+    return result.AiScore == 0
+           && result.ConfidencePercent == 0
+           && string.IsNullOrWhiteSpace(result.Justification)
+           && (result.RubricBreakdown == null || result.RubricBreakdown.Count == 0);
+}
+
+static EssayGradeApiResponse? TryParseFlexibleAiResponse(string json, double fallbackMaxScore)
+{
+    try
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+
+        static double ReadNumber(JsonElement e, params string[] names)
+        {
+            foreach (var n in names)
+            {
+                if (!e.TryGetProperty(n, out var p)) continue;
+                if (p.ValueKind == JsonValueKind.Number && p.TryGetDouble(out var d)) return d;
+                if (p.ValueKind == JsonValueKind.String && double.TryParse(p.GetString(), out var ds)) return ds;
+            }
+            return 0;
+        }
+
+        static string ReadText(JsonElement e, params string[] names)
+        {
+            foreach (var n in names)
+            {
+                if (!e.TryGetProperty(n, out var p)) continue;
+                if (p.ValueKind == JsonValueKind.String) return p.GetString() ?? string.Empty;
+            }
+            return string.Empty;
+        }
+
+        static bool ReadBool(JsonElement e, params string[] names)
+        {
+            foreach (var n in names)
+            {
+                if (!e.TryGetProperty(n, out var p)) continue;
+                if (p.ValueKind is JsonValueKind.True or JsonValueKind.False) return p.GetBoolean();
+                if (p.ValueKind == JsonValueKind.String && bool.TryParse(p.GetString(), out var b)) return b;
+            }
+            return false;
+        }
+
+        var aiScore = ReadNumber(root, "AiScore", "score", "totalScore", "pointsAwarded");
+        var maxScore = ReadNumber(root, "MaxScore", "maxScore", "totalPoints", "pointsPossible");
+        if (maxScore <= 0) maxScore = fallbackMaxScore;
+
+        var confidence = ReadNumber(root, "ConfidencePercent", "confidence", "confidenceScore");
+        if (confidence > 0 && confidence <= 1) confidence *= 100;
+
+        var justification = ReadText(root, "Justification", "justification", "feedback", "reason", "rationale");
+        var flag = ReadBool(root, "FlagForReview", "flagForReview", "needsReview");
+
+        var breakdown = new List<EssayRubricScoreRowApi>();
+        foreach (var name in new[] { "RubricBreakdown", "rubricBreakdown", "breakdown", "criteria" })
+        {
+            if (!root.TryGetProperty(name, out var arr) || arr.ValueKind != JsonValueKind.Array) continue;
+            foreach (var row in arr.EnumerateArray())
+            {
+                if (row.ValueKind != JsonValueKind.Object) continue;
+                breakdown.Add(new EssayRubricScoreRowApi
+                {
+                    Criterion = ReadText(row, "Criterion", "criterion", "name"),
+                    Weight = ReadNumber(row, "Weight", "weight"),
+                    MaxPoints = ReadNumber(row, "MaxPoints", "maxPoints", "max"),
+                    PointsAwarded = ReadNumber(row, "PointsAwarded", "pointsAwarded", "awarded", "score"),
+                    Reason = ReadText(row, "Reason", "reason", "explanation", "feedback")
+                });
+            }
+            break;
+        }
+
+        return new EssayGradeApiResponse
+        {
+            AiScore = aiScore,
+            MaxScore = maxScore,
+            ConfidencePercent = confidence,
+            FlagForReview = flag,
+            Justification = justification,
+            RubricBreakdown = breakdown,
+            UsedDeepSeek = true,
+            ProviderStatus = "DeepSeek response parsed with flexible schema mapping."
+        };
+    }
+    catch
+    {
+        return null;
+    }
 }
 
 static string ExtractJsonPayload(string content)
