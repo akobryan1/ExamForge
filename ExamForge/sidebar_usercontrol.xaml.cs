@@ -148,6 +148,19 @@ namespace ExamForge
             }
         }
 
+        private void Essay_Checker_Button_Click(object sender, RoutedEventArgs e)
+        {
+            // Essay Checker button clicked - load essay checker usercontrol
+            Window mainWindow = Window.GetWindow(this);
+            if (mainWindow is MainWindow main)
+            {
+                if (main.FindName("MainContentHost") is ContentControl contentHost)
+                {
+                    contentHost.Content = new essay_checker_usercontrol();
+                }
+            }
+        }
+
         /// <summary>
         /// Public method to navigate to Published Exams tab from external code
         /// </summary>
