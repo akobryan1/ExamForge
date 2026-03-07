@@ -1,0 +1,117 @@
+<UserControl x:Class="ExamForge.settings_usercontrol"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="760" d:DesignWidth="980"
+             Margin="0"
+             Loaded="Settings_UserControl_Loaded">
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource CardBackgroundBrush}"
+                BorderBrush="{StaticResource BorderBrushLight}"
+                BorderThickness="0,0,0,1"
+                Padding="28,20">
+            <StackPanel>
+                <TextBlock Text="Settings"
+                           Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="Personalize your workspace and manage account recovery options"
+                           Style="{StaticResource SmallTextStyle}"
+                           Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="28,24">
+            <StackPanel>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Change Window Size" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="Select a preset size for the main application window." Style="{StaticResource SmallTextStyle}" Margin="0,6,0,12"/>
+                        <DockPanel>
+                            <ComboBox x:Name="WindowSizeComboBox"
+                                      Width="260"
+                                      Height="34"
+                                      Style="{StaticResource CleanComboBoxStyle}"
+                                      VerticalAlignment="Center"/>
+                            <Button Content="Apply Size"
+                                    Width="120"
+                                    Height="34"
+                                    Margin="12,0,0,0"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="ApplyWindowSize_Click"/>
+                        </DockPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,16">
+                    <StackPanel>
+                        <TextBlock Text="Dark Mode / Light Mode" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="Choose your preferred appearance theme." Style="{StaticResource SmallTextStyle}" Margin="0,6,0,12"/>
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="LightModeRadio"
+                                         Content="Light Mode"
+                                         IsChecked="True"
+                                         Margin="0,0,20,0"/>
+                            <RadioButton x:Name="DarkModeRadio"
+                                         Content="Dark Mode"/>
+                            <Button Content="Apply Theme"
+                                    Width="120"
+                                    Height="30"
+                                    Margin="20,0,0,0"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="ApplyThemeChanges_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Text="Account Settings and Recovery" Style="{StaticResource SectionTitleStyle}"/>
+                        <TextBlock Text="Review account details and send a password recovery email." Style="{StaticResource SmallTextStyle}" Margin="0,6,0,14"/>
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="170"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Username:" Grid.Row="0" Grid.Column="0" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="UsernameValueText" Grid.Row="0" Grid.Column="1" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Email:" Grid.Row="1" Grid.Column="0" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"/>
+                            <TextBlock x:Name="EmailValueText" Grid.Row="1" Grid.Column="1" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+
+                            <TextBlock Text="User ID:" Grid.Row="2" Grid.Column="0" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            <TextBlock x:Name="UserIdValueText" Grid.Row="2" Grid.Column="1" Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis"/>
+                        </Grid>
+
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Send Recovery Email"
+                                    Width="180"
+                                    Height="34"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Click="SendRecoveryEmail_Click"/>
+                            <Button Content="Refresh Account"
+                                    Width="140"
+                                    Height="34"
+                                    Margin="12,0,0,0"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Click="RefreshAccount_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

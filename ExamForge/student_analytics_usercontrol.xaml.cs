@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using ExamForge.Models;
 using ExamForge.Services;
 
@@ -301,6 +302,7 @@ namespace ExamForge
                 // Update metrics to zeros
                 await UpdateClassMetricsDisplay(new ExamForge.Services.ClassOverviewMetrics());
                 DrawScoreHistogram();
+                await Dispatcher.InvokeAsync(() => UpdateScoreStatistics(new List<double>()));
             }
             catch (Exception ex)
             {
@@ -411,6 +413,21 @@ namespace ExamForge
                         PassRateMetricText.Text = $"{metrics.PassRate:F0}%";
                         CompletionRateMetricText.Text = $"{metrics.CompletionRate:F0}%";
 
+                        var totalStudents = metrics.TotalStudents;
+                        var passingStudents = metrics.PassingStudents;
+                        var completedStudents = totalStudents > 0
+                            ? (int)Math.Round((metrics.CompletionRate / 100.0) * totalStudents)
+                            : 0;
+
+                        if (ClassAverageDetailText != null)
+                            ClassAverageDetailText.Text = "Current exam average";
+
+                        if (PassRateDetailText != null)
+                            PassRateDetailText.Text = $"{passingStudents} of {totalStudents} students";
+
+                        if (CompletionRateDetailText != null)
+                            CompletionRateDetailText.Text = $"{completedStudents} of {totalStudents} submitted";
+
                         try
                         {
                             var incidents = await _firestoreService.GetIntegrityIncidentsAsync(_currentExamId);
@@ -418,11 +435,16 @@ namespace ExamForge
                                 ? (incidents.Count / (double)metrics.TotalStudents) * 100
                                 : 0;
                             FlaggedRateMetricText.Text = $"{flaggedRate:F1}%";
+
+                            if (FlaggedRateDetailText != null)
+                                FlaggedRateDetailText.Text = $"{incidents.Count} integrity incidents";
                         }
                         catch (Exception ex)
                         {
                             Debug.WriteLine($"Error getting integrity incidents: {ex.Message}");
                             FlaggedRateMetricText.Text = "0.0%";
+                            if (FlaggedRateDetailText != null)
+                                FlaggedRateDetailText.Text = "0 integrity incidents";
                         }
 
                         // Update Quick Insights with real data
@@ -680,7 +702,11 @@ namespace ExamForge
                     try
                     {
                         var submissions = await _firestoreService.GetExamSubmissionsAsync(_currentExamId);
-                        if (!submissions.Any()) return;
+                        if (!submissions.Any())
+                        {
+                            Dispatcher.Invoke(() => UpdateScoreStatistics(new List<double>()));
+                            return;
+                        }
 
                         var scores = submissions.Select(s => s.TotalPossiblePoints > 0 ? 
                             (s.TotalScore / s.TotalPossiblePoints) * 100 : 0).ToList();
@@ -691,7 +717,9 @@ namespace ExamForge
                         {
                             var min = i * 10;
                             var max = (i + 1) * 10;
-                            var count = scores.Count(s => s >= min && s < max);
+                            var count = i == 9
+                                ? scores.Count(s => s >= min && s <= max)
+                                : scores.Count(s => s >= min && s < max);
                             
                             var color = i switch
                             {
@@ -711,7 +739,11 @@ namespace ExamForge
                         }
 
                         // Update UI on main thread
-                        Dispatcher.Invoke(() => DrawHistogramBars(scoreBins));
+                        Dispatcher.Invoke(() =>
+                        {
+                            DrawHistogramBars(scoreBins);
+                            UpdateScoreStatistics(scores);
+                        });
                     }
                     catch (Exception ex)
                     {
@@ -725,11 +757,64 @@ namespace ExamForge
             }
         }
 
+        private void UpdateScoreStatistics(List<double> scores)
+        {
+            if (scores == null || scores.Count == 0)
+            {
+                MeanStatText.Text = "Mean: 0.0%";
+                MedianStatText.Text = "Median: 0.0%";
+                StdDevStatText.Text = "Std Dev: 0.0";
+                RangeStatText.Text = "Range: 0-0%";
+                Q1StatText.Text = "Q1: 0.0%";
+                Q3StatText.Text = "Q3: 0.0%";
+                return;
+            }
+
+            var ordered = scores.OrderBy(s => s).ToList();
+            var mean = ordered.Average();
+            var median = Percentile(ordered, 0.5);
+            var q1 = Percentile(ordered, 0.25);
+            var q3 = Percentile(ordered, 0.75);
+            var min = ordered.First();
+            var max = ordered.Last();
+
+            var variance = ordered.Average(v => Math.Pow(v - mean, 2));
+            var stdDev = Math.Sqrt(variance);
+
+            MeanStatText.Text = $"Mean: {mean:F1}%";
+            MedianStatText.Text = $"Median: {median:F1}%";
+            StdDevStatText.Text = $"Std Dev: {stdDev:F1}";
+            RangeStatText.Text = $"Range: {min:F0}-{max:F0}%";
+            Q1StatText.Text = $"Q1: {q1:F1}%";
+            Q3StatText.Text = $"Q3: {q3:F1}%";
+        }
+
+        private static double Percentile(List<double> sortedValues, double percentile)
+        {
+            if (sortedValues.Count == 0) return 0;
+            if (sortedValues.Count == 1) return sortedValues[0];
+
+            var position = (sortedValues.Count - 1) * percentile;
+            var lower = (int)Math.Floor(position);
+            var upper = (int)Math.Ceiling(position);
+
+            if (lower == upper) return sortedValues[lower];
+
+            var weight = position - lower;
+            return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * weight;
+        }
+
         private void DrawHistogramBars(List<ScoreBin> scoreBins)
         {
             try
             {
                 if (ScoreHistogram == null) return;
+
+                if (ScoreHistogram.ActualWidth <= 0 || ScoreHistogram.ActualHeight <= 0)
+                {
+                    Dispatcher.BeginInvoke(() => DrawHistogramBars(scoreBins), DispatcherPriority.Loaded);
+                    return;
+                }
 
                 var maxCount = scoreBins.Max(b => b.Count);
                 if (maxCount == 0) return;

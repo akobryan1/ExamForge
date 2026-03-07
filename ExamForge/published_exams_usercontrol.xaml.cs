@@ -363,12 +363,6 @@ public partial class published_exams_usercontrol : UserControl
                 await LoadPublishedExamsAsync();
                 Debug.WriteLine("?? Scheduled tab activated");
             }
-            else if (LiveTab?.IsChecked == true && LivePanel != null)
-            {
-                LivePanel.Visibility = Visibility.Visible;
-                await InitializeLiveMonitoringAsync();
-                Debug.WriteLine("?? Live tab activated");
-            }
             else if (ExamBankTab?.IsChecked == true && ExamBankPanel != null)
             {
                 ExamBankPanel.Visibility = Visibility.Visible;
@@ -376,11 +370,7 @@ public partial class published_exams_usercontrol : UserControl
                 Debug.WriteLine("?? Exam Bank tab activated");
             }
             
-            // Stop live data refresh if not on live tab
-            if (LiveTab?.IsChecked != true)
-            {
-                StopLiveDataRefresh();
-            }
+            StopLiveDataRefresh();
         }
         catch (Exception ex)
         {
