@@ -60,6 +60,12 @@
     <Resource Include="ICONS\white_anvil64.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="essay_checker_usercontrol.xaml.cs">
+      <DependentUpon>essay_checker_usercontrol.xaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
   <!-- ✅ THIS SECTION COPIES FILES TO OUTPUT DIRECTORY -->
   <ItemGroup>
     <None Update="appsettings.json">

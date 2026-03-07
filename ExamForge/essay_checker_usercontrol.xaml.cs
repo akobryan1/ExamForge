@@ -1,202 +1,315 @@
+using ExamForge.Models;
+using ExamForge.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using ExamForge.Models;
-using ExamForge.Services;
-using Microsoft.Win32;
 
-namespace ExamForge
+namespace ExamForge;
+
+public partial class essay_checker_usercontrol : UserControl
 {
-    /// <summary>
-    /// Interaction logic for essay_checker_usercontrol.xaml
-    /// </summary>
-    public partial class essay_checker_usercontrol : UserControl
+    private readonly FirestoreService? _firestoreService;
+    private readonly EssayAutoGradingService _autoGradingService = new();
+
+    private readonly List<PublishedExam> _essayExams = new();
+    private readonly List<EssayCheckerQueueItem> _queueItems = new();
+
+    private EssayCheckerQueueItem? _currentItem;
+    private EssayAutoGradeResult? _currentResult;
+    private double _currentAdjustedScore;
+    private bool _apiStatusShown;
+
+    public essay_checker_usercontrol()
     {
-        private readonly EssayCheckerService _essayCheckerService;
-        private Rubric _currentRubric;
+        InitializeComponent();
+        _firestoreService = App.FirestoreService;
+    }
 
-        public essay_checker_usercontrol()
+    private async void EssayChecker_Loaded(object sender, RoutedEventArgs e)
+    {
+        await LoadEssayExamsAsync();
+    }
+
+    private async Task LoadEssayExamsAsync()
+    {
+        if (_firestoreService == null) return;
+
+        var allExams = await _firestoreService.GetAllPublishedExamsAsync();
+        _essayExams.Clear();
+        _essayExams.AddRange(allExams.Where(e => e.Contents.Any(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))));
+
+        EssayExamFilter.Items.Clear();
+        EssayExamFilter.Items.Add(new ComboBoxItem { Content = "All Essay Exams", Tag = "ALL" });
+        foreach (var exam in _essayExams)
         {
-            InitializeComponent();
-            _essayCheckerService = new EssayCheckerService();
-            _currentRubric = Rubric.CreateDefaultEssayRubric();
-            LoadRubricDisplay();
-            UpdateApiStatus();
+            EssayExamFilter.Items.Add(new ComboBoxItem { Content = exam.Title, Tag = exam.Id });
         }
 
-        private void LoadRubricDisplay()
-        {
-            RubricTitleText.Text = _currentRubric.Title;
-            RubricPointsText.Text = $"Total: {_currentRubric.TotalPoints} points · {_currentRubric.Criteria.Count} criteria";
-            RubricCriteriaList.ItemsSource = _currentRubric.Criteria;
-        }
+        EssayExamFilter.SelectedIndex = 0;
+        await RefreshQueueAsync();
+    }
 
-        private void UpdateApiStatus()
-        {
-            if (_essayCheckerService.IsConfigured)
-            {
-                ApiStatusText.Text = "● Connected";
-                ApiStatusText.Foreground = (System.Windows.Media.Brush)FindResource("SuccessTextBrush");
-            }
-            else
-            {
-                ApiStatusText.Text = "● Not configured";
-                ApiStatusText.Foreground = (System.Windows.Media.Brush)FindResource("ErrorTextBrush");
-            }
-        }
+    private async void EssayExamFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded) return;
+        await RefreshQueueAsync();
+    }
 
-        private void ApiKeyBox_PasswordChanged(object sender, RoutedEventArgs e)
-        {
-            _essayCheckerService.SetApiKey(ApiKeyBox.Password);
-            UpdateApiStatus();
-        }
+    private async Task RefreshQueueAsync()
+    {
+        if (_firestoreService == null) return;
 
-        private void ModelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (ModelComboBox.SelectedItem is ComboBoxItem selected)
-            {
-                _essayCheckerService.SetModel(selected.Content.ToString() ?? "gpt-4o-mini");
-            }
-        }
+        _queueItems.Clear();
+        var selectedExamId = (EssayExamFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "ALL";
+        var targetExams = selectedExamId == "ALL"
+            ? _essayExams
+            : _essayExams.Where(e => e.Id == selectedExamId).ToList();
 
-        private void UploadRubric_Click(object sender, RoutedEventArgs e)
+        foreach (var exam in targetExams)
         {
-            var dialog = new OpenFileDialog
-            {
-                Filter = "JSON Files (*.json)|*.json|All Files (*.*)|*.*",
-                Title = "Upload Rubric File"
-            };
+            var submissions = await _firestoreService.GetExamSubmissionsAsync(exam.Id);
+            var essayContents = exam.Contents
+                .Where(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))
+                .Select((content, idx) => new { Content = content, Number = idx + 1 })
+                .ToList();
 
-            if (dialog.ShowDialog() == true)
+            foreach (var submission in submissions)
             {
-                var rubric = EssayCheckerService.LoadRubricFromFile(dialog.FileName);
-                if (rubric != null && rubric.Criteria.Count > 0)
+                foreach (var essay in essayContents)
                 {
-                    _currentRubric = rubric;
-                    LoadRubricDisplay();
-                    MessageBox.Show($"Rubric \"{rubric.Title}\" loaded successfully with {rubric.Criteria.Count} criteria.",
-                        "Rubric Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show("Failed to load rubric. Please ensure the JSON file has the correct format.\n\n" +
-                        "Expected format:\n" +
-                        "{\n  \"Title\": \"My Rubric\",\n  \"TotalPoints\": 100,\n  \"Criteria\": [\n    {\n      \"Name\": \"...\",\n      \"Description\": \"...\",\n      \"MaxPoints\": 25,\n      \"Levels\": [\"Excellent (...)\", \"Good (...)\", ...]\n    }\n  ]\n}",
-                        "Invalid Rubric", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-            }
-        }
+                    var response = submission.Responses.FirstOrDefault(r =>
+                        string.Equals(r.QuestionId, essay.Content.ContentId, StringComparison.OrdinalIgnoreCase)
+                        || r.QuestionNumber == essay.Number);
 
-        private void ExportRubric_Click(object sender, RoutedEventArgs e)
-        {
-            var dialog = new SaveFileDialog
-            {
-                Filter = "JSON Files (*.json)|*.json",
-                Title = "Export Rubric",
-                FileName = $"{_currentRubric.Title.Replace(" ", "_")}.json"
-            };
+                    if (response == null || string.IsNullOrWhiteSpace(response.Answer))
+                        continue;
 
-            if (dialog.ShowDialog() == true)
-            {
-                if (EssayCheckerService.SaveRubricToFile(_currentRubric, dialog.FileName))
-                {
-                    MessageBox.Show("Rubric exported successfully.", "Export Complete",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    MessageBox.Show("Failed to export rubric.", "Export Error",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
+                    var meta = ParseEssayMetadata(essay.Content.Explanation);
+
+                    _queueItems.Add(new EssayCheckerQueueItem
+                    {
+                        SubmissionId = submission.Id,
+                        ExamId = exam.Id,
+                        ExamTitle = exam.Title,
+                        Subject = exam.Subject,
+                        StudentName = submission.StudentName,
+                        StudentId = submission.StudentId,
+                        QuestionId = ResolveQuestionId(essay.Content.ContentId, response.QuestionId, response.QuestionNumber, essay.Number),
+                        QuestionNumber = response.QuestionNumber,
+                        EssayQuestion = essay.Content.Question,
+                        EssayAnswer = response.Answer,
+                        RubricText = meta.Rubric,
+                        ModelAnswer = meta.ModelAnswer,
+                        KeyPoints = meta.KeyPoints,
+                        MaxPoints = essay.Content.Points > 0 ? essay.Content.Points : 1,
+                        ThesisWeight = meta.ThesisWeight,
+                        EvidenceWeight = meta.EvidenceWeight,
+                        ClarityWeight = meta.ClarityWeight
+                    });
                 }
             }
         }
 
-        private void ResetRubric_Click(object sender, RoutedEventArgs e)
+        EssayQueueList.ItemsSource = null;
+        EssayQueueList.ItemsSource = _queueItems
+            .OrderBy(q => q.ExamTitle)
+            .ThenBy(q => q.StudentName)
+            .ToList();
+
+        QueueCountText.Text = $"({_queueItems.Count} pending)";
+    }
+
+    private async void EssayQueueList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EssayQueueList.SelectedItem is not EssayCheckerQueueItem item) return;
+
+        _currentItem = item;
+        ExamMetaText.Text = $"Student: {item.StudentName} ({item.StudentId}) | Exam: {item.ExamTitle} | Subject: {item.Subject}";
+        QuestionTextBlock.Text = item.EssayQuestion;
+        RubricTextBlock.Text = string.IsNullOrWhiteSpace(item.RubricText) ? "No rubric specified." : item.RubricText;
+        ModelAnswerTextBlock.Text = string.IsNullOrWhiteSpace(item.ModelAnswer)
+            ? item.KeyPoints
+            : $"Model Answer: {item.ModelAnswer}\n\nKey Points: {item.KeyPoints}";
+        StudentEssayText.Text = item.EssayAnswer;
+
+        _currentResult = await _autoGradingService.GradeEssayAsync(item);
+        _currentAdjustedScore = _currentResult.AiScore;
+        RenderCurrentResult();
+
+        if (!_apiStatusShown)
         {
-            var result = MessageBox.Show("Reset to the default essay rubric?", "Reset Rubric",
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                _currentRubric = Rubric.CreateDefaultEssayRubric();
-                LoadRubricDisplay();
-            }
-        }
-
-        private async void EvaluateButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (!_essayCheckerService.IsConfigured)
-            {
-                MessageBox.Show("Please enter your LLM API key to evaluate essays.",
-                    "API Key Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            var essayText = EssayTextBox.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(essayText))
-            {
-                MessageBox.Show("Please enter the student essay text to evaluate.",
-                    "Essay Required", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            // Show loading state
-            EvaluateButton.IsEnabled = false;
-            LoadingOverlay.Visibility = Visibility.Visible;
-            ResultsCard.Visibility = Visibility.Collapsed;
-
-            try
-            {
-                var questionPrompt = EssayPromptBox.Text?.Trim() ?? "";
-                var result = await _essayCheckerService.EvaluateEssayAsync(essayText, questionPrompt, _currentRubric);
-                DisplayResults(result);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error evaluating essay:\n\n{ex.Message}",
-                    "Evaluation Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-            finally
-            {
-                EvaluateButton.IsEnabled = true;
-                LoadingOverlay.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private void DisplayResults(EssayEvaluationResult result)
-        {
-            ResultsCard.Visibility = Visibility.Visible;
-
-            TotalScoreText.Text = result.TotalScore.ToString();
-            MaxScoreText.Text = $"/{result.MaxScore}";
-            LetterGradeText.Text = result.LetterGrade;
-            OverallFeedbackText.Text = result.OverallFeedback;
-
-            // Map criterion scores for display
-            var displayScores = result.CriterionScores.Select(cs => new CriterionScoreDisplay
-            {
-                CriterionName = cs.CriterionName,
-                ScoreDisplay = $"{cs.Score}/{cs.MaxPoints}",
-                Level = cs.Level,
-                Feedback = cs.Feedback
-            }).ToList();
-
-            CriterionScoresList.ItemsSource = displayScores;
-            StrengthsList.ItemsSource = result.Strengths;
-            ImprovementsList.ItemsSource = result.AreasForImprovement;
+            _apiStatusShown = true;
+            var mode = _currentResult.UsedDeepSeek ? "DeepSeek API" : "Heuristic Fallback";
+            MessageBox.Show($"Grading mode: {mode}\nStatus: {_currentResult.ProviderStatus}",
+                "Essay Grading Provider Status", MessageBoxButton.OK, MessageBoxImage.Information);
+            System.Diagnostics.Debug.WriteLine($"Essay grading provider: {mode}. {_currentResult.ProviderStatus}");
         }
     }
 
-    /// <summary>
-    /// View model for displaying criterion scores in the UI.
-    /// </summary>
-    public class CriterionScoreDisplay
+    private void RenderCurrentResult()
     {
-        public string CriterionName { get; set; } = "";
-        public string ScoreDisplay { get; set; } = "";
-        public string Level { get; set; } = "";
-        public string Feedback { get; set; } = "";
+        if (_currentItem == null || _currentResult == null) return;
+
+        AiScoreText.Text = $"{_currentAdjustedScore:F1}/{_currentResult.MaxScore:F1}";
+        ConfidenceText.Text = $"Confidence: {_currentResult.ConfidencePercent:F1}%";
+        FlagReviewText.Text = _currentResult.FlagForReview ? "Flagged for Review" : "";
+
+        RubricBreakdownGrid.ItemsSource = null;
+        RubricBreakdownGrid.ItemsSource = _currentResult.RubricBreakdown;
+
+        var adjustmentReason = AdjustmentReasonTextBox.Text?.Trim();
+        var justification = _currentResult.Justification;
+        if (Math.Abs(_currentAdjustedScore - _currentResult.AiScore) > 0.01)
+        {
+            var reason = string.IsNullOrWhiteSpace(adjustmentReason) ? "Instructor adjustment" : adjustmentReason;
+            justification += $"\nInstructor adjusted score from {_currentResult.AiScore:F1} to {_currentAdjustedScore:F1} due to: {reason}.";
+        }
+
+        JustificationText.Text = justification;
+    }
+
+    private async void AutoGradeAll_Click(object sender, RoutedEventArgs e)
+    {
+        if (!_queueItems.Any())
+        {
+            MessageBox.Show("No pending essay submissions were found.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (_firestoreService == null)
+        {
+            MessageBox.Show("Firestore service is not available.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var processed = 0;
+        var skipped = 0;
+        var deepSeekCount = 0;
+        var fallbackCount = 0;
+
+        foreach (var item in _queueItems)
+        {
+            if (string.IsNullOrWhiteSpace(item.SubmissionId))
+            {
+                skipped++;
+                continue;
+            }
+
+            try
+            {
+                var result = await _autoGradingService.GradeEssayAsync(item);
+                if (result.UsedDeepSeek) deepSeekCount++; else fallbackCount++;
+                var record = new EssayGradeRecord
+                {
+                    QuestionId = ResolveQuestionId(item.QuestionId, string.Empty, item.QuestionNumber, item.QuestionNumber),
+                    QuestionNumber = item.QuestionNumber,
+                    StudentAnswer = item.EssayAnswer,
+                    AiScore = result.AiScore,
+                    FinalScore = result.AiScore,
+                    MaxScore = result.MaxScore,
+                    ConfidencePercent = result.ConfidencePercent,
+                    FlagForReview = result.FlagForReview,
+                    Justification = result.Justification,
+                    RubricBreakdown = result.RubricBreakdown,
+                    GradedAt = DateTime.UtcNow
+                };
+
+                await _firestoreService.UpdateSubmissionEssayGradeAsync(item.SubmissionId, record);
+                processed++;
+            }
+            catch (Exception ex)
+            {
+                skipped++;
+                System.Diagnostics.Debug.WriteLine($"Essay auto-grade skipped for submission {item.SubmissionId}: {ex.Message}");
+            }
+        }
+
+        MessageBox.Show($"Auto-grading finished. Processed: {processed}, Skipped: {skipped}.\nDeepSeek: {deepSeekCount}, Fallback: {fallbackCount}.",
+            "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+        System.Diagnostics.Debug.WriteLine($"Auto-grade provider usage => DeepSeek: {deepSeekCount}, Fallback: {fallbackCount}");
+    }
+
+    private void DecreaseScore_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentResult == null) return;
+        _currentAdjustedScore = Math.Max(0, _currentAdjustedScore - 1);
+        RenderCurrentResult();
+    }
+
+    private void IncreaseScore_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentResult == null) return;
+        _currentAdjustedScore = Math.Min(_currentResult.MaxScore, _currentAdjustedScore + 1);
+        RenderCurrentResult();
+    }
+
+    private async void SaveCurrentGrade_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentItem == null || _currentResult == null || _firestoreService == null)
+        {
+            MessageBox.Show("Select an essay first.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var record = new EssayGradeRecord
+        {
+            QuestionId = ResolveQuestionId(_currentItem.QuestionId, string.Empty, _currentItem.QuestionNumber, _currentItem.QuestionNumber),
+            QuestionNumber = _currentItem.QuestionNumber,
+            StudentAnswer = _currentItem.EssayAnswer,
+            AiScore = _currentResult.AiScore,
+            FinalScore = _currentAdjustedScore,
+            MaxScore = _currentResult.MaxScore,
+            ConfidencePercent = _currentResult.ConfidencePercent,
+            FlagForReview = _currentResult.FlagForReview,
+            Justification = JustificationText.Text,
+            InstructorAdjustmentNote = AdjustmentReasonTextBox.Text?.Trim() ?? string.Empty,
+            RubricBreakdown = _currentResult.RubricBreakdown,
+            GradedAt = DateTime.UtcNow
+        };
+
+        await _firestoreService.UpdateSubmissionEssayGradeAsync(_currentItem.SubmissionId, record);
+        MessageBox.Show("Essay grade saved.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private sealed class EssayMetadata
+    {
+        public string Rubric { get; set; } = "";
+        public string ModelAnswer { get; set; } = "";
+        public string KeyPoints { get; set; } = "";
+        public double ThesisWeight { get; set; } = 33;
+        public double EvidenceWeight { get; set; } = 34;
+        public double ClarityWeight { get; set; } = 33;
+    }
+
+    private static EssayMetadata ParseEssayMetadata(string? rawExplanation)
+    {
+        if (string.IsNullOrWhiteSpace(rawExplanation))
+            return new EssayMetadata();
+
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<EssayMetadata>(rawExplanation, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+            return parsed ?? new EssayMetadata();
+        }
+        catch
+        {
+            return new EssayMetadata { Rubric = rawExplanation };
+        }
+    }
+
+    private static string ResolveQuestionId(string? primary, string? secondary, int responseNumber, int fallbackNumber)
+    {
+        if (!string.IsNullOrWhiteSpace(primary)) return primary.Trim();
+        if (!string.IsNullOrWhiteSpace(secondary)) return secondary.Trim();
+
+        var number = responseNumber > 0 ? responseNumber : fallbackNumber;
+        return $"essay_q_{Math.Max(1, number)}";
     }
 }

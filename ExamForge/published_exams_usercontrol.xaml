@@ -1,6 +1,7 @@
 ﻿<UserControl x:Class="ExamForge.published_exams_usercontrol"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ExamForge"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              mc:Ignorable="d"
@@ -155,6 +156,10 @@
                              Checked="Tab_Changed"/>
                 <RadioButton x:Name="ExamBankTab"
                              Content="📚 Exam Bank"
+                             Style="{StaticResource TabButtonStyle}"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="EssayCheckerTab"
+                             Content="📝 Essay Checker"
                              Style="{StaticResource TabButtonStyle}"
                              Checked="Tab_Changed"/>
             </StackPanel>
@@ -566,6 +571,10 @@
                             </DataGrid>
                         </StackPanel>
                     </Border>
+                </StackPanel>
+
+                <StackPanel x:Name="EssayCheckerPanel" Visibility="Collapsed">
+                    <local:essay_checker_usercontrol/>
                 </StackPanel>
 
                 <!-- Closed and Grading Panel -->

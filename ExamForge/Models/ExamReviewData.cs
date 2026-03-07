@@ -95,6 +95,9 @@ public class ExamSubmission
     [FirestoreProperty]
     public string Status { get; set; } = "Submitted";
 
+    [FirestoreProperty]
+    public Dictionary<string, EssayGradeRecord> EssayGrades { get; set; } = new();
+
     // ✅ Nullable because your logic treats them as optional
     [FirestoreProperty]
     public DateTime? StartTime { get; set; }

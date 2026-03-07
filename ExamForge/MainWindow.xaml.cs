@@ -373,7 +373,26 @@ public partial class MainWindow : Window
 
                 case "Identification":
                 case "Essay":
-                    content.CorrectAnswer = item.TextAnswer;
+                    if (item.TestType == "Essay")
+                    {
+                        content.CorrectAnswer = item.EssayModelAnswer;
+                        content.Explanation = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            Rubric = item.EssayRubric,
+                            ModelAnswer = item.EssayModelAnswer,
+                            KeyPoints = item.EssayKeyPoints,
+                            Weights = new
+                            {
+                                Thesis = item.EssayWeightThesis,
+                                Evidence = item.EssayWeightEvidence,
+                                Clarity = item.EssayWeightClarity
+                            }
+                        });
+                    }
+                    else
+                    {
+                        content.CorrectAnswer = item.TextAnswer;
+                    }
                     break;
 
                 case "Enumeration":
