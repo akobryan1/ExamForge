@@ -354,6 +354,7 @@ public partial class published_exams_usercontrol : UserControl
             if (ScheduledPanel != null) ScheduledPanel.Visibility = Visibility.Collapsed;
             if (LivePanel != null) LivePanel.Visibility = Visibility.Collapsed;
             if (ExamBankPanel != null) ExamBankPanel.Visibility = Visibility.Collapsed;
+            if (EssayCheckerPanel != null) EssayCheckerPanel.Visibility = Visibility.Collapsed;
             if (ClosedPanel != null) ClosedPanel.Visibility = Visibility.Collapsed;
 
             // Show selected panel and load data
@@ -368,6 +369,11 @@ public partial class published_exams_usercontrol : UserControl
                 ExamBankPanel.Visibility = Visibility.Visible;
                 await LoadExamBankAsync();
                 Debug.WriteLine("?? Exam Bank tab activated");
+            }
+            else if (EssayCheckerTab?.IsChecked == true && EssayCheckerPanel != null)
+            {
+                EssayCheckerPanel.Visibility = Visibility.Visible;
+                Debug.WriteLine("Essay checker tab activated");
             }
             
             StopLiveDataRefresh();

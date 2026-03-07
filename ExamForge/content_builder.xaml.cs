@@ -404,6 +404,14 @@ namespace ExamForge
         // Identification & Essay
         public string TextAnswer { get; set; } = "";
 
+        // Essay infrastructure
+        public string EssayRubric { get; set; } = "";
+        public string EssayModelAnswer { get; set; } = "";
+        public string EssayKeyPoints { get; set; } = "";
+        public double EssayWeightThesis { get; set; } = 33;
+        public double EssayWeightEvidence { get; set; } = 34;
+        public double EssayWeightClarity { get; set; } = 33;
+
         // Enumeration
         public List<string> EnumerationAnswers { get; set; } = new List<string>();
 
@@ -418,7 +426,7 @@ namespace ExamForge
                 "Modified True or False" => !string.IsNullOrWhiteSpace(ModifiedAnswer),
                 "Identification" => !string.IsNullOrWhiteSpace(TextAnswer),
                 "Enumeration" => EnumerationAnswers.Count > 0 && EnumerationAnswers.All(a => !string.IsNullOrWhiteSpace(a)),
-                "Essay" => true, // Essays are subjective
+                "Essay" => !string.IsNullOrWhiteSpace(EssayRubric),
                 _ => false
             };
         }

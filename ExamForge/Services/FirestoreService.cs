@@ -206,6 +206,54 @@ public class FirestoreService
         }
     }
 
+    public async Task UpdateSubmissionEssayGradeAsync(string submissionId, EssayGradeRecord essayGrade)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(submissionId))
+                throw new ArgumentException("SubmissionId is required.", nameof(submissionId));
+
+            if (string.IsNullOrWhiteSpace(essayGrade.QuestionId))
+                throw new ArgumentException("Essay QuestionId is required.", nameof(essayGrade.QuestionId));
+
+            var docRef = _firestoreDb.Collection(GetUserPath(ExamineeDataCollection)).Document(submissionId);
+            var gradeMap = new Dictionary<string, object>
+            {
+                ["QuestionId"] = essayGrade.QuestionId,
+                ["QuestionNumber"] = essayGrade.QuestionNumber,
+                ["StudentAnswer"] = essayGrade.StudentAnswer,
+                ["AiScore"] = essayGrade.AiScore,
+                ["MaxScore"] = essayGrade.MaxScore,
+                ["FinalScore"] = essayGrade.FinalScore,
+                ["ConfidencePercent"] = essayGrade.ConfidencePercent,
+                ["FlagForReview"] = essayGrade.FlagForReview,
+                ["Justification"] = essayGrade.Justification,
+                ["InstructorAdjustmentNote"] = essayGrade.InstructorAdjustmentNote,
+                ["GradedAt"] = Timestamp.FromDateTime(essayGrade.GradedAt.ToUniversalTime()),
+                ["RubricBreakdown"] = essayGrade.RubricBreakdown.Select(r => new Dictionary<string, object>
+                {
+                    ["Criterion"] = r.Criterion,
+                    ["Weight"] = r.Weight,
+                    ["MaxPoints"] = r.MaxPoints,
+                    ["PointsAwarded"] = r.PointsAwarded,
+                    ["Reason"] = r.Reason
+                }).ToList()
+            };
+
+            await docRef.SetAsync(new Dictionary<string, object>
+            {
+                ["EssayGrades"] = new Dictionary<string, object>
+                {
+                    [essayGrade.QuestionId] = gradeMap
+                }
+            }, SetOptions.MergeAll);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to update essay grade: {ex.Message}", ex);
+        }
+    }
+
     // Delete published exam
     public async Task DeletePublishedExamAsync(string examId)
     {
