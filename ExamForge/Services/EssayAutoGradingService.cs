@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,103 +11,83 @@ namespace ExamForge.Services;
 
 public class EssayAutoGradingService
 {
-    private const string DeepSeekApiKey = "DEEPSEEK_API_KEY";
-    private const string DeepSeekEndpoint = "https://api.deepseek.com/v1/chat/completions";
+    private const string BackendEssayGradeEndpoint = "https://examforge-signalr.onrender.com/api/essay/grade";
+    private const string BackendEssayGradeEndpointFallback = "https://examforge-signalr.onrender.com/essay/grade";
 
     public async Task<EssayAutoGradeResult> GradeEssayAsync(EssayCheckerQueueItem item)
     {
-        var apiKey = ResolveApiKey();
-
-        if (string.IsNullOrWhiteSpace(apiKey) || apiKey.Contains("DEEPSEEK_API_KEY", StringComparison.Ordinal))
-        {
-            return GradeWithHeuristic(item, "DeepSeek key is missing or still placeholder.");
-        }
+        var endpoints = ResolveBackendEndpoints();
 
         try
         {
             using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-            var prompt = BuildPrompt(item);
             var payload = new
             {
-                model = "deepseek-chat",
-                temperature = 0.2,
-                messages = new[]
-                {
-                    new { role = "system", content = "You are an essay grading assistant. Return valid JSON only." },
-                    new { role = "user", content = prompt }
-                }
+                item.ExamTitle,
+                item.Subject,
+                item.EssayQuestion,
+                item.EssayAnswer,
+                item.RubricText,
+                item.ModelAnswer,
+                item.KeyPoints,
+                MaxPoints = item.MaxPoints,
+                ThesisWeight = item.ThesisWeight,
+                EvidenceWeight = item.EvidenceWeight,
+                ClarityWeight = item.ClarityWeight
             };
 
             var content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
-            var response = await httpClient.PostAsync(DeepSeekEndpoint, content);
-            if (!response.IsSuccessStatusCode)
+            HttpResponseMessage? response = null;
+            string? lastStatus = null;
+
+            foreach (var endpoint in endpoints)
             {
-                System.Diagnostics.Debug.WriteLine($"DeepSeek request failed: {(int)response.StatusCode} {response.ReasonPhrase}");
-                return GradeWithHeuristic(item, $"DeepSeek HTTP {(int)response.StatusCode}.");
+                response = await httpClient.PostAsync(endpoint, content);
+                if (response.IsSuccessStatusCode)
+                    break;
+
+                lastStatus = $"{(int)response.StatusCode} {response.ReasonPhrase} @ {endpoint}";
+
+                if (response.StatusCode != System.Net.HttpStatusCode.NotFound)
+                    break;
+            }
+
+            if (response == null || !response.IsSuccessStatusCode)
+            {
+                System.Diagnostics.Debug.WriteLine($"Backend essay grade request failed: {lastStatus ?? "No response"}");
+                return GradeWithHeuristic(item, $"Backend HTTP {lastStatus ?? "unknown"}.");
             }
 
             var rawJson = await response.Content.ReadAsStringAsync();
-            var aiJson = ExtractAiContent(rawJson);
-            var result = JsonSerializer.Deserialize<EssayAutoGradeResult>(aiJson, new JsonSerializerOptions
+            var result = JsonSerializer.Deserialize<EssayAutoGradeResult>(rawJson, new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
             if (result == null)
             {
-                return GradeWithHeuristic(item, "DeepSeek returned an empty response payload.");
+                return GradeWithHeuristic(item, "Backend returned an empty response payload.");
             }
-
-            result.UsedDeepSeek = true;
-            result.ProviderStatus = "DeepSeek response parsed successfully.";
             return result;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"DeepSeek grading failed, using heuristic fallback: {ex.Message}");
-            return GradeWithHeuristic(item, $"DeepSeek exception: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Backend essay grading failed, using heuristic fallback: {ex.Message}");
+            return GradeWithHeuristic(item, $"Backend exception: {ex.Message}");
         }
     }
 
-    private static string ResolveApiKey()
+    private static List<string> ResolveBackendEndpoints()
     {
-        var key = Environment.GetEnvironmentVariable("DEEPSEEK_API_KEY");
-        if (string.IsNullOrWhiteSpace(key))
-            key = DeepSeekApiKey;
+        var endpoint = Environment.GetEnvironmentVariable("ESSAY_GRADING_API_URL");
+        if (!string.IsNullOrWhiteSpace(endpoint))
+            return new List<string> { endpoint.Trim() };
 
-        key = key.Trim();
-
-        // Support accidental "DEEPSEEK_API_KEY=..." format in config.
-        if (key.StartsWith("DEEPSEEK_API_KEY=", StringComparison.OrdinalIgnoreCase))
+        return new List<string>
         {
-            key = key.Substring("DEEPSEEK_API_KEY=".Length).Trim();
-        }
-
-        return key;
-    }
-
-    private static string BuildPrompt(EssayCheckerQueueItem item)
-    {
-        return $@"Grade this essay using rubric and return JSON matching EssayAutoGradeResult fields.
-Exam: {item.ExamTitle}
-Subject: {item.Subject}
-Question: {item.EssayQuestion}
-Rubric: {item.RubricText}
-ModelAnswer: {item.ModelAnswer}
-KeyPoints: {item.KeyPoints}
-Weights: Thesis={item.ThesisWeight}, Evidence={item.EvidenceWeight}, Clarity={item.ClarityWeight}
-StudentAnswer: {item.EssayAnswer}
-MaxPoints: {item.MaxPoints}";
-    }
-
-    private static string ExtractAiContent(string rawResponse)
-    {
-        using var doc = JsonDocument.Parse(rawResponse);
-        var root = doc.RootElement;
-        var content = root.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString();
-        return content ?? "{}";
+            BackendEssayGradeEndpoint,
+            BackendEssayGradeEndpointFallback
+        };
     }
 
     private static EssayAutoGradeResult GradeWithHeuristic(EssayCheckerQueueItem item, string providerStatus)
