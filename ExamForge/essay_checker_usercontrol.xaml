@@ -42,7 +42,10 @@
             <Border Grid.Column="0" Background="{StaticResource SurfaceDark}" CornerRadius="8" Padding="12" Margin="0,0,12,0">
                 <StackPanel>
                     <TextBlock Text="Review Queue" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,0,0,10"/>
-                    <ListBox x:Name="EssayQueueList" DisplayMemberPath="StudentName" SelectionChanged="EssayQueueList_SelectionChanged"/>
+                    <ListBox x:Name="EssayQueueList" DisplayMemberPath="DisplayLabel" Height="250" SelectionChanged="EssayQueueList_SelectionChanged"/>
+
+                    <TextBlock Text="Graded Archive" FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource TextPrimary}" Margin="0,14,0,10"/>
+                    <ListBox x:Name="GradedArchiveList" DisplayMemberPath="DisplayLabel" Height="250" SelectionChanged="GradedArchiveList_SelectionChanged"/>
                 </StackPanel>
             </Border>
 

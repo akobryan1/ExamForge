@@ -17,6 +17,7 @@ public partial class essay_checker_usercontrol : UserControl
 
     private readonly List<PublishedExam> _essayExams = new();
     private readonly List<EssayCheckerQueueItem> _queueItems = new();
+    private readonly List<EssayCheckerQueueItem> _gradedItems = new();
 
     private EssayCheckerQueueItem? _currentItem;
     private EssayAutoGradeResult? _currentResult;
@@ -64,6 +65,7 @@ public partial class essay_checker_usercontrol : UserControl
         if (_firestoreService == null) return;
 
         _queueItems.Clear();
+        _gradedItems.Clear();
         var selectedExamId = (EssayExamFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "ALL";
         var targetExams = selectedExamId == "ALL"
             ? _essayExams
@@ -89,8 +91,10 @@ public partial class essay_checker_usercontrol : UserControl
                         continue;
 
                     var meta = ParseEssayMetadata(essay.Content.Explanation);
+                    var resolvedQuestionId = ResolveQuestionId(essay.Content.ContentId, response.QuestionId, response.QuestionNumber, essay.Number);
+                    var existingGrade = TryGetExistingGrade(submission, resolvedQuestionId, response.QuestionId, response.QuestionNumber, essay.Number);
 
-                    _queueItems.Add(new EssayCheckerQueueItem
+                    var queueItem = new EssayCheckerQueueItem
                     {
                         SubmissionId = submission.Id,
                         ExamId = exam.Id,
@@ -98,7 +102,7 @@ public partial class essay_checker_usercontrol : UserControl
                         Subject = exam.Subject,
                         StudentName = submission.StudentName,
                         StudentId = submission.StudentId,
-                        QuestionId = ResolveQuestionId(essay.Content.ContentId, response.QuestionId, response.QuestionNumber, essay.Number),
+                        QuestionId = resolvedQuestionId,
                         QuestionNumber = response.QuestionNumber,
                         EssayQuestion = essay.Content.Question,
                         EssayAnswer = response.Answer,
@@ -108,8 +112,18 @@ public partial class essay_checker_usercontrol : UserControl
                         MaxPoints = essay.Content.Points > 0 ? essay.Content.Points : 1,
                         ThesisWeight = meta.ThesisWeight,
                         EvidenceWeight = meta.EvidenceWeight,
-                        ClarityWeight = meta.ClarityWeight
-                    });
+                        ClarityWeight = meta.ClarityWeight,
+                        ExistingGrade = existingGrade
+                    };
+
+                    if (existingGrade != null)
+                    {
+                        _gradedItems.Add(queueItem);
+                    }
+                    else
+                    {
+                        _queueItems.Add(queueItem);
+                    }
                 }
             }
         }
@@ -120,12 +134,23 @@ public partial class essay_checker_usercontrol : UserControl
             .ThenBy(q => q.StudentName)
             .ToList();
 
-        QueueCountText.Text = $"({_queueItems.Count} pending)";
+        GradedArchiveList.ItemsSource = null;
+        GradedArchiveList.ItemsSource = _gradedItems
+            .OrderByDescending(g => g.ExistingGrade?.GradedAt ?? DateTime.MinValue)
+            .ToList();
+
+        QueueCountText.Text = $"({_queueItems.Count} pending, {_gradedItems.Count} graded)";
+
+        if (EssayQueueList.Items.Count > 0)
+        {
+            EssayQueueList.SelectedIndex = 0;
+        }
     }
 
     private async void EssayQueueList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (EssayQueueList.SelectedItem is not EssayCheckerQueueItem item) return;
+        GradedArchiveList.SelectedItem = null;
 
         _currentItem = item;
         ExamMetaText.Text = $"Student: {item.StudentName} ({item.StudentId}) | Exam: {item.ExamTitle} | Subject: {item.Subject}";
@@ -148,6 +173,36 @@ public partial class essay_checker_usercontrol : UserControl
                 "Essay Grading Provider Status", MessageBoxButton.OK, MessageBoxImage.Information);
             System.Diagnostics.Debug.WriteLine($"Essay grading provider: {mode}. {_currentResult.ProviderStatus}");
         }
+    }
+
+    private void GradedArchiveList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (GradedArchiveList.SelectedItem is not EssayCheckerQueueItem item || item.ExistingGrade == null) return;
+        EssayQueueList.SelectedItem = null;
+
+        _currentItem = item;
+        ExamMetaText.Text = $"Student: {item.StudentName} ({item.StudentId}) | Exam: {item.ExamTitle} | Subject: {item.Subject}";
+        QuestionTextBlock.Text = item.EssayQuestion;
+        RubricTextBlock.Text = string.IsNullOrWhiteSpace(item.RubricText) ? "No rubric specified." : item.RubricText;
+        ModelAnswerTextBlock.Text = string.IsNullOrWhiteSpace(item.ModelAnswer)
+            ? item.KeyPoints
+            : $"Model Answer: {item.ModelAnswer}\n\nKey Points: {item.KeyPoints}";
+        StudentEssayText.Text = item.EssayAnswer;
+
+        _currentResult = new EssayAutoGradeResult
+        {
+            AiScore = item.ExistingGrade.AiScore,
+            MaxScore = item.ExistingGrade.MaxScore,
+            ConfidencePercent = item.ExistingGrade.ConfidencePercent,
+            FlagForReview = item.ExistingGrade.FlagForReview,
+            Justification = item.ExistingGrade.Justification,
+            RubricBreakdown = item.ExistingGrade.RubricBreakdown,
+            ProviderStatus = $"Loaded from archive ({item.ExistingGrade.GradedAt:g})",
+            UsedDeepSeek = true
+        };
+        _currentAdjustedScore = item.ExistingGrade.FinalScore;
+        AdjustmentReasonTextBox.Text = item.ExistingGrade.InstructorAdjustmentNote;
+        RenderCurrentResult();
     }
 
     private void RenderCurrentResult()
@@ -231,6 +286,7 @@ public partial class essay_checker_usercontrol : UserControl
         MessageBox.Show($"Auto-grading finished. Processed: {processed}, Skipped: {skipped}.\nDeepSeek: {deepSeekCount}, Fallback: {fallbackCount}.",
             "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
         System.Diagnostics.Debug.WriteLine($"Auto-grade provider usage => DeepSeek: {deepSeekCount}, Fallback: {fallbackCount}");
+        await RefreshQueueAsync();
     }
 
     private void DecreaseScore_Click(object sender, RoutedEventArgs e)
@@ -273,6 +329,21 @@ public partial class essay_checker_usercontrol : UserControl
 
         await _firestoreService.UpdateSubmissionEssayGradeAsync(_currentItem.SubmissionId, record);
         MessageBox.Show("Essay grade saved.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+        await RefreshQueueAsync();
+    }
+
+    private static EssayGradeRecord? TryGetExistingGrade(ExamSubmission submission, string resolvedQuestionId, string? responseQuestionId, int responseNumber, int fallbackNumber)
+    {
+        if (submission.EssayGrades == null || submission.EssayGrades.Count == 0) return null;
+
+        if (submission.EssayGrades.TryGetValue(resolvedQuestionId, out var record) && record != null)
+            return record;
+
+        if (!string.IsNullOrWhiteSpace(responseQuestionId) && submission.EssayGrades.TryGetValue(responseQuestionId, out record) && record != null)
+            return record;
+
+        var numberKey = $"essay_q_{Math.Max(1, responseNumber > 0 ? responseNumber : fallbackNumber)}";
+        return submission.EssayGrades.TryGetValue(numberKey, out record) ? record : null;
     }
 
     private sealed class EssayMetadata
