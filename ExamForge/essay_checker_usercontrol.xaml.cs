@@ -24,6 +24,8 @@ public partial class essay_checker_usercontrol : UserControl
     private EssayAutoGradeResult? _currentResult;
     private double _currentAdjustedScore;
     private bool _apiStatusShown;
+    private bool _autoGradingEnabled = true;
+    private bool _suppressAutoGradeToggleEvents;
 
     public essay_checker_usercontrol()
     {
@@ -43,6 +45,8 @@ public partial class essay_checker_usercontrol : UserControl
         SetLoadingState(true, "Loading essay exams...");
         try
         {
+            await LoadAutoGradePreferenceAsync();
+
             var allExams = await _firestoreService.GetAllPublishedExamsAsync();
             _essayExams.Clear();
             _essayExams.AddRange(allExams.Where(e => e.Contents.Any(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))));
@@ -185,6 +189,20 @@ public partial class essay_checker_usercontrol : UserControl
         if (cached != null)
         {
             _currentResult = cached;
+        }
+        else if (!_autoGradingEnabled)
+        {
+            _currentResult = new EssayAutoGradeResult
+            {
+                AiScore = 0,
+                MaxScore = item.MaxPoints,
+                ConfidencePercent = 0,
+                FlagForReview = true,
+                Justification = "Auto-grading is turned off for this account. Turn it on to generate AI evaluation.",
+                RubricBreakdown = new List<EssayRubricScoreRow>(),
+                UsedDeepSeek = false,
+                ProviderStatus = "Auto-grading is disabled by user preference."
+            };
         }
         else
         {
@@ -329,6 +347,12 @@ public partial class essay_checker_usercontrol : UserControl
 
     private async Task AutoGradeQueueItemsAsync()
     {
+        if (!_autoGradingEnabled)
+        {
+            SetLoadingState(true, "Auto-grading is OFF. Queue will stay pending until enabled.");
+            return;
+        }
+
         var total = _queueItems.Count;
         var current = 0;
         foreach (var item in _queueItems)
@@ -365,6 +389,58 @@ public partial class essay_checker_usercontrol : UserControl
         LoadingProgressBar.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
         LoadingStatusText.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
         LoadingStatusText.Text = message;
+    }
+
+    private async Task LoadAutoGradePreferenceAsync()
+    {
+        if (_firestoreService == null) return;
+
+        _autoGradingEnabled = await _firestoreService.GetEssayAutoGradingEnabledAsync();
+        _suppressAutoGradeToggleEvents = true;
+        AutoGradeToggleButton.IsChecked = _autoGradingEnabled;
+        AutoGradeToggleButton.Content = _autoGradingEnabled ? "Auto-Grading: ON" : "Auto-Grading: OFF";
+        _suppressAutoGradeToggleEvents = false;
+    }
+
+    private async Task SaveAutoGradePreferenceAsync(bool enabled)
+    {
+        if (_firestoreService == null) return;
+
+        _autoGradingEnabled = enabled;
+        AutoGradeToggleButton.Content = _autoGradingEnabled ? "Auto-Grading: ON" : "Auto-Grading: OFF";
+        await _firestoreService.SetEssayAutoGradingEnabledAsync(enabled);
+    }
+
+    private async void AutoGradeToggleButton_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoGradeToggleEvents) return;
+
+        SetLoadingState(true, "Saving auto-grading preference...");
+        try
+        {
+            await SaveAutoGradePreferenceAsync(true);
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
+    }
+
+    private async void AutoGradeToggleButton_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoGradeToggleEvents) return;
+
+        SetLoadingState(true, "Saving auto-grading preference...");
+        try
+        {
+            await SaveAutoGradePreferenceAsync(false);
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
     }
 
     private static EssayGradeRecord? TryGetExistingGrade(ExamSubmission submission, string resolvedQuestionId, string? responseQuestionId, int responseNumber, int fallbackNumber)

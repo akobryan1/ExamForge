@@ -545,6 +545,53 @@ public class FirestoreService
         }
     }
 
+    public async Task<bool> GetEssayAutoGradingEnabledAsync()
+    {
+        try
+        {
+            var userDocRef = _firestoreDb.Collection(UsersRoot).Document(_userId);
+            var snapshot = await userDocRef.GetSnapshotAsync();
+            if (!snapshot.Exists)
+            {
+                return true;
+            }
+
+            if (snapshot.TryGetValue("preferences", out Dictionary<string, object> preferences) &&
+                preferences.TryGetValue("auto_grade_essays", out var value))
+            {
+                if (value is bool b) return b;
+                if (bool.TryParse(value?.ToString(), out var parsed)) return parsed;
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to get auto-grade preference: {ex.Message}");
+            return true;
+        }
+    }
+
+    public async Task SetEssayAutoGradingEnabledAsync(bool enabled)
+    {
+        try
+        {
+            var userDocRef = _firestoreDb.Collection(UsersRoot).Document(_userId);
+            await userDocRef.SetAsync(new Dictionary<string, object>
+            {
+                ["preferences"] = new Dictionary<string, object>
+                {
+                    ["auto_grade_essays"] = enabled,
+                    ["updated_at"] = Timestamp.FromDateTime(DateTime.UtcNow)
+                }
+            }, SetOptions.MergeAll);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Failed to save auto-grade preference: {ex.Message}", ex);
+        }
+    }
+
 
     #endregion
 

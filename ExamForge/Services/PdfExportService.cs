@@ -201,10 +201,10 @@ namespace ExamForge.Services
             var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
             var safeTitle = SanitizeFileSegment(title);
 
-            var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             if (string.IsNullOrWhiteSpace(documentsPath) || !Directory.Exists(documentsPath))
             {
-                documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
             }
 
             var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
@@ -233,6 +233,7 @@ namespace ExamForge.Services
                 .ToArray());
 
             cleaned = cleaned.Replace(' ', '_');
+            if (cleaned.Length > 80) cleaned = cleaned.Substring(0, 80);
             return string.IsNullOrWhiteSpace(cleaned) ? "Untitled" : cleaned;
         }
     }

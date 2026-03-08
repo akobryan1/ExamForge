@@ -38,7 +38,7 @@ public partial class MainWindow : Window
         InitializeSignalStrengthMonitoring();
 
         // Get reference to sidebar
-        _sidebar = this.FindName("Sidebar") as sidebar_usercontrol;
+        _sidebar = this.FindName("sidebar_usercontrol") as sidebar_usercontrol;
 
         // Default to dashboard on launch
         if (MainContentHost.Content == null)
@@ -98,21 +98,22 @@ public partial class MainWindow : Window
 
             if (!response.IsSuccessStatusCode)
             {
-                SignalStrengthText.Text = "Disconnected";
+                _sidebar?.SetSignalStrength("Disconnected");
                 return;
             }
 
             var ms = sw.ElapsedMilliseconds;
-            SignalStrengthText.Text = ms switch
+            var status = ms switch
             {
                 <= 180 => "Strong",
                 <= 450 => "Medium",
                 _ => "Poor"
             };
+            _sidebar?.SetSignalStrength(status);
         }
         catch
         {
-            SignalStrengthText.Text = "Disconnected";
+            _sidebar?.SetSignalStrength("Disconnected");
         }
         finally
         {

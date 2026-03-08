@@ -137,20 +137,30 @@
                     </StackPanel>
                 </Button>
 
-                <!-- Essay Checker -->
-                <Button x:Name="essay_checker_button"
-                        Style="{StaticResource SidebarButtonStyle}"
-                        Click="Essay_Checker_Button_Click">
-                    <StackPanel Orientation="Horizontal">
-                        <Image Source="pack://application:,,,/ICONS/analytics_grey32.png"
-                               Width="20" Height="20" Stretch="Uniform"/>
-                        <TextBlock Text="Essay Checker" Margin="12,0,0,0" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
             </StackPanel>
 
-            <!-- Spacer -->
-            <Border Grid.Row="2"/>
+            <!-- Sidebar center status -->
+            <Border Grid.Row="2"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Background="#E6F4F1"
+                    CornerRadius="14"
+                    Padding="10,6"
+                    Margin="8">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Signal:"
+                               Foreground="#2e2f33"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+                    <TextBlock x:Name="SignalStrengthText"
+                               Text="Checking..."
+                               Foreground="#3aae9e"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               Margin="6,0,0,0"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+            </Border>
 
             <!-- User Info & Settings -->
             <StackPanel Grid.Row="3" Margin="12,0,12,8">
