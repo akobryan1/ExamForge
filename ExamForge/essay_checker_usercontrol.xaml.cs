@@ -83,6 +83,7 @@ public partial class essay_checker_usercontrol : UserControl
 
             _queueItems.Clear();
             _gradedItems.Clear();
+            var seenQueueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var selectedExamId = (EssayExamFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "ALL";
             var targetExams = selectedExamId == "ALL"
                 ? _essayExams
@@ -92,8 +93,8 @@ public partial class essay_checker_usercontrol : UserControl
         {
             var submissions = await _firestoreService.GetExamSubmissionsAsync(exam.Id);
             var essayContents = exam.Contents
-                .Where(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))
                 .Select((content, idx) => new { Content = content, Number = idx + 1 })
+                .Where(x => string.Equals(x.Content.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             foreach (var submission in submissions)
@@ -132,6 +133,12 @@ public partial class essay_checker_usercontrol : UserControl
                         ClarityWeight = meta.ClarityWeight,
                         ExistingGrade = existingGrade
                     };
+
+                    var dedupeKey = $"{queueItem.SubmissionId}:{queueItem.QuestionId}:{queueItem.QuestionNumber}";
+                    if (!seenQueueKeys.Add(dedupeKey))
+                    {
+                        continue;
+                    }
 
                     if (existingGrade != null)
                     {
