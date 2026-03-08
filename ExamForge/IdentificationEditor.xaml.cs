@@ -27,12 +27,19 @@ namespace ExamForge
         {
             if (isLoading) return;
             item.TextAnswer = AnswerTextBox.Text;
+            UpdateItemStatus();
         }
 
         private void CustomPoints_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (isLoading) return;
             item.CustomPoints = CustomPointsTextBox.Text;
+        }
+
+        private void UpdateItemStatus()
+        {
+            var isComplete = !string.IsNullOrWhiteSpace(item.Question) && item.HasValidAnswer();
+            item.Status = isComplete ? "Complete" : "Incomplete";
         }
     }
 }

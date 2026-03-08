@@ -41,6 +41,7 @@ namespace ExamForge
             this.DataContext = this;
 
             AddNewRow();
+            UpdateEssayCountColumnVisibility();
         }
 
         private void DataRows_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -93,6 +94,12 @@ namespace ExamForge
             {
                 // Clear previous warnings
                 row.Warning = "";
+                var isEssay = string.Equals(row.TestType?.Trim(), "Essay", StringComparison.OrdinalIgnoreCase);
+
+                if (!isEssay && !string.IsNullOrWhiteSpace(row.EssayCount))
+                {
+                    row.EssayCount = string.Empty;
+                }
 
                 // Rule 1: Unique Test Groups (first wins, later duplicates get warning)
                 if (!string.IsNullOrWhiteSpace(row.TestGroup))
@@ -112,15 +119,46 @@ namespace ExamForge
                 bool hasStart = int.TryParse(row.Start?.Trim(), out int start);
                 bool hasEnd = int.TryParse(row.End?.Trim(), out int end);
 
-                if (!string.IsNullOrWhiteSpace(row.Start) && !hasStart)
+                if (isEssay)
+                {
+                    if (string.IsNullOrWhiteSpace(row.EssayCount))
+                        row.EssayCount = "1";
+
+                    if (!int.TryParse(row.EssayCount.Trim(), out var essayCount) || essayCount < 1)
+                    {
+                        row.Warning = "# Essays must be a positive number for Essay type.";
+                    }
+                    else if (!int.TryParse(row.Points?.Trim(), out var essayPoints) || essayPoints < 1)
+                    {
+                        row.Warning = "Essay Points must be a positive number.";
+                    }
+                    else if (essayPoints < essayCount)
+                    {
+                        row.Warning = "Essay Points must be at least the number of essays.";
+                    }
+                    else
+                    {
+                        start = 1;
+                        while (occupiedNumbers.Contains(start)) start++;
+
+                        var computedEnd = start + essayPoints - 1;
+                        row.Start = start.ToString();
+                        row.End = computedEnd.ToString();
+                        hasStart = true;
+                        hasEnd = true;
+                        end = computedEnd;
+                    }
+                }
+
+                if (!isEssay && !string.IsNullOrWhiteSpace(row.Start) && !hasStart)
                 {
                     row.Warning = "Start must be a valid number.";
                 }
-                else if (!string.IsNullOrWhiteSpace(row.End) && !hasEnd)
+                else if (!isEssay && !string.IsNullOrWhiteSpace(row.End) && !hasEnd)
                 {
                     row.Warning = "End must be a valid number.";
                 }
-                else if (hasEnd && !hasStart)
+                else if (!isEssay && hasEnd && !hasStart)
                 {
                     row.Warning = "Enter Start before End.";
                 }
@@ -206,7 +244,16 @@ namespace ExamForge
                 }
             }
 
+            UpdateEssayCountColumnVisibility();
             _suppressRowEvents = false;
+        }
+
+        private void UpdateEssayCountColumnVisibility()
+        {
+            if (EssayCountColumn == null) return;
+
+            var hasEssayRows = dataRows.Any(r => string.Equals(r.TestType?.Trim(), "Essay", StringComparison.OrdinalIgnoreCase));
+            EssayCountColumn.Visibility = hasEssayRows ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private void AddNewRow()
@@ -285,7 +332,8 @@ namespace ExamForge
                     TestType = row.TestType,
                     Start = row.Start,
                     End = row.End,
-                    Points = row.Points
+                    Points = row.Points,
+                    EssayCount = row.EssayCount
                 });
             }
 
@@ -313,7 +361,8 @@ namespace ExamForge
                             TestType = row.TestType,
                             Start = row.Start,
                             End = row.End,
-                            Points = row.Points
+                            Points = row.Points,
+                            EssayCount = row.EssayCount
                         };
                         dataRows.Add(newRow);
                     }
@@ -360,6 +409,27 @@ namespace ExamForge
                 {
                     errorMessage = "Start and End must be valid numbers.";
                     return false;
+                }
+
+                if (string.Equals(row.TestType?.Trim(), "Essay", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!int.TryParse(row.EssayCount?.Trim(), out var essayCount) || essayCount < 1)
+                    {
+                        errorMessage = "Essay rows must have a valid # Essays value (>= 1).";
+                        return false;
+                    }
+
+                    if (!int.TryParse(row.Points.Trim(), out var essayPoints) || essayPoints < 1)
+                    {
+                        errorMessage = "Essay rows must have valid Points (>= 1).";
+                        return false;
+                    }
+
+                    if (essayPoints < essayCount)
+                    {
+                        errorMessage = "Essay points must be greater than or equal to # Essays.";
+                        return false;
+                    }
                 }
 
                 if (start < 1 || end < 1)
@@ -414,6 +484,7 @@ namespace ExamForge
         private string _start = "";
         private string _end = "";
         private string _points = "";
+        private string _essayCount = "1";
         private string _warning = "";
 
         public string TestGroup
@@ -425,6 +496,19 @@ namespace ExamForge
                 {
                     _testGroup = value;
                     OnPropertyChanged(nameof(TestGroup));
+                }
+            }
+        }
+
+        public string EssayCount
+        {
+            get => _essayCount;
+            set
+            {
+                if (_essayCount != value)
+                {
+                    _essayCount = value;
+                    OnPropertyChanged(nameof(EssayCount));
                 }
             }
         }

@@ -217,6 +217,42 @@ public class FirestoreService
                 throw new ArgumentException("Essay QuestionId is required.", nameof(essayGrade.QuestionId));
 
             var docRef = _firestoreDb.Collection(GetUserPath(ExamineeDataCollection)).Document(submissionId);
+            var existingSnapshot = await docRef.GetSnapshotAsync();
+
+            var responses = existingSnapshot.Exists
+                ? existingSnapshot.ConvertTo<ExamSubmission>()?.Responses ?? new List<SubmissionResponse>()
+                : new List<SubmissionResponse>();
+
+            var targetResponse = responses.FirstOrDefault(r =>
+                string.Equals(r.QuestionId, essayGrade.QuestionId, StringComparison.OrdinalIgnoreCase) ||
+                r.QuestionNumber == essayGrade.QuestionNumber);
+
+            if (targetResponse != null)
+            {
+                var cappedPoints = Math.Max(0, Math.Min(essayGrade.FinalScore, targetResponse.PointsPossible > 0 ? targetResponse.PointsPossible : essayGrade.MaxScore));
+                targetResponse.PointsEarned = cappedPoints;
+                targetResponse.IsCorrect = cappedPoints >= (targetResponse.PointsPossible > 0 ? targetResponse.PointsPossible : essayGrade.MaxScore);
+            }
+            else
+            {
+                responses.Add(new SubmissionResponse
+                {
+                    QuestionId = essayGrade.QuestionId,
+                    QuestionNumber = essayGrade.QuestionNumber,
+                    Answer = essayGrade.StudentAnswer,
+                    PointsEarned = Math.Max(0, essayGrade.FinalScore),
+                    PointsPossible = Math.Max(0, essayGrade.MaxScore),
+                    IsCorrect = essayGrade.FinalScore >= essayGrade.MaxScore && essayGrade.MaxScore > 0
+                });
+            }
+
+            var rawTotalScore = responses.Sum(r => Math.Max(0, r.PointsEarned));
+            var totalPossible = responses.Sum(r => Math.Max(0, r.PointsPossible));
+            var deductedPoints = existingSnapshot.Exists
+                ? (existingSnapshot.TryGetValue("DeductedPoints", out double ded) ? ded : 0)
+                : 0;
+            var finalScore = Math.Max(0, rawTotalScore - Math.Max(0, deductedPoints));
+
             var gradeMap = new Dictionary<string, object>
             {
                 ["QuestionId"] = essayGrade.QuestionId,
@@ -245,7 +281,20 @@ public class FirestoreService
                 ["EssayGrades"] = new Dictionary<string, object>
                 {
                     [essayGrade.QuestionId] = gradeMap
-                }
+                },
+                ["Responses"] = responses.Select(r => new Dictionary<string, object>
+                {
+                    ["QuestionId"] = r.QuestionId,
+                    ["QuestionNumber"] = r.QuestionNumber,
+                    ["Answer"] = r.Answer,
+                    ["PointsEarned"] = r.PointsEarned,
+                    ["PointsPossible"] = r.PointsPossible,
+                    ["IsCorrect"] = r.IsCorrect
+                }).ToList(),
+                ["RawTotalScore"] = rawTotalScore,
+                ["TotalPossiblePoints"] = totalPossible,
+                ["TotalScore"] = finalScore,
+                ["Status"] = "Graded"
             }, SetOptions.MergeAll);
         }
         catch (Exception ex)

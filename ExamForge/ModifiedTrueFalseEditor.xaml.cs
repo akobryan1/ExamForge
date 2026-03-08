@@ -66,7 +66,7 @@ namespace ExamForge
             bool isComplete = _item.TrueFalseAnswer == true || 
                              (!_item.TrueFalseAnswer && !string.IsNullOrWhiteSpace(_item.ModifiedAnswer));
 
-            _item.Status = isComplete ? "Complete" : "Incomplete";
+            _item.Status = (!string.IsNullOrWhiteSpace(_item.Question) && isComplete) ? "Complete" : "Incomplete";
         }
     }
 }

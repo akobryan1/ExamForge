@@ -42,6 +42,7 @@ namespace ExamForge
             else if (sender == OptionBTextBox) item.OptionB = OptionBTextBox.Text;
             else if (sender == OptionCTextBox) item.OptionC = OptionCTextBox.Text;
             else if (sender == OptionDTextBox) item.OptionD = OptionDTextBox.Text;
+            UpdateItemStatus();
         }
 
         private void CorrectAnswer_Checked(object sender, RoutedEventArgs e)
@@ -51,12 +52,19 @@ namespace ExamForge
             else if (sender == CorrectB) item.CorrectAnswer = "B";
             else if (sender == CorrectC) item.CorrectAnswer = "C";
             else if (sender == CorrectD) item.CorrectAnswer = "D";
+            UpdateItemStatus();
         }
 
         private void CustomPoints_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (isLoading) return;
             item.CustomPoints = CustomPointsTextBox.Text;
+        }
+
+        private void UpdateItemStatus()
+        {
+            var isComplete = !string.IsNullOrWhiteSpace(item.Question) && item.HasValidAnswer();
+            item.Status = isComplete ? "Complete" : "Incomplete";
         }
     }
 }

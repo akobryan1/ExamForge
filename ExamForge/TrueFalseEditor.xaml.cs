@@ -31,6 +31,7 @@ namespace ExamForge
             if (!isLoading)
             {
                 item.TrueFalseAnswer = true;
+                UpdateItemStatus();
             }
         }
 
@@ -40,6 +41,7 @@ namespace ExamForge
             if (!isLoading)
             {
                 item.TrueFalseAnswer = false;
+                UpdateItemStatus();
             }
         }
 
@@ -47,6 +49,12 @@ namespace ExamForge
         {
             if (isLoading) return;
             item.CustomPoints = CustomPointsTextBox.Text;
+        }
+
+        private void UpdateItemStatus()
+        {
+            var isComplete = !string.IsNullOrWhiteSpace(item.Question) && item.HasValidAnswer();
+            item.Status = isComplete ? "Complete" : "Incomplete";
         }
     }
 }

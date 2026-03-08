@@ -375,6 +375,40 @@ namespace ExamForge
             }
         }
 
+        private async void GenerateExamReport_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (sender is not Button btn || btn.Tag is not string examId || string.IsNullOrWhiteSpace(examId))
+                    return;
+
+                var examGroup = _filteredExamineeData.FirstOrDefault(x => x.ExamId == examId)
+                                ?? _allExamineeData.FirstOrDefault(x => x.ExamId == examId);
+                if (examGroup == null)
+                {
+                    ShowError("Exam group not found.");
+                    return;
+                }
+
+                var submissions = await _firestoreService.GetExamSubmissionsAsync(examId);
+                if (!submissions.Any())
+                {
+                    ShowError("No submissions found for this exam.");
+                    return;
+                }
+
+                var pdfService = new PdfExportService();
+                var path = await pdfService.ExportGradebookToPdfAsync(examId, examGroup.ExamTitle, submissions);
+                MessageBox.Show($"Examinee report generated: {path}", "Success",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to generate exam report: {ex.Message}");
+                Debug.WriteLine($"Error generating exam report: {ex.Message}");
+            }
+        }
+
         #endregion
 
         #region Class Overview

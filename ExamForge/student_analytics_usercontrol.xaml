@@ -544,6 +544,12 @@
                                                               FontWeight="Medium"
                                                               Foreground="White"/>
                                                 </Border>
+                                                <Button Content="Generate Report"
+                                                        Margin="12,0,0,0"
+                                                        Padding="12,6"
+                                                        Style="{StaticResource PrimaryButtonStyle}"
+                                                        Click="GenerateExamReport_Click"
+                                                        Tag="{Binding ExamId}"/>
                                             </StackPanel>
                                             
                                             <!-- Examinee Data Grid -->

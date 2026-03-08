@@ -108,6 +108,7 @@ namespace ExamForge
             item.EnumerationAnswers.Add("");
             AddAnswerUI("");
             UpdateAnswerNumbers();
+            UpdateItemStatus();
         }
 
         private void DeleteAnswer_Click(object sender, RoutedEventArgs e)
@@ -125,6 +126,7 @@ namespace ExamForge
                     item.EnumerationAnswers.RemoveAt(index);
                     AnswersPanel.Children.RemoveAt(index);
                     UpdateAnswerNumbers();
+                    UpdateItemStatus();
                 }
             }
         }
@@ -138,6 +140,7 @@ namespace ExamForge
             if (index >= 0 && index < item.EnumerationAnswers.Count)
             {
                 item.EnumerationAnswers[index] = textBox.Text;
+                UpdateItemStatus();
             }
         }
 
@@ -156,6 +159,12 @@ namespace ExamForge
         {
             if (isLoading) return;
             item.CustomPoints = CustomPointsTextBox.Text;
+        }
+
+        private void UpdateItemStatus()
+        {
+            var isComplete = !string.IsNullOrWhiteSpace(item.Question) && item.HasValidAnswer();
+            item.Status = isComplete ? "Complete" : "Incomplete";
         }
     }
 }
