@@ -243,6 +243,7 @@ async function submitExam(request, env) {
     let rawTotalScore = 0;
     let totalPossiblePoints = 0;
     const deductedPoints = Math.max(0, Number(submission.deductedPoints || 0) || 0);
+    let hasEssayQuestions = false;
 
     contents.forEach((content, index) => {
       const questionNumber = index + 1;
@@ -258,6 +259,7 @@ async function submitExam(request, env) {
       const correctionValue = answerMap[correctionKey] ?? '';
 
       const essay = isEssayType(questionType);
+      if (essay) hasEssayQuestions = true;
       const isCorrect = !essay && isCorrectAnswer(questionType, correctAnswer, answerValue, correctionValue, options);
       const pointsEarned = isCorrect ? points : 0;
 
@@ -343,7 +345,12 @@ async function submitExam(request, env) {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      submissionId: submissionData.id 
+      submissionId: submissionData.id,
+      totalScore: submissionData.totalScore,
+      totalPossiblePoints: submissionData.totalPossiblePoints,
+      rawTotalScore: submissionData.rawTotalScore,
+      deductedPoints: submissionData.deductedPoints,
+      isPartiallyGraded: hasEssayQuestions
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

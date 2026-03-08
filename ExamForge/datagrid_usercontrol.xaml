@@ -218,8 +218,45 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Text="{Binding Start, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource EditTextBoxStyle}"
-                                     MaxLength="5"/>
+                                     MaxLength="5">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource EditTextBoxStyle}">
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                        <Setter Property="IsReadOnly" Value="False"/>
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TestType}" Value="Essay">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="IsReadOnly" Value="True"/>
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <!-- Essay Count Column (used when Test Type is Essay) -->
+                <DataGridTemplateColumn x:Name="EssayCountColumn" Header="# Essays" Width="90" Visibility="Collapsed">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox Text="{Binding EssayCount, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                     MaxLength="3">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource EditTextBoxStyle}">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.45"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TestType}" Value="Essay">
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Setter Property="Opacity" Value="1"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -229,8 +266,22 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <TextBox Text="{Binding End, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                     Style="{StaticResource EditTextBoxStyle}"
-                                     MaxLength="5"/>
+                                     MaxLength="5">
+                                <TextBox.Style>
+                                    <Style TargetType="TextBox" BasedOn="{StaticResource EditTextBoxStyle}">
+                                        <Setter Property="IsEnabled" Value="True"/>
+                                        <Setter Property="IsReadOnly" Value="False"/>
+                                        <Setter Property="Opacity" Value="1"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TestType}" Value="Essay">
+                                                <Setter Property="IsEnabled" Value="False"/>
+                                                <Setter Property="IsReadOnly" Value="True"/>
+                                                <Setter Property="Opacity" Value="0.55"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBox.Style>
+                            </TextBox>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>

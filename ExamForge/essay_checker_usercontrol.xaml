@@ -28,8 +28,8 @@
                 </StackPanel>
 
                 <ComboBox x:Name="EssayExamFilter" Grid.Column="1" Width="220" Margin="12,0,0,0" SelectionChanged="EssayExamFilter_SelectionChanged"/>
-                <Button Grid.Column="2" Content="Auto-Grade All Pending Essays" Margin="12,0,0,0" Padding="12,8" Style="{StaticResource PrimaryButtonStyle}" Click="AutoGradeAll_Click"/>
-                <Button Grid.Column="3" Content="Save Current Grade" Margin="12,0,0,0" Padding="12,8" Style="{StaticResource SecondaryButtonStyle}" Click="SaveCurrentGrade_Click"/>
+                <ToggleButton x:Name="AutoGradeToggleButton" Grid.Column="2" Margin="12,0,0,0" Padding="12,8" MinWidth="170" Checked="AutoGradeToggleButton_Checked" Unchecked="AutoGradeToggleButton_Unchecked"/>
+                <Button Grid.Column="3" Content="Move to Archive" Margin="12,0,0,0" Padding="12,8" Style="{StaticResource SecondaryButtonStyle}" Click="SaveCurrentGrade_Click"/>
             </Grid>
         </Border>
 
@@ -129,7 +129,13 @@
         </Grid>
 
         <Border Grid.Row="2" Background="{StaticResource SurfaceDark}" CornerRadius="8" Padding="10" Margin="0,12,0,0">
-            <TextBlock Text="DeepSeek grading uses configured rubric + model answer + key points. API key placeholder is configured in EssayAutoGradingService." Foreground="{StaticResource TextMuted}" FontSize="11"/>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,6">
+                    <ProgressBar x:Name="LoadingProgressBar" Width="140" Height="6" IsIndeterminate="True" Visibility="Collapsed"/>
+                    <TextBlock x:Name="LoadingStatusText" Margin="10,0,0,0" Foreground="{StaticResource TextSecondary}" FontSize="11" Visibility="Collapsed"/>
+                </StackPanel>
+                <TextBlock Text="DeepSeek grading uses configured rubric + model answer + key points. API key placeholder is configured in EssayAutoGradingService." Foreground="{StaticResource TextMuted}" FontSize="11"/>
+            </StackPanel>
         </Border>
     </Grid>
 </UserControl>

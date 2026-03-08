@@ -1195,7 +1195,7 @@ public class ExamPublishingService
                 sb.AppendLine("            }");
                 sb.AppendLine("            questionTimeRemaining--;");
                 sb.AppendLine("        }");
-                sb.AppendLine();
+        sb.AppendLine();
             }
         }
         
@@ -1253,8 +1253,17 @@ public class ExamPublishingService
         sb.AppendLine("                    body: JSON.stringify(submission)");
         sb.AppendLine("                });");
         sb.AppendLine("                if (response.ok) {");
+        sb.AppendLine("                    const result = await response.json();");
         sb.AppendLine("                    const studentName = (window.studentInfo && window.studentInfo.name) ? window.studentInfo.name : 'Student';");
-        sb.AppendLine("                    document.body.innerHTML = '<div style=\"display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; text-align: center; padding: 20px;\"><h1 style=\"font-size: clamp(24px, 5vw, 48px);\">✓ Exam Submitted Successfully!</h1><p style=\"font-size: clamp(16px, 3vw, 24px); margin-top: 20px;\">Thank you, ' + studentName + '!</p><p style=\"font-size: clamp(14px, 2.5vw, 18px); margin-top: 10px;\">Your answers have been recorded.</p></div>';");
+        sb.AppendLine("                    const totalScore = (typeof result.totalScore === 'number') ? result.totalScore : null;");
+        sb.AppendLine("                    const totalPossible = (typeof result.totalPossiblePoints === 'number') ? result.totalPossiblePoints : null;");
+        sb.AppendLine("                    const deducted = (typeof result.deductedPoints === 'number') ? result.deductedPoints : 0;");
+        sb.AppendLine("                    const isPartiallyGraded = !!result.isPartiallyGraded;");
+        sb.AppendLine("                    const percentage = (totalScore !== null && totalPossible && totalPossible > 0) ? ((totalScore / totalPossible) * 100) : null;");
+        sb.AppendLine("                    const scoreHtml = (totalScore !== null && totalPossible !== null)");
+        sb.AppendLine("                        ? `<div style=\"margin-top:18px;padding:14px 18px;border-radius:10px;background:#e6f4f1;color:#2e2f33;min-width:320px;\"><div style=\"font-size:20px;font-weight:700;\">Current Score: ${totalScore.toFixed(1)} / ${totalPossible.toFixed(1)} (${percentage !== null ? percentage.toFixed(1) : '0.0'}%)</div><div style=\"font-size:14px;margin-top:6px;\">Penalty deductions applied: ${deducted.toFixed(1)} points</div><div style=\"font-size:13px;margin-top:6px;color:#6b7280;\">${isPartiallyGraded ? 'This score is partially graded. Essay scores will be added after instructor review.' : 'This is your fully auto-graded score.'}</div></div>`");
+        sb.AppendLine("                        : ''; ");
+        sb.AppendLine("                    document.body.innerHTML = '<div style=\"display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; color: white; text-align: center; padding: 20px;\"><h1 style=\"font-size: clamp(24px, 5vw, 48px);\">✓ Exam Submitted Successfully!</h1><p style=\"font-size: clamp(16px, 3vw, 24px); margin-top: 20px;\">Thank you, ' + studentName + '!</p><p style=\"font-size: clamp(14px, 2.5vw, 18px); margin-top: 10px;\">Your answers have been recorded.</p>' + scoreHtml + '</div>';");
         sb.AppendLine("                    invokeSignalR('LeaveExamSession', examId, window.studentInfo.studentId || '', window.studentInfo.name || '')");
         sb.AppendLine("                        .catch(function(err){ console.warn('[SignalR] LeaveExamSession failed:', err); });");
         sb.AppendLine("                } else {");

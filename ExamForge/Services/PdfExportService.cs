@@ -23,14 +23,10 @@ namespace ExamForge.Services
         {
             return await Task.Run(() =>
             {
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var filename = $"StudentReport_{studentName.Replace(" ", "_")}_{timestamp}.pdf";
-                var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
-                Directory.CreateDirectory(exportPath);
-                var filePath = Path.Combine(exportPath, filename);
+                var filePath = BuildExportFilePath("StudentReport", studentName);
 
-                using (var writer = new PdfWriter(filePath))
+                using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var writer = new PdfWriter(stream))
                 using (var pdf = new PdfDocument(writer))
                 {
                     var document = new Document(pdf);
@@ -123,14 +119,10 @@ namespace ExamForge.Services
         {
             return await Task.Run(() =>
             {
-                var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                var filename = $"Gradebook_{examTitle.Replace(" ", "_")}_{timestamp}.pdf";
-                var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-                var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
-                Directory.CreateDirectory(exportPath);
-                var filePath = Path.Combine(exportPath, filename);
+                var filePath = BuildExportFilePath("Gradebook", examTitle);
 
-                using (var writer = new PdfWriter(filePath))
+                using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
+                using (var writer = new PdfWriter(stream))
                 using (var pdf = new PdfDocument(writer))
                 {
                     var document = new Document(pdf);
@@ -202,6 +194,47 @@ namespace ExamForge.Services
                 >= 60 => "D",
                 _ => "F"
             };
+        }
+
+        private static string BuildExportFilePath(string prefix, string title)
+        {
+            var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            var safeTitle = SanitizeFileSegment(title);
+
+            var documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            if (string.IsNullOrWhiteSpace(documentsPath) || !Directory.Exists(documentsPath))
+            {
+                documentsPath = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            }
+
+            var exportPath = Path.Combine(documentsPath, "ExamForge_Exports");
+            Directory.CreateDirectory(exportPath);
+
+            var fileName = $"{prefix}_{safeTitle}_{timestamp}.pdf";
+            var filePath = Path.Combine(exportPath, fileName);
+
+            var dir = Path.GetDirectoryName(filePath);
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            return filePath;
+        }
+
+        private static string SanitizeFileSegment(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "Untitled";
+
+            var invalid = Path.GetInvalidFileNameChars();
+            var cleaned = new string(value
+                .Trim()
+                .Select(ch => invalid.Contains(ch) ? '_' : ch)
+                .ToArray());
+
+            cleaned = cleaned.Replace(' ', '_');
+            if (cleaned.Length > 80) cleaned = cleaned.Substring(0, 80);
+            return string.IsNullOrWhiteSpace(cleaned) ? "Untitled" : cleaned;
         }
     }
 }

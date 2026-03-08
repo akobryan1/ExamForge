@@ -93,6 +93,12 @@ public class ExamSubmission
     public double TotalPossiblePoints { get; set; }
 
     [FirestoreProperty]
+    public double RawTotalScore { get; set; }
+
+    [FirestoreProperty]
+    public double DeductedPoints { get; set; }
+
+    [FirestoreProperty]
     public string Status { get; set; } = "Submitted";
 
     [FirestoreProperty]

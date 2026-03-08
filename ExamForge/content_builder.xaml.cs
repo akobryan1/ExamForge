@@ -68,6 +68,41 @@ namespace ExamForge
                 if (!int.TryParse(row.Start, out int start) || !int.TryParse(row.End, out int end))
                     continue;
 
+                var isEssay = string.Equals(row.TestType, "Essay", StringComparison.OrdinalIgnoreCase);
+
+                if (isEssay)
+                {
+                    var essayCount = int.TryParse(row.EssayCount, out var parsedEssayCount) && parsedEssayCount > 0
+                        ? parsedEssayCount
+                        : 1;
+
+                    var totalEssayPoints = int.TryParse(row.Points, out var parsedPoints) && parsedPoints > 0
+                        ? parsedPoints
+                        : essayCount;
+
+                    var basePoints = totalEssayPoints / essayCount;
+                    var remainder = totalEssayPoints % essayCount;
+
+                    for (int i = 0; i < essayCount; i++)
+                    {
+                        var distributedPoints = basePoints + (i < remainder ? 1 : 0);
+                        if (distributedPoints <= 0) distributedPoints = 1;
+
+                        var item = new ExamItem
+                        {
+                            Number = start + i,
+                            Title = $"Item {start + i}",
+                            TestGroup = row.TestGroup,
+                            TestType = row.TestType,
+                            Points = distributedPoints.ToString(),
+                            Status = "Incomplete"
+                        };
+                        allItems.Add(item);
+                    }
+
+                    continue;
+                }
+
                 for (int i = start; i <= end; i++)
                 {
                     var item = new ExamItem

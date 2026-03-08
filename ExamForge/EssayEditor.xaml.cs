@@ -33,18 +33,21 @@ namespace ExamForge
         {
             if (isLoading) return;
             item.EssayRubric = RubricTextBox.Text;
+            UpdateItemStatus();
         }
 
         private void ModelAnswer_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (isLoading) return;
             item.EssayModelAnswer = ModelAnswerTextBox.Text;
+            UpdateItemStatus();
         }
 
         private void KeyPoints_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (isLoading) return;
             item.EssayKeyPoints = KeyPointsTextBox.Text;
+            UpdateItemStatus();
         }
 
         private void WeightSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -68,6 +71,12 @@ namespace ExamForge
         {
             if (isLoading) return;
             item.CustomPoints = CustomPointsTextBox.Text;
+        }
+
+        private void UpdateItemStatus()
+        {
+            var isComplete = !string.IsNullOrWhiteSpace(item.Question) && item.HasValidAnswer();
+            item.Status = isComplete ? "Complete" : "Incomplete";
         }
     }
 }

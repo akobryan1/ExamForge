@@ -33,6 +33,7 @@
     <PackageReference Include="FirebaseAdmin" Version="3.4.0" />
     <PackageReference Include="Google.Cloud.Storage.V1" Version="4.13.0" />
     <PackageReference Include="itext" Version="9.5.0" />
+    <PackageReference Include="itext7.bouncy-castle-adapter" Version="9.5.0" />
     <PackageReference Include="LtiAdvantage.IdentityServer4" Version="2.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="10.0.2" />

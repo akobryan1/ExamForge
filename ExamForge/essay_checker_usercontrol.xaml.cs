@@ -18,11 +18,14 @@ public partial class essay_checker_usercontrol : UserControl
     private readonly List<PublishedExam> _essayExams = new();
     private readonly List<EssayCheckerQueueItem> _queueItems = new();
     private readonly List<EssayCheckerQueueItem> _gradedItems = new();
+    private readonly Dictionary<string, EssayAutoGradeResult> _autoGradeCache = new();
 
     private EssayCheckerQueueItem? _currentItem;
     private EssayAutoGradeResult? _currentResult;
     private double _currentAdjustedScore;
     private bool _apiStatusShown;
+    private bool _autoGradingEnabled = true;
+    private bool _suppressAutoGradeToggleEvents;
 
     public essay_checker_usercontrol()
     {
@@ -39,19 +42,29 @@ public partial class essay_checker_usercontrol : UserControl
     {
         if (_firestoreService == null) return;
 
-        var allExams = await _firestoreService.GetAllPublishedExamsAsync();
-        _essayExams.Clear();
-        _essayExams.AddRange(allExams.Where(e => e.Contents.Any(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))));
-
-        EssayExamFilter.Items.Clear();
-        EssayExamFilter.Items.Add(new ComboBoxItem { Content = "All Essay Exams", Tag = "ALL" });
-        foreach (var exam in _essayExams)
+        SetLoadingState(true, "Loading essay exams...");
+        try
         {
-            EssayExamFilter.Items.Add(new ComboBoxItem { Content = exam.Title, Tag = exam.Id });
-        }
+            await LoadAutoGradePreferenceAsync();
 
-        EssayExamFilter.SelectedIndex = 0;
-        await RefreshQueueAsync();
+            var allExams = await _firestoreService.GetAllPublishedExamsAsync();
+            _essayExams.Clear();
+            _essayExams.AddRange(allExams.Where(e => e.Contents.Any(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))));
+
+            EssayExamFilter.Items.Clear();
+            EssayExamFilter.Items.Add(new ComboBoxItem { Content = "All Essay Exams", Tag = "ALL" });
+            foreach (var exam in _essayExams)
+            {
+                EssayExamFilter.Items.Add(new ComboBoxItem { Content = exam.Title, Tag = exam.Id });
+            }
+
+            EssayExamFilter.SelectedIndex = 0;
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
     }
 
     private async void EssayExamFilter_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -64,19 +77,24 @@ public partial class essay_checker_usercontrol : UserControl
     {
         if (_firestoreService == null) return;
 
-        _queueItems.Clear();
-        _gradedItems.Clear();
-        var selectedExamId = (EssayExamFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "ALL";
-        var targetExams = selectedExamId == "ALL"
-            ? _essayExams
-            : _essayExams.Where(e => e.Id == selectedExamId).ToList();
+        SetLoadingState(true, "Refreshing essay queue...");
+        try
+        {
+
+            _queueItems.Clear();
+            _gradedItems.Clear();
+            var seenQueueKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var selectedExamId = (EssayExamFilter.SelectedItem as ComboBoxItem)?.Tag?.ToString() ?? "ALL";
+            var targetExams = selectedExamId == "ALL"
+                ? _essayExams
+                : _essayExams.Where(e => e.Id == selectedExamId).ToList();
 
         foreach (var exam in targetExams)
         {
             var submissions = await _firestoreService.GetExamSubmissionsAsync(exam.Id);
             var essayContents = exam.Contents
-                .Where(c => string.Equals(c.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))
                 .Select((content, idx) => new { Content = content, Number = idx + 1 })
+                .Where(x => string.Equals(x.Content.QuestionType, "Essay", StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
             foreach (var submission in submissions)
@@ -116,6 +134,12 @@ public partial class essay_checker_usercontrol : UserControl
                         ExistingGrade = existingGrade
                     };
 
+                    var dedupeKey = $"{queueItem.SubmissionId}:{queueItem.QuestionId}:{queueItem.QuestionNumber}";
+                    if (!seenQueueKeys.Add(dedupeKey))
+                    {
+                        continue;
+                    }
+
                     if (existingGrade != null)
                     {
                         _gradedItems.Add(queueItem);
@@ -128,22 +152,29 @@ public partial class essay_checker_usercontrol : UserControl
             }
         }
 
-        EssayQueueList.ItemsSource = null;
-        EssayQueueList.ItemsSource = _queueItems
-            .OrderBy(q => q.ExamTitle)
-            .ThenBy(q => q.StudentName)
-            .ToList();
+            await AutoGradeQueueItemsAsync();
 
-        GradedArchiveList.ItemsSource = null;
-        GradedArchiveList.ItemsSource = _gradedItems
-            .OrderByDescending(g => g.ExistingGrade?.GradedAt ?? DateTime.MinValue)
-            .ToList();
+            EssayQueueList.ItemsSource = null;
+            EssayQueueList.ItemsSource = _queueItems
+                .OrderBy(q => q.ExamTitle)
+                .ThenBy(q => q.StudentName)
+                .ToList();
 
-        QueueCountText.Text = $"({_queueItems.Count} pending, {_gradedItems.Count} graded)";
+            GradedArchiveList.ItemsSource = null;
+            GradedArchiveList.ItemsSource = _gradedItems
+                .OrderByDescending(g => g.ExistingGrade?.GradedAt ?? DateTime.MinValue)
+                .ToList();
 
-        if (EssayQueueList.Items.Count > 0)
+            QueueCountText.Text = $"({_queueItems.Count} pending, {_gradedItems.Count} graded)";
+
+            if (EssayQueueList.Items.Count > 0)
+            {
+                EssayQueueList.SelectedIndex = 0;
+            }
+        }
+        finally
         {
-            EssayQueueList.SelectedIndex = 0;
+            SetLoadingState(false);
         }
     }
 
@@ -161,7 +192,38 @@ public partial class essay_checker_usercontrol : UserControl
             : $"Model Answer: {item.ModelAnswer}\n\nKey Points: {item.KeyPoints}";
         StudentEssayText.Text = item.EssayAnswer;
 
-        _currentResult = await _autoGradingService.GradeEssayAsync(item);
+        var cached = GetCachedAutoGrade(item);
+        if (cached != null)
+        {
+            _currentResult = cached;
+        }
+        else if (!_autoGradingEnabled)
+        {
+            _currentResult = new EssayAutoGradeResult
+            {
+                AiScore = 0,
+                MaxScore = item.MaxPoints,
+                ConfidencePercent = 0,
+                FlagForReview = true,
+                Justification = "Auto-grading is turned off for this account. Turn it on to generate AI evaluation.",
+                RubricBreakdown = new List<EssayRubricScoreRow>(),
+                UsedDeepSeek = false,
+                ProviderStatus = "Auto-grading is disabled by user preference."
+            };
+        }
+        else
+        {
+            SetLoadingState(true, "Auto-grading selected essay...");
+            try
+            {
+                _currentResult = await _autoGradingService.GradeEssayAsync(item);
+            }
+            finally
+            {
+                SetLoadingState(false);
+            }
+        }
+        _autoGradeCache[BuildQueueKey(item)] = _currentResult;
         _currentAdjustedScore = _currentResult.AiScore;
         RenderCurrentResult();
 
@@ -227,68 +289,6 @@ public partial class essay_checker_usercontrol : UserControl
         JustificationText.Text = justification;
     }
 
-    private async void AutoGradeAll_Click(object sender, RoutedEventArgs e)
-    {
-        if (!_queueItems.Any())
-        {
-            MessageBox.Show("No pending essay submissions were found.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
-        }
-
-        if (_firestoreService == null)
-        {
-            MessageBox.Show("Firestore service is not available.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        var processed = 0;
-        var skipped = 0;
-        var deepSeekCount = 0;
-        var fallbackCount = 0;
-
-        foreach (var item in _queueItems)
-        {
-            if (string.IsNullOrWhiteSpace(item.SubmissionId))
-            {
-                skipped++;
-                continue;
-            }
-
-            try
-            {
-                var result = await _autoGradingService.GradeEssayAsync(item);
-                if (result.UsedDeepSeek) deepSeekCount++; else fallbackCount++;
-                var record = new EssayGradeRecord
-                {
-                    QuestionId = ResolveQuestionId(item.QuestionId, string.Empty, item.QuestionNumber, item.QuestionNumber),
-                    QuestionNumber = item.QuestionNumber,
-                    StudentAnswer = item.EssayAnswer,
-                    AiScore = result.AiScore,
-                    FinalScore = result.AiScore,
-                    MaxScore = result.MaxScore,
-                    ConfidencePercent = result.ConfidencePercent,
-                    FlagForReview = result.FlagForReview,
-                    Justification = result.Justification,
-                    RubricBreakdown = result.RubricBreakdown,
-                    GradedAt = DateTime.UtcNow
-                };
-
-                await _firestoreService.UpdateSubmissionEssayGradeAsync(item.SubmissionId, record);
-                processed++;
-            }
-            catch (Exception ex)
-            {
-                skipped++;
-                System.Diagnostics.Debug.WriteLine($"Essay auto-grade skipped for submission {item.SubmissionId}: {ex.Message}");
-            }
-        }
-
-        MessageBox.Show($"Auto-grading finished. Processed: {processed}, Skipped: {skipped}.\nDeepSeek: {deepSeekCount}, Fallback: {fallbackCount}.",
-            "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
-        System.Diagnostics.Debug.WriteLine($"Auto-grade provider usage => DeepSeek: {deepSeekCount}, Fallback: {fallbackCount}");
-        await RefreshQueueAsync();
-    }
-
     private void DecreaseScore_Click(object sender, RoutedEventArgs e)
     {
         if (_currentResult == null) return;
@@ -327,9 +327,127 @@ public partial class essay_checker_usercontrol : UserControl
             GradedAt = DateTime.UtcNow
         };
 
-        await _firestoreService.UpdateSubmissionEssayGradeAsync(_currentItem.SubmissionId, record);
-        MessageBox.Show("Essay grade saved.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
-        await RefreshQueueAsync();
+        SetLoadingState(true, "Saving grade and moving to archive...");
+        try
+        {
+            await _firestoreService.UpdateSubmissionEssayGradeAsync(_currentItem.SubmissionId, record);
+            _autoGradeCache.Remove(BuildQueueKey(_currentItem));
+            MessageBox.Show("Essay moved to archive.", "Essay Checker", MessageBoxButton.OK, MessageBoxImage.Information);
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
+    }
+
+    private EssayAutoGradeResult? GetCachedAutoGrade(EssayCheckerQueueItem item)
+    {
+        var key = BuildQueueKey(item);
+        return _autoGradeCache.TryGetValue(key, out var result) ? result : null;
+    }
+
+    private static string BuildQueueKey(EssayCheckerQueueItem item)
+    {
+        return $"{item.SubmissionId}:{item.QuestionId}:{item.QuestionNumber}";
+    }
+
+    private async Task AutoGradeQueueItemsAsync()
+    {
+        if (!_autoGradingEnabled)
+        {
+            SetLoadingState(true, "Auto-grading is OFF. Queue will stay pending until enabled.");
+            return;
+        }
+
+        var total = _queueItems.Count;
+        var current = 0;
+        foreach (var item in _queueItems)
+        {
+            current++;
+            var key = BuildQueueKey(item);
+            if (_autoGradeCache.ContainsKey(key))
+                continue;
+
+            try
+            {
+                SetLoadingState(true, $"Auto-grading queued essays ({current}/{total})...");
+                var result = await _autoGradingService.GradeEssayAsync(item);
+                _autoGradeCache[key] = result;
+
+                if (!_apiStatusShown)
+                {
+                    _apiStatusShown = true;
+                    var mode = result.UsedDeepSeek ? "DeepSeek API" : "Heuristic Fallback";
+                    MessageBox.Show($"Grading mode: {mode}\nStatus: {result.ProviderStatus}",
+                        "Essay Grading Provider Status", MessageBoxButton.OK, MessageBoxImage.Information);
+                    System.Diagnostics.Debug.WriteLine($"Essay grading provider: {mode}. {result.ProviderStatus}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Dynamic essay auto-grade failed for {key}: {ex.Message}");
+            }
+        }
+    }
+
+    private void SetLoadingState(bool isLoading, string message = "")
+    {
+        LoadingProgressBar.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        LoadingStatusText.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        LoadingStatusText.Text = message;
+    }
+
+    private async Task LoadAutoGradePreferenceAsync()
+    {
+        if (_firestoreService == null) return;
+
+        _autoGradingEnabled = await _firestoreService.GetEssayAutoGradingEnabledAsync();
+        _suppressAutoGradeToggleEvents = true;
+        AutoGradeToggleButton.IsChecked = _autoGradingEnabled;
+        AutoGradeToggleButton.Content = _autoGradingEnabled ? "Auto-Grading: ON" : "Auto-Grading: OFF";
+        _suppressAutoGradeToggleEvents = false;
+    }
+
+    private async Task SaveAutoGradePreferenceAsync(bool enabled)
+    {
+        if (_firestoreService == null) return;
+
+        _autoGradingEnabled = enabled;
+        AutoGradeToggleButton.Content = _autoGradingEnabled ? "Auto-Grading: ON" : "Auto-Grading: OFF";
+        await _firestoreService.SetEssayAutoGradingEnabledAsync(enabled);
+    }
+
+    private async void AutoGradeToggleButton_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoGradeToggleEvents) return;
+
+        SetLoadingState(true, "Saving auto-grading preference...");
+        try
+        {
+            await SaveAutoGradePreferenceAsync(true);
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
+    }
+
+    private async void AutoGradeToggleButton_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressAutoGradeToggleEvents) return;
+
+        SetLoadingState(true, "Saving auto-grading preference...");
+        try
+        {
+            await SaveAutoGradePreferenceAsync(false);
+            await RefreshQueueAsync();
+        }
+        finally
+        {
+            SetLoadingState(false);
+        }
     }
 
     private static EssayGradeRecord? TryGetExistingGrade(ExamSubmission submission, string resolvedQuestionId, string? responseQuestionId, int responseNumber, int fallbackNumber)
