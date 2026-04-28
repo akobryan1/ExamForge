@@ -1,12 +1,11 @@
 import apiClient from './api';
 import { supabase } from '../config/supabase';
 import { auth, googleProvider } from '../config/firebase';
-import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import {
   User,
   LoginCredentials,
   SignupCredentials,
-  AuthState,
 } from '../types';
 
 /**
@@ -72,7 +71,7 @@ export class AuthAPI {
    */
   static async checkUsernameAvailability(username: string): Promise<boolean> {
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('examforge_users')
         .select('username')
         .eq('username', username)
