@@ -12,14 +12,14 @@ const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 export function generateTokens(payload: JwtPayload): AuthTokens {
   const accessToken = jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  } as jwt.SignOptions);
 
   const refreshToken = jwt.sign(
     { userId: payload.userId },
     JWT_REFRESH_SECRET,
     {
       expiresIn: JWT_REFRESH_EXPIRES_IN,
-    }
+    } as jwt.SignOptions
   );
 
   // Calculate expiration time in seconds
