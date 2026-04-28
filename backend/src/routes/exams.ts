@@ -1,0 +1,266 @@
+import express, { Router, Request, Response } from 'express';
+import { body, param } from 'express-validator';
+import { ExamService } from '../services/ExamService';
+import { authenticate, authorize } from '../middleware/auth';
+
+const router: Router = express.Router();
+
+// All exam routes require authentication
+router.use(authenticate);
+
+/**
+ * POST /api/exams - Create a new exam (Instructor only)
+ */
+router.post(
+  '/',
+  authorize('instructor', 'admin'),
+  [
+    body('title').trim().notEmpty().withMessage('Title is required'),
+    body('description').trim().notEmpty().withMessage('Description is required'),
+    body('passingScore').isInt({ min: 0, max: 100 }).withMessage('Passing score must be between 0 and 100'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const exam = await ExamService.createExam(
+        req.user!.userId,
+        req.user!.email,
+        req.body
+      );
+      res.status(201).json(exam);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/exams - Get exams (instructor: their exams, student: available exams)
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const exams = req.user!.role === 'instructor' || req.user!.role === 'admin'
+      ? await ExamService.getInstructorExams(req.user!.userId)
+      : await ExamService.getAvailableExams(req.user!.userId);
+    
+    res.json(exams);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/exams/:id - Get exam by ID
+ */
+router.get('/:id', async (req: Request, res: Response) => {
+  try {
+    const exam = await ExamService.getExamById(req.params.id, req.user!.userId);
+    if (!exam) {
+      return res.status(404).json({ error: 'Exam not found' });
+    }
+    res.json(exam);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * PUT /api/exams/:id - Update exam (Instructor only)
+ */
+router.put(
+  '/:id',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const exam = await ExamService.updateExam(
+        req.params.id,
+        req.user!.userId,
+        req.body
+      );
+      res.json(exam);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * DELETE /api/exams/:id - Delete exam (Instructor only)
+ */
+router.delete(
+  '/:id',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.deleteExam(req.params.id, req.user!.userId);
+      res.json({ message: 'Exam deleted successfully' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/exams/:id/questions - Get all questions for an exam
+ */
+router.get('/:id/questions', async (req: Request, res: Response) => {
+  try {
+    const questions = await ExamService.getExamQuestions(
+      req.params.id,
+      req.user!.userId
+    );
+    res.json(questions);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/exams/:id/questions - Create a question (Instructor only)
+ */
+router.post(
+  '/:id/questions',
+  authorize('instructor', 'admin'),
+  [
+    body('type').isIn(['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_in_blank', 'matching']),
+    body('text').trim().notEmpty().withMessage('Question text is required'),
+    body('points').isInt({ min: 1 }).withMessage('Points must be at least 1'),
+    body('difficulty').isIn(['easy', 'medium', 'hard']),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const question = await ExamService.createQuestion(
+        req.user!.userId,
+        {
+          ...req.body,
+          examId: req.params.id,
+        }
+      );
+      res.status(201).json(question);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * PUT /api/questions/:id - Update a question (Instructor only)
+ */
+router.put(
+  '/questions/:id',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const question = await ExamService.updateQuestion(
+        req.params.id,
+        req.user!.userId,
+        req.body
+      );
+      res.json(question);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * DELETE /api/questions/:id - Delete a question (Instructor only)
+ */
+router.delete(
+  '/questions/:id',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.deleteQuestion(req.params.id, req.user!.userId);
+      res.json({ message: 'Question deleted successfully' });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/exams/:id/start - Start an exam attempt (Student)
+ */
+router.post(
+  '/:id/start',
+  authorize('student'),
+  async (req: Request, res: Response) => {
+    try {
+      const attempt = await ExamService.startExamAttempt(
+        req.user!.userId,
+        req.user!.email,
+        {
+          examId: req.params.id,
+          accessCode: req.body.accessCode,
+        }
+      );
+      res.status(201).json(attempt);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/attempts/:id/answers - Submit an answer (Student)
+ */
+router.post(
+  '/attempts/:id/answers',
+  authorize('student'),
+  [
+    body('questionId').notEmpty().withMessage('Question ID is required'),
+    body('answer').notEmpty().withMessage('Answer is required'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const answer = await ExamService.submitAnswer(
+        req.user!.userId,
+        {
+          attemptId: req.params.id,
+          questionId: req.body.questionId,
+          answer: req.body.answer,
+          timeSpent: req.body.timeSpent,
+        }
+      );
+      res.json(answer);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/attempts/:id/submit - Submit exam attempt (Student)
+ */
+router.post(
+  '/attempts/:id/submit',
+  authorize('student'),
+  async (req: Request, res: Response) => {
+    try {
+      const attempt = await ExamService.submitExam(
+        req.user!.userId,
+        { attemptId: req.params.id }
+      );
+      res.json(attempt);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/attempts/:id - Get exam attempt with answers
+ */
+router.get('/attempts/:id', async (req: Request, res: Response) => {
+  try {
+    const attempt = await ExamService.getExamAttempt(
+      req.params.id,
+      req.user!.userId
+    );
+    res.json(attempt);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+export default router;

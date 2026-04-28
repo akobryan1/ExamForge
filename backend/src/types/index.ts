@@ -38,3 +38,6 @@ export interface SignupRequest {
 export interface GoogleAuthRequest {
   idToken: string;
 }
+
+// Export exam types
+export * from './exam';

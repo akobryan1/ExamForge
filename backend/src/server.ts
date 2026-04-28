@@ -38,9 +38,10 @@ app.get('/health', (req: Request, res: Response) => {
 
 // API Routes
 import authRoutes from './routes/auth.js';
+import examRoutes from './routes/exams.js';
 
 app.use('/api/auth', authRoutes);
-// app.use('/api/exams', examRoutes);
+app.use('/api/exams', examRoutes);
 // app.use('/api/submissions', submissionRoutes);
 // app.use('/api/analytics', analyticsRoutes);
 // app.use('/api/grading', gradingRoutes);
