@@ -1,9 +1,0 @@
-name = "examforge-api"
-main = "worker.js"
-compatibility_date = "2026-01-23"
-
-[vars]
-PROJECT_ID = "examforge-201e8"
-
-# Secrets are set via: wrangler secret put SERVICE_ACCOUNT_JSON
-# Or they're already configured in your Cloudflare dashboard
