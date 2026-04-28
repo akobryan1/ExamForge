@@ -2,7 +2,10 @@ import { motion } from 'framer-motion';
 import { ButtonHTMLAttributes, ReactNode } from 'react';
 import '../styles/components.css';
 
-interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
+interface ButtonProps extends Omit<
+  ButtonHTMLAttributes<HTMLButtonElement>, 
+  'onDrag' | 'onDragStart' | 'onDragEnd' | 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'
+> {
   variant?: 'primary' | 'accent' | 'secondary' | 'outline' | 'text';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
