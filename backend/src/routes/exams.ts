@@ -26,9 +26,9 @@ router.post(
         req.user!.email,
         req.body
       );
-      res.status(201).json(exam);
+      return res.status(201).json(exam);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -42,9 +42,9 @@ router.get('/', async (req: Request, res: Response) => {
       ? await ExamService.getInstructorExams(req.user!.userId)
       : await ExamService.getAvailableExams(req.user!.userId);
     
-    res.json(exams);
+    return res.json(exams);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -57,9 +57,9 @@ router.get('/:id', async (req: Request, res: Response) => {
     if (!exam) {
       return res.status(404).json({ error: 'Exam not found' });
     }
-    res.json(exam);
+    return res.json(exam);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -76,9 +76,9 @@ router.put(
         req.user!.userId,
         req.body
       );
-      res.json(exam);
+      return res.json(exam);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -92,9 +92,9 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       await ExamService.deleteExam(req.params.id, req.user!.userId);
-      res.json({ message: 'Exam deleted successfully' });
+      return res.json({ message: 'Exam deleted successfully' });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -108,9 +108,9 @@ router.get('/:id/questions', async (req: Request, res: Response) => {
       req.params.id,
       req.user!.userId
     );
-    res.json(questions);
+    return res.json(questions);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 });
 
@@ -135,9 +135,9 @@ router.post(
           examId: req.params.id,
         }
       );
-      res.status(201).json(question);
+      return res.status(201).json(question);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -155,9 +155,9 @@ router.put(
         req.user!.userId,
         req.body
       );
-      res.json(question);
+      return res.json(question);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -171,9 +171,9 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       await ExamService.deleteQuestion(req.params.id, req.user!.userId);
-      res.json({ message: 'Question deleted successfully' });
+      return res.json({ message: 'Question deleted successfully' });
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -194,9 +194,9 @@ router.post(
           accessCode: req.body.accessCode,
         }
       );
-      res.status(201).json(attempt);
+      return res.status(201).json(attempt);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -222,9 +222,9 @@ router.post(
           timeSpent: req.body.timeSpent,
         }
       );
-      res.json(answer);
+      return res.json(answer);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -241,9 +241,9 @@ router.post(
         req.user!.userId,
         { attemptId: req.params.id }
       );
-      res.json(attempt);
+      return res.json(attempt);
     } catch (error: any) {
-      res.status(400).json({ error: error.message });
+      return res.status(400).json({ error: error.message });
     }
   }
 );
@@ -257,9 +257,9 @@ router.get('/attempts/:id', async (req: Request, res: Response) => {
       req.params.id,
       req.user!.userId
     );
-    res.json(attempt);
+    return res.json(attempt);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return res.status(400).json({ error: error.message });
   }
 });
 

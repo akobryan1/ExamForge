@@ -1,4 +1,4 @@
-import { getSupabaseClient } from '../config/supabase';
+import { getSupabase } from '../config/supabase';
 import {
   Exam,
   Question,
@@ -19,7 +19,7 @@ export class ExamService {
    * Create a new exam
    */
   static async createExam(instructorId: string, instructorName: string, data: CreateExamDto): Promise<Exam> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: exam, error } = await supabase
       .from('exams')
@@ -49,7 +49,7 @@ export class ExamService {
    * Get exam by ID
    */
   static async getExamById(examId: string, userId: string): Promise<Exam | null> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: exam, error } = await supabase
       .from('exams')
@@ -71,7 +71,7 @@ export class ExamService {
    * Get all exams for an instructor
    */
   static async getInstructorExams(instructorId: string): Promise<Exam[]> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: exams, error } = await supabase
       .from('exams')
@@ -87,7 +87,7 @@ export class ExamService {
    * Get available exams for a student
    */
   static async getAvailableExams(studentId: string): Promise<Exam[]> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: exams, error } = await supabase
       .from('exams')
@@ -100,7 +100,7 @@ export class ExamService {
     // Filter exams based on scheduling and access control
     const now = new Date();
     return exams
-      .filter(exam => {
+      .filter((exam: any) => {
         // Check if exam is within scheduled time
         if (exam.start_date && new Date(exam.start_date) > now) return false;
         if (exam.end_date && new Date(exam.end_date) < now) return false;
@@ -117,7 +117,7 @@ export class ExamService {
    * Update an exam
    */
   static async updateExam(examId: string, instructorId: string, data: UpdateExamDto): Promise<Exam> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Verify ownership
     const exam = await this.getExamById(examId, instructorId);
@@ -151,7 +151,7 @@ export class ExamService {
    * Delete an exam
    */
   static async deleteExam(examId: string, instructorId: string): Promise<void> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { error } = await supabase
       .from('exams')
@@ -166,7 +166,7 @@ export class ExamService {
    * Create a question for an exam
    */
   static async createQuestion(instructorId: string, data: CreateQuestionDto): Promise<Question> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Verify exam ownership
     const exam = await this.getExamById(data.examId, instructorId);
@@ -213,7 +213,7 @@ export class ExamService {
    * Get all questions for an exam
    */
   static async getExamQuestions(examId: string, userId: string): Promise<Question[]> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Verify access
     await this.getExamById(examId, userId);
@@ -232,7 +232,7 @@ export class ExamService {
    * Update a question
    */
   static async updateQuestion(questionId: string, instructorId: string, data: UpdateQuestionDto): Promise<Question> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Get question to verify ownership
     const { data: question } = await supabase
@@ -272,7 +272,7 @@ export class ExamService {
    * Delete a question
    */
   static async deleteQuestion(questionId: string, instructorId: string): Promise<void> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: question } = await supabase
       .from('questions')
@@ -296,7 +296,7 @@ export class ExamService {
    * Start an exam attempt
    */
   static async startExamAttempt(studentId: string, studentName: string, data: StartExamDto): Promise<ExamAttempt> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Get and verify exam
     const exam = await this.getExamById(data.examId, studentId);
@@ -349,7 +349,7 @@ export class ExamService {
    * Submit an answer for a question
    */
   static async submitAnswer(studentId: string, data: SubmitAnswerDto): Promise<ExamAnswer> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Verify attempt ownership
     const { data: attempt } = await supabase
@@ -403,7 +403,7 @@ export class ExamService {
    * Submit exam (complete attempt)
    */
   static async submitExam(studentId: string, data: SubmitExamDto): Promise<ExamAttempt> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     // Verify attempt ownership
     const { data: attempt } = await supabase
@@ -422,7 +422,7 @@ export class ExamService {
       .select('points_earned')
       .eq('attempt_id', data.attemptId);
 
-    const totalScore = answers?.reduce((sum, ans) => sum + (ans.points_earned || 0), 0) || 0;
+    const totalScore = answers?.reduce((sum: number, ans: any) => sum + (ans.points_earned || 0), 0) || 0;
 
     // Get exam to calculate percentage
     const { data: exam } = await supabase
@@ -468,7 +468,7 @@ export class ExamService {
    * Get exam attempt with answers
    */
   static async getExamAttempt(attemptId: string, userId: string): Promise<ExamAttempt & { answers: ExamAnswer[] }> {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabase();
 
     const { data: attempt, error: attemptError } = await supabase
       .from('exam_attempts')
