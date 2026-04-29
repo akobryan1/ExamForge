@@ -206,9 +206,9 @@ npm test
 This is a progressive migration from the WPF desktop application. Current implementation status:
 
 - [x] Phase 1: Foundation & Infrastructure
-- [ ] Phase 2: Authentication System
-- [ ] Phase 3: Core Data Services
-- [ ] Phase 4: Exam Management Interface
+- [x] Phase 2: Authentication System
+- [x] Phase 3: Core Data Services (Firestore + Exam Management)
+- [x] Phase 4: Exam Management Interface
 - [ ] Phase 5: Publishing & Student Interface
 - [ ] Phase 6: Real-Time Monitoring & Anti-Cheat
 - [ ] Phase 7: Grading & Analytics
