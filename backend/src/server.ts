@@ -39,9 +39,15 @@ app.get('/health', (req: Request, res: Response) => {
 // API Routes
 import authRoutes from './routes/auth.js';
 import examRoutes from './routes/exams.js';
+import fileRoutes from './routes/files.js';
+import aiQuestionRoutes from './routes/ai-questions.js';
+import notificationRoutes from './routes/notifications.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/exams', examRoutes);
+app.use('/api/files', fileRoutes);
+app.use('/api/ai', aiQuestionRoutes);
+app.use('/api/notifications', notificationRoutes);
 // app.use('/api/submissions', submissionRoutes);
 // app.use('/api/analytics', analyticsRoutes);
 // app.use('/api/grading', gradingRoutes);

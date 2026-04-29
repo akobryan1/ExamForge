@@ -27,7 +27,7 @@ export function QuestionsPage() {
     difficulty: 'medium' as DifficultyLevel,
     choices: [{ text: '', isCorrect: false }],
     correctAnswer: '',
-    matchingPairs: [{ left: '', right: '' }],
+    enumerationItems: [''], // For enumeration type
     imageUrl: '',
     timeLimit: 0,
   });
@@ -65,7 +65,7 @@ export function QuestionsPage() {
       difficulty: 'medium',
       choices: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
       correctAnswer: '',
-      matchingPairs: [{ left: '', right: '' }],
+      enumerationItems: [''],
       imageUrl: '',
       timeLimit: 0,
     });
@@ -82,7 +82,7 @@ export function QuestionsPage() {
       difficulty: question.difficulty || 'medium',
       choices: question.choices || [{ text: '', isCorrect: false }],
       correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : '',
-      matchingPairs: question.matchingPairs || [{ left: '', right: '' }],
+      enumerationItems: Array.isArray(question.correctAnswer) ? question.correctAnswer : [''],
       imageUrl: question.imageUrl || '',
       timeLimit: question.timeLimit || 0,
     });
@@ -121,10 +121,13 @@ export function QuestionsPage() {
         questionData.correctAnswer = formData.choices.findIndex(c => c.isCorrect);
       } else if (formData.type === 'true_false') {
         questionData.correctAnswer = formData.correctAnswer === 'true';
-      } else if (formData.type === 'matching') {
-        questionData.matchingPairs = formData.matchingPairs.filter(p => p.left && p.right);
-      } else if (formData.type === 'short_answer' || formData.type === 'fill_in_blank') {
+      } else if (formData.type === 'modified_true_false') {
+        // For modified true/false, store both T/F and the correction
         questionData.correctAnswer = formData.correctAnswer;
+      } else if (formData.type === 'identification') {
+        questionData.correctAnswer = formData.correctAnswer;
+      } else if (formData.type === 'enumeration') {
+        questionData.correctAnswer = formData.enumerationItems.filter(item => item.trim());
       }
 
       if (editingQuestion) {
@@ -168,26 +171,26 @@ export function QuestionsPage() {
     }));
   };
 
-  const addMatchingPair = () => {
+  const addEnumerationItem = () => {
     setFormData(prev => ({
       ...prev,
-      matchingPairs: [...prev.matchingPairs, { left: '', right: '' }],
+      enumerationItems: [...prev.enumerationItems, ''],
     }));
   };
 
-  const updateMatchingPair = (index: number, field: 'left' | 'right', value: string) => {
+  const updateEnumerationItem = (index: number, value: string) => {
     setFormData(prev => ({
       ...prev,
-      matchingPairs: prev.matchingPairs.map((p, i) => 
-        i === index ? { ...p, [field]: value } : p
+      enumerationItems: prev.enumerationItems.map((item, i) => 
+        i === index ? value : item
       ),
     }));
   };
 
-  const removeMatchingPair = (index: number) => {
+  const removeEnumerationItem = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      matchingPairs: prev.matchingPairs.filter((_, i) => i !== index),
+      enumerationItems: prev.enumerationItems.filter((_, i) => i !== index),
     }));
   };
 
@@ -318,10 +321,10 @@ export function QuestionsPage() {
                     >
                       <option value="multiple_choice">Multiple Choice</option>
                       <option value="true_false">True/False</option>
-                      <option value="short_answer">Short Answer</option>
+                      <option value="modified_true_false">Modified True/False</option>
                       <option value="essay">Essay</option>
-                      <option value="fill_in_blank">Fill in the Blank</option>
-                      <option value="matching">Matching</option>
+                      <option value="identification">Identification</option>
+                      <option value="enumeration">Enumeration</option>
                     </select>
                   </div>
 
@@ -416,48 +419,56 @@ export function QuestionsPage() {
                   </div>
                 )}
 
-                {/* Short Answer / Fill in Blank */}
-                {(formData.type === 'short_answer' || formData.type === 'fill_in_blank') && (
+                {/* Modified True/False */}
+                {formData.type === 'modified_true_false' && (
                   <div className="form-group">
-                    <label>Correct Answer (for auto-grading)</label>
+                    <label>Correct Answer</label>
+                    <textarea
+                      value={formData.correctAnswer}
+                      onChange={(e) => setFormData(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                      placeholder="Enter 'True' or 'False'. If false, provide the correct answer."
+                      rows={2}
+                      required
+                    />
+                    <small>Format: "False. The correct answer is..." or "True"</small>
+                  </div>
+                )}
+
+                {/* Identification */}
+                {formData.type === 'identification' && (
+                  <div className="form-group">
+                    <label>Correct Answer</label>
                     <input
                       type="text"
                       value={formData.correctAnswer}
                       onChange={(e) => setFormData(prev => ({ ...prev, correctAnswer: e.target.value }))}
                       placeholder="Expected answer..."
+                      required
                     />
-                    <small>Leave blank if manual grading is required</small>
                   </div>
                 )}
 
-                {/* Matching Pairs */}
-                {formData.type === 'matching' && (
+                {/* Enumeration */}
+                {formData.type === 'enumeration' && (
                   <div className="form-group">
-                    <label>Matching Pairs</label>
-                    {formData.matchingPairs.map((pair, index) => (
-                      <div key={index} className="matching-pair-group">
+                    <label>Expected Items (in order)</label>
+                    {formData.enumerationItems.map((item, index) => (
+                      <div key={index} className="choice-input-group">
+                        <span className="item-number">{index + 1}.</span>
                         <input
                           type="text"
-                          value={pair.left}
-                          onChange={(e) => updateMatchingPair(index, 'left', e.target.value)}
-                          placeholder="Left item"
+                          value={item}
+                          onChange={(e) => updateEnumerationItem(index, e.target.value)}
+                          placeholder={`Item ${index + 1}`}
                           required
                         />
-                        <span>↔</span>
-                        <input
-                          type="text"
-                          value={pair.right}
-                          onChange={(e) => updateMatchingPair(index, 'right', e.target.value)}
-                          placeholder="Right item"
-                          required
-                        />
-                        {formData.matchingPairs.length > 1 && (
-                          <button type="button" onClick={() => removeMatchingPair(index)} className="remove-btn">×</button>
+                        {formData.enumerationItems.length > 1 && (
+                          <button type="button" onClick={() => removeEnumerationItem(index)} className="remove-btn">×</button>
                         )}
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="small" onClick={addMatchingPair}>
-                      Add Pair
+                    <Button type="button" variant="outline" size="small" onClick={addEnumerationItem}>
+                      Add Item
                     </Button>
                   </div>
                 )}

@@ -166,6 +166,45 @@ class ExamServiceClass {
     const response = await apiClient.get(`/api/exams/analytics/${examId}`);
     return response.data;
   }
+
+  /**
+   * Get incident reports (Instructor only)
+   */
+  async getIncidentReports(): Promise<any[]> {
+    const response = await apiClient.get('/api/exams/incidents');
+    return response.data;
+  }
+
+  /**
+   * Archive incidents (Instructor only)
+   */
+  async archiveIncidents(incidentIds: string[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/archive', { incidentIds });
+  }
+
+  /**
+   * Unarchive incidents (Instructor only)
+   */
+  async unarchiveIncidents(incidentIds: string[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/unarchive', { incidentIds });
+  }
+
+  /**
+   * Delete incidents (Instructor only)
+   */
+  async deleteIncidents(incidentIds: string[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/delete', { incidentIds });
+  }
+
+  /**
+   * Record a proctoring violation (Student)
+   */
+  async recordViolation(attemptId: string, violationType: string): Promise<void> {
+    await apiClient.post(`/api/exams/attempts/${attemptId}/violations`, {
+      type: violationType,
+      timestamp: Date.now(),
+    });
+  }
 }
 
 export const ExamService = new ExamServiceClass();

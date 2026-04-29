@@ -1067,4 +1067,225 @@ export class ExamService {
       throw new Error(`Failed to get exam analytics: ${error}`);
     }
   }
+
+  /**
+   * Get incident reports for an instructor
+   */
+  static async getIncidentReports(instructorId: string): Promise<any[]> {
+    const db = getFirestore();
+
+    try {
+      // Get all exams for this instructor
+      const examsSnapshot = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .get();
+
+      const incidents: any[] = [];
+
+      for (const examDoc of examsSnapshot.docs) {
+        const examData = examDoc.data();
+
+        // Get all sessions for this exam
+        const sessionsSnapshot = await db
+          .collectionGroup('exam_sessions')
+          .where('examId', '==', examDoc.id)
+          .get();
+
+        for (const sessionDoc of sessionsSnapshot.docs) {
+          const sessionData = sessionDoc.data();
+
+          // Get session events (incidents)
+          const eventsSnapshot = await db
+            .collection('examforge_users')
+            .doc(sessionData.studentId)
+            .collection('session_events')
+            .where('attemptId', '==', sessionData.attemptId)
+            .get();
+
+          eventsSnapshot.docs.forEach(eventDoc => {
+            const eventData = eventDoc.data();
+            incidents.push({
+              id: eventDoc.id,
+              studentId: sessionData.studentId,
+              studentName: sessionData.studentName,
+              examId: examDoc.id,
+              examTitle: examData.title,
+              eventType: eventData.eventType,
+              eventDetail: eventData.eventDetail || '',
+              timestamp: eventData.timestamp,
+              severity: eventData.severity || 'medium',
+              archived: eventData.archived || false,
+            });
+          });
+        }
+      }
+
+      // Sort by timestamp descending (most recent first)
+      incidents.sort((a, b) => b.timestamp - a.timestamp);
+
+      return incidents;
+    } catch (error) {
+      throw new Error(`Failed to get incident reports: ${error}`);
+    }
+  }
+
+  /**
+   * Archive incidents
+   */
+  static async archiveIncidents(incidentIds: string[]): Promise<void> {
+    const db = getFirestore();
+
+    try {
+      const batch = db.batch();
+
+      for (const incidentId of incidentIds) {
+        // Find the incident across all users' session_events
+        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+
+        eventsSnapshot.docs.forEach(doc => {
+          batch.update(doc.ref, { archived: true });
+        });
+      }
+
+      await batch.commit();
+    } catch (error) {
+      throw new Error(`Failed to archive incidents: ${error}`);
+    }
+  }
+
+  /**
+   * Unarchive incidents
+   */
+  static async unarchiveIncidents(incidentIds: string[]): Promise<void> {
+    const db = getFirestore();
+
+    try {
+      const batch = db.batch();
+
+      for (const incidentId of incidentIds) {
+        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+
+        eventsSnapshot.docs.forEach(doc => {
+          batch.update(doc.ref, { archived: false });
+        });
+      }
+
+      await batch.commit();
+    } catch (error) {
+      throw new Error(`Failed to unarchive incidents: ${error}`);
+    }
+  }
+
+  /**
+   * Delete incidents
+   */
+  static async deleteIncidents(incidentIds: string[]): Promise<void> {
+    const db = getFirestore();
+
+    try {
+      const batch = db.batch();
+
+      for (const incidentId of incidentIds) {
+        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+
+        eventsSnapshot.docs.forEach(doc => {
+          batch.delete(doc.ref);
+        });
+      }
+
+      await batch.commit();
+    } catch (error) {
+      throw new Error(`Failed to delete incidents: ${error}`);
+    }
+  }
+
+  /**
+   * Record a proctoring violation for an exam attempt
+   */
+  static async recordViolation(
+    userId: string,
+    attemptId: string,
+    violationType: string,
+    timestamp: number
+  ): Promise<void> {
+    const db = getFirestore();
+
+    try {
+      // Get the attempt to find exam details
+      const attemptSnapshot = await db.collectionGroup('exam_sessions')
+        .where('__name__', '==', attemptId)
+        .get();
+
+      if (attemptSnapshot.empty) {
+        throw new Error('Exam attempt not found');
+      }
+
+      const attemptDoc = attemptSnapshot.docs[0];
+      const attemptData = attemptDoc.data();
+      const examId = attemptData.examId;
+
+      // Get exam to determine point deduction
+      const examSnapshot = await db.collectionGroup('published_exams')
+        .where('__name__', '==', examId)
+        .get();
+
+      let pointsDeducted = 0;
+      let severity: 'low' | 'medium' | 'high' = 'low';
+
+      if (!examSnapshot.empty) {
+        const examData = examSnapshot.docs[0].data();
+        const proctorConfig = examData.proctorConfig;
+
+        if (proctorConfig?.pointDeductions) {
+          // Map violation type to deduction field
+          const deductionMap: Record<string, string> = {
+            'tab_switch': 'tabSwitch',
+            'copy_attempt': 'copyPaste',
+            'paste_attempt': 'copyPaste',
+            'right_click_attempt': 'rightClick',
+            'exit_fullscreen': 'exitFullscreen',
+          };
+
+          const deductionField = deductionMap[violationType];
+          if (deductionField && proctorConfig.pointDeductions[deductionField]) {
+            pointsDeducted = proctorConfig.pointDeductions[deductionField];
+          }
+        }
+
+        // Determine severity based on points deducted
+        if (pointsDeducted >= 10) severity = 'high';
+        else if (pointsDeducted >= 5) severity = 'medium';
+        else severity = 'low';
+      }
+
+      // Create violation event in user's session_events collection
+      const eventRef = db.collection(`examforge_users/${userId}/session_events`).doc();
+      await eventRef.set({
+        attemptId,
+        examId,
+        eventType: 'proctoring_violation',
+        eventDetail: violationType,
+        timestamp: new Date(timestamp),
+        severity,
+        pointsDeducted,
+        archived: false,
+      });
+
+      // Update attempt with violation
+      await attemptDoc.ref.update({
+        violations: FieldValue.arrayUnion({
+          id: eventRef.id,
+          type: violationType,
+          timestamp: new Date(timestamp),
+          pointsDeducted,
+          severity,
+        }),
+        violationPenalty: FieldValue.increment(pointsDeducted),
+      });
+    } catch (error) {
+      throw new Error(`Failed to record violation: ${error}`);
+    }
+  }
 }

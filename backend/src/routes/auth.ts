@@ -247,4 +247,65 @@ router.get('/me', authenticate, async (req: Request, res: Response): Promise<voi
   }
 });
 
+/**
+ * POST /api/auth/register/student
+ * Student self-registration
+ */
+router.post(
+  '/register/student',
+  [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('password')
+      .isLength({ min: 6 })
+      .withMessage('Password must be at least 6 characters'),
+    body('studentId')
+      .notEmpty()
+      .withMessage('Student ID is required'),
+    body('studentName')
+      .notEmpty()
+      .withMessage('Student name is required'),
+    body('section').optional().isString(),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const { email, password, studentId, studentName, section } = req.body;
+
+      // Create student account
+      const { user, tokens } = await authService.signupWithEmail({
+        email,
+        password,
+        username: studentId,
+        displayName: studentName,
+        role: 'student',
+      });
+
+      // Set refresh token in httpOnly cookie
+      res.cookie('refreshToken', tokens.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      });
+
+      res.status(201).json({
+        user,
+        accessToken: tokens.accessToken,
+        message: 'Student account created successfully',
+      });
+    } catch (error) {
+      console.error('Student registration error:', error);
+      res.status(500).json({
+        error: 'Registration failed',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+);
+
 export default router;

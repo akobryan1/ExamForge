@@ -6,10 +6,10 @@
 export enum QuestionType {
   MULTIPLE_CHOICE = 'multiple_choice',
   TRUE_FALSE = 'true_false',
-  SHORT_ANSWER = 'short_answer',
+  MODIFIED_TRUE_FALSE = 'modified_true_false',
   ESSAY = 'essay',
-  FILL_IN_BLANK = 'fill_in_blank',
-  MATCHING = 'matching',
+  IDENTIFICATION = 'identification',
+  ENUMERATION = 'enumeration',
 }
 
 export enum ExamStatus {
@@ -44,12 +44,49 @@ export interface Question {
   order: number;
   choices?: AnswerChoice[];
   correctAnswer?: string | string[];
-  matchingPairs?: { left: string; right: string }[];
   tags?: string[];
   imageUrl?: string;
   timeLimit?: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Retake configuration
+export interface RetakeConfiguration {
+  enabled: boolean;
+  maxRetakes?: number;
+  requireApproval: boolean;
+  scoringMethod: 'best' | 'latest' | 'average';
+}
+
+// Late submission configuration
+export interface LateSubmissionConfiguration {
+  policy: 'allowed' | 'disabled' | 'request_permission';
+  gracePeriodMinutes?: number;
+  penaltyPoints?: number;
+  penaltyInterval?: 'minute' | 'hour' | 'day';
+}
+
+// Point deduction for proctoring
+export interface ProctorPointDeductions {
+  tabSwitch?: number;
+  copyPaste?: number;
+  rightClick?: number;
+  exitFullscreen?: number;
+  multipleDevices?: number;
+  suspiciousBehavior?: number;
+  generalViolation?: number;
+}
+
+// Proctoring configuration
+export interface ProctorConfiguration {
+  enabled: boolean;
+  enforceFullscreen: boolean;
+  detectTabSwitch: boolean;
+  detectCopyPaste: boolean;
+  disableRightClick: boolean;
+  pointDeductions?: ProctorPointDeductions;
+  customRules?: string;
 }
 
 export interface Exam {
@@ -70,6 +107,13 @@ export interface Exam {
   endDate?: Date;
   accessCode?: string;
   allowedStudentIds?: string[];
+  allowGuestAccess?: boolean;
+  sections?: string[];
+  retakeConfig?: RetakeConfiguration;
+  lateSubmissionConfig?: LateSubmissionConfiguration;
+  proctorConfig?: ProctorConfiguration;
+  customInstructions?: string;
+  showRulesBeforeExam?: boolean;
   subject?: string;
   grade?: string;
   tags?: string[];
@@ -78,6 +122,15 @@ export interface Exam {
   averageScore?: number;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface ProctorViolation {
+  id: string;
+  type: 'tab_switch' | 'copy_paste' | 'right_click' | 'exit_fullscreen' | 'multiple_devices' | 'suspicious_behavior' | 'general';
+  timestamp: Date;
+  description?: string;
+  pointsDeducted?: number;
+  severity: 'low' | 'medium' | 'high';
 }
 
 export interface ExamAttempt {
@@ -89,10 +142,21 @@ export interface ExamAttempt {
   score?: number;
   percentage?: number;
   passed?: boolean;
+  attemptNumber?: number;
+  isRetake?: boolean;
+  retakeRequested?: boolean;
+  retakeApproved?: boolean;
+  retakeApprovedBy?: string;
+  isLateSubmission?: boolean;
+  latePenaltyApplied?: number;
+  minutesLate?: number;
+  violations?: ProctorViolation[];
+  violationPenalty?: number;
   startedAt: Date;
   submittedAt?: Date;
   timeSpent?: number;
   answers: ExamAnswer[];
+  isGuest?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -137,7 +201,6 @@ export interface CreateQuestionFormData {
   difficulty: DifficultyLevel;
   choices?: Omit<AnswerChoice, 'id'>[];
   correctAnswer?: string | string[];
-  matchingPairs?: { left: string; right: string }[];
   tags?: string[];
   imageUrl?: string;
   timeLimit?: number;

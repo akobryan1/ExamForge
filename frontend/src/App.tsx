@@ -6,14 +6,16 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { ExamsPage } from './pages/ExamsPage'
-import { CreateExamPage } from './pages/CreateExamPage'
+import { CreateExamPageEnhanced } from './pages/CreateExamPageEnhanced'
 import { QuestionsPage } from './pages/QuestionsPage'
 import { ExamPreviewPage } from './pages/ExamPreviewPage'
 import { TakeExamPage } from './pages/TakeExamPage'
 import { ExamResultsPage } from './pages/ExamResultsPage'
 import { GradingQueuePage } from './pages/GradingQueuePage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
-
+import { IncidentReportsPage } from './pages/IncidentReportsPage'
+import { StudentRegistrationPage } from './pages/StudentRegistrationPage';
+import { AIQuestionGeneratorPage } from './pages/AIQuestionGeneratorPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -32,6 +34,7 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/register/student" element={<StudentRegistrationPage />} />
             
             {/* Protected routes */}
             <Route
@@ -54,7 +57,7 @@ function App() {
               path="/exams/create"
               element={
                 <ProtectedRoute>
-                  <CreateExamPage />
+                  <CreateExamPageEnhanced />
                 </ProtectedRoute>
               }
             />
@@ -63,6 +66,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <QuestionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/:examId/ai-generate"
+              element={
+                <ProtectedRoute>
+                  <AIQuestionGeneratorPage />
                 </ProtectedRoute>
               }
             />
@@ -103,6 +114,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AnalyticsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/incidents"
+              element={
+                <ProtectedRoute>
+                  <IncidentReportsPage />
                 </ProtectedRoute>
               }
             />

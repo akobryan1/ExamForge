@@ -1,0 +1,321 @@
+.ai-generator-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: var(--spacing-8);
+}
+
+.page-header {
+  text-align: center;
+  margin-bottom: var(--spacing-8);
+}
+
+.page-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: var(--spacing-2);
+}
+
+.page-description {
+  color: var(--color-text-secondary);
+  font-size: 1.125rem;
+}
+
+/* Progress Steps */
+.progress-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--spacing-8);
+  padding: var(--spacing-6) 0;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--color-border);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 1.25rem;
+  transition: all 0.3s ease;
+}
+
+.step.active .step-number {
+  background-color: var(--color-primary);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.step-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.step.active .step-label {
+  color: var(--color-primary);
+}
+
+.step-line {
+  width: 80px;
+  height: 2px;
+  background-color: var(--color-border);
+  margin: 0 var(--spacing-4);
+  margin-bottom: 28px;
+  transition: background-color 0.3s ease;
+}
+
+.step-line.active {
+  background-color: var(--color-primary);
+}
+
+/* Form Card */
+.form-card {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-8);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.form-card h2 {
+  margin-bottom: var(--spacing-2);
+}
+
+.step-description {
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-6);
+}
+
+.form-group {
+  margin-bottom: var(--spacing-6);
+}
+
+.form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: var(--spacing-2);
+  color: var(--color-text);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  font-size: 1rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 200px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: var(--spacing-2);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+}
+
+/* Banners */
+.info-banner {
+  padding: var(--spacing-4);
+  background-color: #e0f2fe;
+  border: 1px solid #7dd3fc;
+  border-radius: var(--radius-lg);
+  color: #0c4a6e;
+  margin-bottom: var(--spacing-6);
+}
+
+.error-banner {
+  padding: var(--spacing-4);
+  background-color: #fee;
+  border: 1px solid #f88;
+  border-radius: var(--radius-lg);
+  color: #c00;
+  margin-top: var(--spacing-6);
+}
+
+/* Questions List */
+.selection-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-4);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.selection-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.question-preview {
+  display: flex;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.question-preview:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.question-preview.selected {
+  border-color: var(--color-primary);
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+.question-checkbox input {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.question-content {
+  flex: 1;
+}
+
+.question-header-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-2);
+}
+
+.question-number {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.question-type-badge {
+  padding: var(--spacing-1) var(--spacing-2);
+  background-color: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.question-points {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.question-text {
+  font-weight: 500;
+  margin-bottom: var(--spacing-2);
+  color: var(--color-text);
+}
+
+.question-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-2);
+}
+
+.question-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-3);
+}
+
+.choice-item {
+  padding: var(--spacing-2) var(--spacing-3);
+  background-color: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+.question-explanation {
+  margin-top: var(--spacing-3);
+  padding: var(--spacing-3);
+  background-color: #f0fdf4;
+  border-left: 3px solid #22c55e;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+}
+
+/* Step Actions */
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .ai-generator-page {
+    padding: var(--spacing-4);
+  }
+
+  .page-header h1 {
+    font-size: 2rem;
+  }
+
+  .form-card {
+    padding: var(--spacing-6);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .step-line {
+    width: 40px;
+  }
+
+  .progress-steps {
+    font-size: 0.875rem;
+  }
+}

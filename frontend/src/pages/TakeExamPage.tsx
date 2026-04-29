@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
+import { PreExamRules } from '../components/PreExamRules';
 import { useAuth } from '../contexts/AuthContext';
 import type { Exam, Question, ExamAttempt } from '../types/exam';
 import '../styles/pages/take-exam.css';
@@ -30,6 +31,14 @@ export function TakeExamPage() {
   // Access code state
   const [accessCode, setAccessCode] = useState('');
   const [showAccessCodePrompt, setShowAccessCodePrompt] = useState(false);
+  
+  // Pre-exam rules state
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [rulesAccepted, setRulesAccepted] = useState(false);
+  
+  // Proctoring state
+  const [violations, setViolations] = useState<Array<{type: string, timestamp: number}>>([]);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   // Timer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -70,6 +79,95 @@ export function TakeExamPage() {
     }
   }, [examStarted, examSubmitted, currentQuestionIndex, answers]);
 
+  // Browser lockdown: Fullscreen enforcement
+  useEffect(() => {
+    if (examStarted && exam?.proctorConfig?.enforceFullscreen) {
+      const handleFullscreenChange = () => {
+        const isCurrentlyFullscreen = !!document.fullscreenElement;
+        setIsFullscreen(isCurrentlyFullscreen);
+        
+        if (!isCurrentlyFullscreen && examStarted && !examSubmitted) {
+          recordViolation('exit_fullscreen');
+        }
+      };
+
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      
+      // Request fullscreen
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.error('Failed to enter fullscreen:', err);
+        });
+      }
+
+      return () => {
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      };
+    }
+  }, [examStarted, exam?.proctorConfig?.enforceFullscreen, examSubmitted]);
+
+  // Browser lockdown: Tab switch detection
+  useEffect(() => {
+    if (examStarted && exam?.proctorConfig?.detectTabSwitch && !examSubmitted) {
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          recordViolation('tab_switch');
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+  }, [examStarted, exam?.proctorConfig?.detectTabSwitch, examSubmitted]);
+
+  // Browser lockdown: Copy/Paste detection
+  useEffect(() => {
+    if (examStarted && exam?.proctorConfig?.detectCopyPaste && !examSubmitted) {
+      const handleCopy = (e: ClipboardEvent) => {
+        recordViolation('copy_attempt');
+      };
+
+      const handlePaste = (e: ClipboardEvent) => {
+        recordViolation('paste_attempt');
+      };
+
+      document.addEventListener('copy', handleCopy);
+      document.addEventListener('paste', handlePaste);
+      
+      return () => {
+        document.removeEventListener('copy', handleCopy);
+        document.removeEventListener('paste', handlePaste);
+      };
+    }
+  }, [examStarted, exam?.proctorConfig?.detectCopyPaste, examSubmitted]);
+
+  // Browser lockdown: Right-click disable
+  useEffect(() => {
+    if (examStarted && exam?.proctorConfig?.disableRightClick && !examSubmitted) {
+      const handleContextMenu = (e: MouseEvent) => {
+        e.preventDefault();
+        recordViolation('right_click_attempt');
+      };
+
+      document.addEventListener('contextmenu', handleContextMenu);
+      return () => document.removeEventListener('contextmenu', handleContextMenu);
+    }
+  }, [examStarted, exam?.proctorConfig?.disableRightClick, examSubmitted]);
+
+  const recordViolation = async (type: string) => {
+    const violation = { type, timestamp: Date.now() };
+    setViolations(prev => [...prev, violation]);
+    
+    // Send violation to backend
+    if (attemptId) {
+      try {
+        await ExamService.recordViolation(attemptId, type);
+      } catch (err) {
+        console.error('Failed to record violation:', err);
+      }
+    }
+  };
+
   const loadExam = async () => {
     try {
       setLoading(true);
@@ -85,6 +183,11 @@ export function TakeExamPage() {
       if (examData.accessCode) {
         setShowAccessCodePrompt(true);
       }
+      
+      // Check if should show rules before exam
+      if (examData.showRulesBeforeExam) {
+        setShowRulesModal(true);
+      }
     } catch (err: any) {
       setError(err.message || 'Failed to load exam');
     } finally {
@@ -92,8 +195,23 @@ export function TakeExamPage() {
     }
   };
 
+  const handleAcceptRules = () => {
+    setRulesAccepted(true);
+    setShowRulesModal(false);
+  };
+
+  const handleRejectRules = () => {
+    navigate('/exams');
+  };
+
   const handleStartExam = async () => {
-    if (!examId) return;
+    if (!examId || !exam) return;
+    
+    // Check if rules need to be accepted
+    if (exam.showRulesBeforeExam && !rulesAccepted) {
+      setShowRulesModal(true);
+      return;
+    }
     
     try {
       const attempt = await ExamService.startExam(examId, accessCode || undefined);
@@ -218,12 +336,12 @@ export function TakeExamPage() {
                 <input
                   type="radio"
                   name={question.id}
-                  value={choice}
-                  checked={answer === choice}
+                  value={choice.text}
+                  checked={answer === choice.text}
                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                 />
                 <span className="option-text">
-                  {String.fromCharCode(65 + index)}. {choice}
+                  {String.fromCharCode(65 + index)}. {choice.text}
                 </span>
               </label>
             ))}
@@ -256,8 +374,49 @@ export function TakeExamPage() {
           </div>
         );
 
-      case 'short_answer':
-      case 'fill_in_blank':
+      case 'modified_true_false':
+        return (
+          <div className="modified-true-false-input">
+            <div className="answer-options">
+              <label className="option-label">
+                <input
+                  type="radio"
+                  name={`${question.id}_tf`}
+                  value="true"
+                  checked={answer?.startsWith?.('true') || answer === 'true'}
+                  onChange={(e) => handleAnswerChange(question.id, 'true')}
+                />
+                <span className="option-text">True</span>
+              </label>
+              <label className="option-label">
+                <input
+                  type="radio"
+                  name={`${question.id}_tf`}
+                  value="false"
+                  checked={answer?.startsWith?.('false') || answer?.includes?.('False')}
+                  onChange={(e) => handleAnswerChange(question.id, 'false__')}
+                />
+                <span className="option-text">False</span>
+              </label>
+            </div>
+            {(answer?.startsWith?.('false') || answer?.includes?.('False')) && (
+              <div className="correction-input" style={{ marginTop: 'var(--spacing-3)' }}>
+                <label style={{ display: 'block', marginBottom: 'var(--spacing-2)', fontSize: 'var(--font-size-sm)' }}>
+                  If false, provide the correct answer:
+                </label>
+                <textarea
+                  className="answer-textarea"
+                  value={answer?.replace('false__', '') || ''}
+                  onChange={(e) => handleAnswerChange(question.id, 'false__' + e.target.value)}
+                  placeholder="Enter the correct answer..."
+                  rows={3}
+                />
+              </div>
+            )}
+          </div>
+        );
+
+      case 'identification':
         return (
           <input
             type="text"
@@ -268,6 +427,23 @@ export function TakeExamPage() {
           />
         );
 
+      case 'enumeration':
+        const enumerationItems = typeof answer === 'string' ? answer.split('\n') : (Array.isArray(answer) ? answer : ['']);
+        return (
+          <div className="enumeration-input">
+            <p style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-2)', color: 'var(--text-secondary)' }}>
+              Enter each item on a new line:
+            </p>
+            <textarea
+              className="answer-textarea"
+              value={Array.isArray(answer) ? answer.join('\n') : answer}
+              onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+              placeholder="Enter items, one per line..."
+              rows={6}
+            />
+          </div>
+        );
+
       case 'essay':
         return (
           <textarea
@@ -276,18 +452,6 @@ export function TakeExamPage() {
             onChange={(e) => handleAnswerChange(question.id, e.target.value)}
             placeholder="Type your essay here..."
             rows={10}
-          />
-        );
-
-      case 'matching':
-        // Simple implementation - can be enhanced
-        return (
-          <textarea
-            className="answer-textarea"
-            value={answer}
-            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-            placeholder="Enter your matches (e.g., 1-A, 2-B, 3-C)"
-            rows={5}
           />
         );
 
@@ -367,6 +531,15 @@ export function TakeExamPage() {
             </div>
           </div>
         </div>
+
+        {/* Pre-Exam Rules Modal */}
+        {showRulesModal && (
+          <PreExamRules
+            exam={exam}
+            onAccept={handleAcceptRules}
+            onCancel={handleRejectRules}
+          />
+        )}
       </MainLayout>
     );
   }

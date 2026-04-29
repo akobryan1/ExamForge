@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
+import { NotificationBell } from '../components/NotificationBell';
 import '../styles/layouts/main-layout.css';
 
 interface MainLayoutProps {
@@ -27,7 +28,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       { path: '/exams/create', label: 'Create Exam', icon: '➕' },
       { path: '/grading', label: 'Grading Queue', icon: '✓' },
       { path: '/analytics', label: 'Analytics', icon: '📈' },
-      { path: '/monitoring', label: 'Live Monitoring', icon: '👁️' },
+      { path: '/incidents', label: 'Incident Reports', icon: '👁️' },
     ] : []),
     ...(user?.role === 'student' ? [
       { path: '/my-exams', label: 'My Exams', icon: '📚' },
@@ -85,6 +86,10 @@ export function MainLayout({ children }: MainLayoutProps) {
 
       {/* Main Content */}
       <main className="main-content">
+        <div className="content-header">
+          <div className="header-spacer" />
+          <NotificationBell />
+        </div>
         <div className="content-container">
           {children}
         </div>

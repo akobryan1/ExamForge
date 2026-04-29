@@ -287,6 +287,31 @@ router.get('/attempts/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * POST /api/attempts/:id/violations - Record a proctoring violation (Student)
+ */
+router.post(
+  '/attempts/:id/violations',
+  authorize('student'),
+  [
+    body('type').trim().notEmpty().withMessage('Violation type is required'),
+    body('timestamp').isNumeric().withMessage('Timestamp is required'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.recordViolation(
+        req.user!.userId,
+        req.params.id,
+        req.body.type,
+        req.body.timestamp
+      );
+      return res.status(201).json({ message: 'Violation recorded' });
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/grading/queue - Get grading queue for essay questions (Instructor only)
  */
 router.get(
@@ -335,6 +360,73 @@ router.get(
     try {
       const analytics = await ExamService.getExamAnalytics(req.params.examId, req.user!.userId);
       return res.json(analytics);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/exams/incidents - Get incident reports (Instructor only)
+ */
+router.get(
+  '/incidents',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const incidents = await ExamService.getIncidentReports(req.user!.userId);
+      return res.json(incidents);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/exams/incidents/archive - Archive incidents (Instructor only)
+ */
+router.post(
+  '/incidents/archive',
+  authorize('instructor', 'admin'),
+  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.archiveIncidents(req.body.incidentIds);
+      return res.json({ success: true, message: 'Incidents archived successfully' });
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/exams/incidents/unarchive - Unarchive incidents (Instructor only)
+ */
+router.post(
+  '/incidents/unarchive',
+  authorize('instructor', 'admin'),
+  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.unarchiveIncidents(req.body.incidentIds);
+      return res.json({ success: true, message: 'Incidents unarchived successfully' });
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/exams/incidents/delete - Delete incidents (Instructor only)
+ */
+router.post(
+  '/incidents/delete',
+  authorize('instructor', 'admin'),
+  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  async (req: Request, res: Response) => {
+    try {
+      await ExamService.deleteIncidents(req.body.incidentIds);
+      return res.json({ success: true, message: 'Incidents deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
