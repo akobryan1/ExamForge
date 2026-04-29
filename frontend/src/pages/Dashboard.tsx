@@ -1,4 +1,5 @@
 import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/Button';
 import { pageTransition } from '../utils/animations';
@@ -49,6 +50,22 @@ export function Dashboard() {
       </div>
 
       <div className="card" style={{ marginTop: 'var(--spacing-8)' }}>
+        <h2 className="card-title">Quick Actions</h2>
+        <div className="card-body">
+          <div style={{ display: 'flex', gap: 'var(--spacing-4)', flexWrap: 'wrap' }}>
+            <Link to="/exams">
+              <Button>View All Exams</Button>
+            </Link>
+            {user?.role === 'instructor' && (
+              <Link to="/exams/create">
+                <Button variant="primary">Create New Exam</Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginTop: 'var(--spacing-8)' }}>
         <h2 className="card-title">Getting Started</h2>
         <div className="card-body">
           <p>Phase 2 authentication system is now complete! You can:</p>
@@ -59,7 +76,7 @@ export function Dashboard() {
             <li>Protected routes</li>
           </ul>
           <p style={{ marginTop: 'var(--spacing-4)' }}>
-            Next steps: Implement exam management, real-time monitoring, and grading features.
+            Phase 3: Exam management system with create, edit, and question management.
           </p>
         </div>
       </div>

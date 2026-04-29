@@ -5,6 +5,8 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
+import { ExamsPage } from './pages/ExamsPage'
+import { CreateExamPage } from './pages/CreateExamPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +33,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams"
+              element={
+                <ProtectedRoute>
+                  <ExamsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/create"
+              element={
+                <ProtectedRoute>
+                  <CreateExamPage />
                 </ProtectedRoute>
               }
             />
