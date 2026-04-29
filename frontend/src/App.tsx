@@ -9,6 +9,8 @@ import { ExamsPage } from './pages/ExamsPage'
 import { CreateExamPage } from './pages/CreateExamPage'
 import { QuestionsPage } from './pages/QuestionsPage'
 import { ExamPreviewPage } from './pages/ExamPreviewPage'
+import { TakeExamPage } from './pages/TakeExamPage'
+import { ExamResultsPage } from './pages/ExamResultsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +69,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ExamPreviewPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/:examId/take"
+              element={
+                <ProtectedRoute>
+                  <TakeExamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/attempts/:attemptId/results"
+              element={
+                <ProtectedRoute>
+                  <ExamResultsPage />
                 </ProtectedRoute>
               }
             />
