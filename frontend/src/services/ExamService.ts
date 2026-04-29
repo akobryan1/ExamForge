@@ -81,16 +81,16 @@ class ExamServiceClass {
   /**
    * Update a question (Instructor only)
    */
-  async updateQuestion(questionId: string, data: Partial<CreateQuestionFormData>): Promise<Question> {
-    const response = await apiClient.put(`/api/exams/questions/${questionId}`, data);
+  async updateQuestion(questionId: string, examId: string, data: Partial<CreateQuestionFormData>): Promise<Question> {
+    const response = await apiClient.put(`/api/exams/questions/${questionId}`, { ...data, examId });
     return response.data;
   }
 
   /**
    * Delete a question (Instructor only)
    */
-  async deleteQuestion(questionId: string): Promise<void> {
-    await apiClient.delete(`/api/exams/questions/${questionId}`);
+  async deleteQuestion(questionId: string, examId: string): Promise<void> {
+    await apiClient.delete(`/api/exams/questions/${questionId}?examId=${examId}`);
   }
 
   /**

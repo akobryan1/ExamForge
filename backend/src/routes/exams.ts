@@ -53,10 +53,19 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const exam = await ExamService.getExamById(req.params.id, req.user!.userId);
-    if (!exam) {
+    // Find exam across all users
+    const result = await ExamService.findExamById(req.params.id);
+    if (!result) {
       return res.status(404).json({ error: 'Exam not found' });
     }
+
+    const { exam, instructorId } = result;
+    
+    // Check access: instructor owns it OR exam is published/active
+    if (exam.instructorId !== req.user!.userId && !['published', 'active'].includes(exam.status)) {
+      return res.status(403).json({ error: 'Unauthorized access to exam' });
+    }
+
     return res.json(exam);
   } catch (error: any) {
     return res.status(400).json({ error: error.message });
@@ -104,9 +113,16 @@ router.delete(
  */
 router.get('/:id/questions', async (req: Request, res: Response) => {
   try {
+    // Find exam to get instructorId
+    const result = await ExamService.findExamById(req.params.id);
+    if (!result) {
+      return res.status(404).json({ error: 'Exam not found' });
+    }
+
+    const { instructorId } = result;
     const questions = await ExamService.getExamQuestions(
       req.params.id,
-      req.user!.userId
+      instructorId
     );
     return res.json(questions);
   } catch (error: any) {
@@ -148,11 +164,13 @@ router.post(
 router.put(
   '/questions/:id',
   authorize('instructor', 'admin'),
+  [body('examId').notEmpty().withMessage('Exam ID is required')],
   async (req: Request, res: Response) => {
     try {
       const question = await ExamService.updateQuestion(
         req.params.id,
         req.user!.userId,
+        req.body.examId,
         req.body
       );
       return res.json(question);
@@ -164,13 +182,18 @@ router.put(
 
 /**
  * DELETE /api/questions/:id - Delete a question (Instructor only)
+ * Note: examId should be passed in query string
  */
 router.delete(
   '/questions/:id',
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
-      await ExamService.deleteQuestion(req.params.id, req.user!.userId);
+      const examId = req.query.examId as string;
+      if (!examId) {
+        return res.status(400).json({ error: 'examId query parameter is required' });
+      }
+      await ExamService.deleteQuestion(req.params.id, req.user!.userId, examId);
       return res.json({ message: 'Question deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

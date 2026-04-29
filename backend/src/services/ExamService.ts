@@ -1,4 +1,5 @@
-import { getSupabase } from '../config/supabase';
+import { getFirestore } from '../config/firebase';
+import { FieldValue, Timestamp } from '@google-cloud/firestore';
 import {
   Exam,
   Question,
@@ -16,573 +17,782 @@ import {
 
 export class ExamService {
   /**
-   * Create a new exam
+   * Create a new exam in instructor's published_exams subcollection
    */
   static async createExam(instructorId: string, instructorName: string, data: CreateExamDto): Promise<Exam> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    const { data: exam, error } = await supabase
-      .from('exams')
-      .insert({
-        ...data,
-        instructor_id: instructorId,
-        instructor_name: instructorName,
-        status: 'draft',
-        start_date: data.startDate,
-        end_date: data.endDate,
-        time_limit: data.timeLimit,
-        passing_score: data.passingScore,
-        shuffle_questions: data.shuffleQuestions ?? false,
-        shuffle_answers: data.shuffleAnswers ?? false,
-        show_results: data.showResults ?? true,
-        allow_review: data.allowReview ?? true,
-        access_code: data.accessCode,
-      })
-      .select()
-      .single();
+    const examData = {
+      title: data.title,
+      description: data.description,
+      subject: data.subject || '',
+      grade: data.grade || '',
+      instructorId,
+      instructorName,
+      status: 'draft' as ExamStatus,
+      startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
+      endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
+      timeLimit: data.timeLimit || null,
+      passingScore: data.passingScore || 70,
+      shuffleQuestions: data.shuffleQuestions ?? false,
+      shuffleAnswers: data.shuffleAnswers ?? false,
+      showResults: data.showResults ?? true,
+      allowReview: data.allowReview ?? true,
+      accessCode: data.accessCode || null,
+      allowedStudentIds: [],
+      tags: [],
+      questionCount: 0,
+      totalPoints: 0,
+      attemptCount: 0,
+      averageScore: 0,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
-    if (error) throw new Error(`Failed to create exam: ${error.message}`);
-    return this.mapExamFromDb(exam);
+    const examRef = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .add(examData);
+
+    const examDoc = await examRef.get();
+    return this.mapExamFromDb(examRef.id, examDoc.data()!, instructorId);
   }
 
   /**
-   * Get exam by ID
+   * Find exam across all users using collection group query
    */
-  static async getExamById(examId: string, userId: string): Promise<Exam | null> {
-    const supabase = getSupabase();
+  static async findExamById(examId: string): Promise<{ exam: Exam; instructorId: string } | null> {
+    const db = getFirestore();
 
-    const { data: exam, error } = await supabase
-      .from('exams')
-      .select('*')
-      .eq('id', examId)
-      .single();
+    const examsSnapshot = await db
+      .collectionGroup('published_exams')
+      .where('__name__', '==', examId)
+      .limit(1)
+      .get();
 
-    if (error) return null;
+    if (examsSnapshot.empty) return null;
+
+    const examDoc = examsSnapshot.docs[0];
+    const examData = examDoc.data();
+    const instructorId = examData.instructorId;
+
+    return {
+      exam: this.mapExamFromDb(examDoc.id, examData, instructorId),
+      instructorId,
+    };
+  }
+
+  /**
+   * Get exam by ID from instructor's collection
+   */
+  static async getExamById(examId: string, instructorId: string, userId?: string): Promise<Exam | null> {
+    const db = getFirestore();
+
+    const examDoc = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .get();
+
+    if (!examDoc.exists) return null;
+
+    const examData = examDoc.data()!;
     
     // Check access: instructor owns it OR exam is published/active
-    if (exam.instructor_id !== userId && !['published', 'active'].includes(exam.status)) {
+    if (userId && examData.instructorId !== userId && !['published', 'active'].includes(examData.status)) {
       throw new Error('Unauthorized access to exam');
     }
 
-    return this.mapExamFromDb(exam);
+    return this.mapExamFromDb(examDoc.id, examData, instructorId);
   }
 
   /**
    * Get all exams for an instructor
    */
   static async getInstructorExams(instructorId: string): Promise<Exam[]> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    const { data: exams, error } = await supabase
-      .from('exams')
-      .select('*')
-      .eq('instructor_id', instructorId)
-      .order('created_at', { ascending: false });
+    const examsSnapshot = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .orderBy('createdAt', 'desc')
+      .get();
 
-    if (error) throw new Error(`Failed to fetch exams: ${error.message}`);
-    return exams.map(this.mapExamFromDb);
+    return examsSnapshot.docs.map(doc => 
+      this.mapExamFromDb(doc.id, doc.data(), instructorId)
+    );
   }
 
   /**
-   * Get available exams for a student
+   * Get available exams for a student (collection group query across all users)
    */
   static async getAvailableExams(studentId: string): Promise<Exam[]> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    const { data: exams, error } = await supabase
-      .from('exams')
-      .select('*')
-      .in('status', ['published', 'active'])
-      .order('created_at', { ascending: false });
+    // Use collection group query to find all published_exams across all users
+    const examsSnapshot = await db
+      .collectionGroup('published_exams')
+      .where('status', 'in', ['published', 'active'])
+      .orderBy('createdAt', 'desc')
+      .get();
 
-    if (error) throw new Error(`Failed to fetch available exams: ${error.message}`);
-    
-    // Filter exams based on scheduling and access control
     const now = new Date();
-    return exams
-      .filter((exam: any) => {
-        // Check if exam is within scheduled time
-        if (exam.start_date && new Date(exam.start_date) > now) return false;
-        if (exam.end_date && new Date(exam.end_date) < now) return false;
-        
-        // Check if student is in allowed list (if specified)
-        if (exam.allowed_student_ids && !exam.allowed_student_ids.includes(studentId)) return false;
-        
-        return true;
-      })
-      .map(this.mapExamFromDb);
+    const exams: Exam[] = [];
+
+    for (const doc of examsSnapshot.docs) {
+      const examData = doc.data();
+      
+      // Check if exam is within scheduled time
+      if (examData.startDate && examData.startDate.toDate() > now) continue;
+      if (examData.endDate && examData.endDate.toDate() < now) continue;
+      
+      // Check if student is in allowed list (if specified)
+      if (examData.allowedStudentIds?.length > 0 && !examData.allowedStudentIds.includes(studentId)) continue;
+
+      exams.push(this.mapExamFromDb(doc.id, examData, examData.instructorId));
+    }
+
+    return exams;
   }
 
   /**
    * Update an exam
    */
   static async updateExam(examId: string, instructorId: string, data: UpdateExamDto): Promise<Exam> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    // Verify ownership
-    const exam = await this.getExamById(examId, instructorId);
-    if (!exam || exam.instructorId !== instructorId) {
-      throw new Error('Unauthorized to update this exam');
+    const examRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId);
+
+    const examDoc = await examRef.get();
+    if (!examDoc.exists) {
+      throw new Error('Exam not found');
     }
 
-    const updateData: any = { ...data };
-    if (data.startDate) updateData.start_date = data.startDate;
-    if (data.endDate) updateData.end_date = data.endDate;
-    if (data.timeLimit !== undefined) updateData.time_limit = data.timeLimit;
-    if (data.passingScore !== undefined) updateData.passing_score = data.passingScore;
-    if (data.shuffleQuestions !== undefined) updateData.shuffle_questions = data.shuffleQuestions;
-    if (data.shuffleAnswers !== undefined) updateData.shuffle_answers = data.shuffleAnswers;
-    if (data.showResults !== undefined) updateData.show_results = data.showResults;
-    if (data.allowReview !== undefined) updateData.allow_review = data.allowReview;
-    if (data.accessCode !== undefined) updateData.access_code = data.accessCode;
+    const updateData: any = {
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
-    const { data: updatedExam, error } = await supabase
-      .from('exams')
-      .update(updateData)
-      .eq('id', examId)
-      .select()
-      .single();
+    if (data.title) updateData.title = data.title;
+    if (data.description !== undefined) updateData.description = data.description;
+    if (data.subject !== undefined) updateData.subject = data.subject;
+    if (data.grade !== undefined) updateData.grade = data.grade;
+    if (data.status) updateData.status = data.status;
+    if (data.startDate) updateData.startDate = Timestamp.fromDate(new Date(data.startDate));
+    if (data.endDate) updateData.endDate = Timestamp.fromDate(new Date(data.endDate));
+    if (data.timeLimit !== undefined) updateData.timeLimit = data.timeLimit;
+    if (data.passingScore !== undefined) updateData.passingScore = data.passingScore;
+    if (data.shuffleQuestions !== undefined) updateData.shuffleQuestions = data.shuffleQuestions;
+    if (data.shuffleAnswers !== undefined) updateData.shuffleAnswers = data.shuffleAnswers;
+    if (data.showResults !== undefined) updateData.showResults = data.showResults;
+    if (data.allowReview !== undefined) updateData.allowReview = data.allowReview;
+    if (data.accessCode !== undefined) updateData.accessCode = data.accessCode;
 
-    if (error) throw new Error(`Failed to update exam: ${error.message}`);
-    return this.mapExamFromDb(updatedExam);
+    await examRef.update(updateData);
+
+    const updatedDoc = await examRef.get();
+    return this.mapExamFromDb(updatedDoc.id, updatedDoc.data()!, instructorId);
   }
 
   /**
    * Delete an exam
    */
   static async deleteExam(examId: string, instructorId: string): Promise<void> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    const { error } = await supabase
-      .from('exams')
-      .delete()
-      .eq('id', examId)
-      .eq('instructor_id', instructorId);
+    // Delete all questions first
+    const questionsSnapshot = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .get();
 
-    if (error) throw new Error(`Failed to delete exam: ${error.message}`);
+    const batch = db.batch();
+    questionsSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+
+    // Delete the exam
+    await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .delete();
   }
 
+
   /**
-   * Create a question for an exam
+   * Create a question for an exam (subcollection)
    */
   static async createQuestion(instructorId: string, data: CreateQuestionDto): Promise<Question> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    // Verify exam ownership
-    const exam = await this.getExamById(data.examId, instructorId);
-    if (!exam || exam.instructorId !== instructorId) {
-      throw new Error('Unauthorized to add questions to this exam');
-    }
-
-    // Get current max order
-    const { data: maxOrderData } = await supabase
-      .from('questions')
-      .select('order_index')
-      .eq('exam_id', data.examId)
-      .order('order_index', { ascending: false })
+    // Get current question count for ordering
+    const questionsSnapshot = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(data.examId)
+      .collection('questions')
+      .orderBy('order', 'desc')
       .limit(1)
-      .single();
+      .get();
 
-    const nextOrder = maxOrderData ? maxOrderData.order_index + 1 : 0;
+    const nextOrder = questionsSnapshot.empty ? 0 : questionsSnapshot.docs[0].data().order + 1;
 
-    const { data: question, error } = await supabase
-      .from('questions')
-      .insert({
-        exam_id: data.examId,
-        type: data.type,
-        text: data.text,
-        description: data.description,
-        points: data.points,
-        difficulty: data.difficulty,
-        order_index: nextOrder,
-        choices: data.choices ? JSON.stringify(data.choices) : null,
-        correct_answer: data.correctAnswer ? JSON.stringify(data.correctAnswer) : null,
-        matching_pairs: data.matchingPairs ? JSON.stringify(data.matchingPairs) : null,
-        tags: data.tags,
-        image_url: data.imageUrl,
-        time_limit: data.timeLimit,
-      })
-      .select()
-      .single();
+    const questionData = {
+      examId: data.examId,
+      type: data.type,
+      text: data.text,
+      description: data.description || '',
+      points: data.points,
+      difficulty: data.difficulty || 'medium',
+      order: nextOrder,
+      choices: data.choices || [],
+      correctAnswer: data.correctAnswer || null,
+      matchingPairs: data.matchingPairs || [],
+      tags: data.tags || [],
+      imageUrl: data.imageUrl || null,
+      timeLimit: data.timeLimit || null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
-    if (error) throw new Error(`Failed to create question: ${error.message}`);
-    return this.mapQuestionFromDb(question);
+    const questionRef = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(data.examId)
+      .collection('questions')
+      .add(questionData);
+
+    // Update exam's question count and total points
+    const examRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(data.examId);
+
+    await examRef.update({
+      questionCount: FieldValue.increment(1),
+      totalPoints: FieldValue.increment(data.points),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    const questionDoc = await questionRef.get();
+    return this.mapQuestionFromDb(questionRef.id, questionDoc.data()!);
   }
 
   /**
    * Get all questions for an exam
    */
-  static async getExamQuestions(examId: string, userId: string): Promise<Question[]> {
-    const supabase = getSupabase();
+  static async getExamQuestions(examId: string, instructorId: string): Promise<Question[]> {
+    const db = getFirestore();
 
-    // Verify access
-    await this.getExamById(examId, userId);
+    const questionsSnapshot = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .orderBy('order', 'asc')
+      .get();
 
-    const { data: questions, error } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('exam_id', examId)
-      .order('order_index', { ascending: true });
-
-    if (error) throw new Error(`Failed to fetch questions: ${error.message}`);
-    return questions.map(this.mapQuestionFromDb);
+    return questionsSnapshot.docs.map(doc => 
+      this.mapQuestionFromDb(doc.id, doc.data())
+    );
   }
 
   /**
    * Update a question
    */
-  static async updateQuestion(questionId: string, instructorId: string, data: UpdateQuestionDto): Promise<Question> {
-    const supabase = getSupabase();
+  static async updateQuestion(questionId: string, instructorId: string, examId: string, data: UpdateQuestionDto): Promise<Question> {
+    const db = getFirestore();
 
-    // Get question to verify ownership
-    const { data: question } = await supabase
-      .from('questions')
-      .select('*, exams!inner(instructor_id)')
-      .eq('id', questionId)
-      .single();
+    const questionRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .doc(questionId);
 
-    if (!question || question.exams.instructor_id !== instructorId) {
-      throw new Error('Unauthorized to update this question');
+    const questionDoc = await questionRef.get();
+    if (!questionDoc.exists) {
+      throw new Error('Question not found');
     }
 
-    const updateData: any = {};
+    const oldPoints = questionDoc.data()!.points;
+    const updateData: any = {
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
     if (data.text) updateData.text = data.text;
     if (data.description !== undefined) updateData.description = data.description;
     if (data.points !== undefined) updateData.points = data.points;
     if (data.difficulty) updateData.difficulty = data.difficulty;
-    if (data.choices) updateData.choices = JSON.stringify(data.choices);
-    if (data.correctAnswer) updateData.correct_answer = JSON.stringify(data.correctAnswer);
-    if (data.matchingPairs) updateData.matching_pairs = JSON.stringify(data.matchingPairs);
+    if (data.choices) updateData.choices = data.choices;
+    if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
+    if (data.matchingPairs) updateData.matchingPairs = data.matchingPairs;
     if (data.tags) updateData.tags = data.tags;
-    if (data.imageUrl !== undefined) updateData.image_url = data.imageUrl;
-    if (data.timeLimit !== undefined) updateData.time_limit = data.timeLimit;
+    if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+    if (data.timeLimit !== undefined) updateData.timeLimit = data.timeLimit;
 
-    const { data: updatedQuestion, error } = await supabase
-      .from('questions')
-      .update(updateData)
-      .eq('id', questionId)
-      .select()
-      .single();
+    await questionRef.update(updateData);
 
-    if (error) throw new Error(`Failed to update question: ${error.message}`);
-    return this.mapQuestionFromDb(updatedQuestion);
+    // Update exam's total points if points changed
+    if (data.points !== undefined && data.points !== oldPoints) {
+      const pointsDiff = data.points - oldPoints;
+      await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(examId)
+        .update({
+          totalPoints: FieldValue.increment(pointsDiff),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+    }
+
+    const updatedDoc = await questionRef.get();
+    return this.mapQuestionFromDb(updatedDoc.id, updatedDoc.data()!);
   }
 
   /**
    * Delete a question
    */
-  static async deleteQuestion(questionId: string, instructorId: string): Promise<void> {
-    const supabase = getSupabase();
+  static async deleteQuestion(questionId: string, instructorId: string, examId: string): Promise<void> {
+    const db = getFirestore();
 
-    const { data: question } = await supabase
-      .from('questions')
-      .select('*, exams!inner(instructor_id)')
-      .eq('id', questionId)
-      .single();
+    const questionRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .doc(questionId);
 
-    if (!question || question.exams.instructor_id !== instructorId) {
-      throw new Error('Unauthorized to delete this question');
+    const questionDoc = await questionRef.get();
+    if (!questionDoc.exists) {
+      throw new Error('Question not found');
     }
 
-    const { error } = await supabase
-      .from('questions')
-      .delete()
-      .eq('id', questionId);
+    const points = questionDoc.data()!.points;
 
-    if (error) throw new Error(`Failed to delete question: ${error.message}`);
+    await questionRef.delete();
+
+    // Update exam's question count and total points
+    await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .update({
+        questionCount: FieldValue.increment(-1),
+        totalPoints: FieldValue.increment(-points),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
   }
 
+
   /**
-   * Start an exam attempt
+   * Start an exam attempt (creates session in student's exam_sessions)
    */
   static async startExamAttempt(studentId: string, studentName: string, data: StartExamDto): Promise<ExamAttempt> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    // Get and verify exam
-    const exam = await this.getExamById(data.examId, studentId);
-    if (!exam) throw new Error('Exam not found');
-    if (!['published', 'active'].includes(exam.status)) throw new Error('Exam is not available');
+    // First, we need to find the exam across all users using collection group
+    const examsSnapshot = await db
+      .collectionGroup('published_exams')
+      .where('__name__', '==', data.examId)
+      .limit(1)
+      .get();
+
+    if (examsSnapshot.empty) {
+      throw new Error('Exam not found');
+    }
+
+    const examDoc = examsSnapshot.docs[0];
+    const examData = examDoc.data();
+    const instructorId = examData.instructorId;
+
+    // Verify exam status
+    if (!['published', 'active'].includes(examData.status)) {
+      throw new Error('Exam is not available');
+    }
 
     // Verify access code if required
-    if (exam.accessCode && exam.accessCode !== data.accessCode) {
+    if (examData.accessCode && examData.accessCode !== data.accessCode) {
       throw new Error('Invalid access code');
     }
 
     // Check if student already has an active attempt
-    const { data: existingAttempt } = await supabase
-      .from('exam_attempts')
-      .select('*')
-      .eq('exam_id', data.examId)
-      .eq('student_id', studentId)
-      .eq('status', 'in_progress')
-      .single();
+    const existingSessionsSnapshot = await db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('exam_sessions')
+      .where('examId', '==', data.examId)
+      .where('status', '==', 'in_progress')
+      .limit(1)
+      .get();
 
-    if (existingAttempt) {
-      return this.mapAttemptFromDb(existingAttempt);
+    if (!existingSessionsSnapshot.empty) {
+      const existingSession = existingSessionsSnapshot.docs[0];
+      return this.mapAttemptFromDb(existingSession.id, existingSession.data());
     }
 
-    // Create new attempt
-    const { data: attempt, error } = await supabase
-      .from('exam_attempts')
-      .insert({
-        exam_id: data.examId,
-        student_id: studentId,
-        student_name: studentName,
-        status: 'in_progress',
-      })
-      .select()
-      .single();
+    // Create new session
+    const sessionData = {
+      examId: data.examId,
+      instructorId,
+      studentId,
+      studentName,
+      examTitle: examData.title,
+      status: 'in_progress',
+      score: 0,
+      percentage: 0,
+      passed: false,
+      startedAt: FieldValue.serverTimestamp(),
+      submittedAt: null,
+      timeSpent: 0,
+      ipAddress: null,
+      userAgent: null,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
-    if (error) throw new Error(`Failed to start exam attempt: ${error.message}`);
+    const sessionRef = await db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('exam_sessions')
+      .add(sessionData);
 
-    // Update exam attempt count
-    await supabase.rpc('increment', {
-      table_name: 'exams',
-      row_id: data.examId,
-      column_name: 'attempt_count',
-    });
+    // Increment exam attempt count
+    await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(data.examId)
+      .update({
+        attemptCount: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
 
-    return this.mapAttemptFromDb(attempt);
+    const sessionDoc = await sessionRef.get();
+    return this.mapAttemptFromDb(sessionRef.id, sessionDoc.data()!);
   }
 
   /**
-   * Submit an answer for a question
+   * Submit an answer for a question (stores in student's examinee_data)
    */
   static async submitAnswer(studentId: string, data: SubmitAnswerDto): Promise<ExamAnswer> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    // Verify attempt ownership
-    const { data: attempt } = await supabase
-      .from('exam_attempts')
-      .select('*')
-      .eq('id', data.attemptId)
-      .eq('student_id', studentId)
-      .single();
+    // Verify session exists and is in progress
+    const sessionDoc = await db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('exam_sessions')
+      .doc(data.attemptId)
+      .get();
 
-    if (!attempt) throw new Error('Unauthorized access to this attempt');
-    if (attempt.status !== 'in_progress') throw new Error('Cannot submit answer for completed attempt');
-
-    // Get question to determine correctness
-    const { data: question } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('id', data.questionId)
-      .single();
-
-    if (!question) throw new Error('Question not found');
-
-    // Auto-grade if possible
-    let isCorrect: boolean | undefined;
-    let pointsEarned: number | undefined;
-
-    if (['multiple_choice', 'true_false'].includes(question.type)) {
-      const correctAnswer = JSON.parse(question.correct_answer);
-      isCorrect = JSON.stringify(data.answer) === JSON.stringify(correctAnswer);
-      pointsEarned = isCorrect ? question.points : 0;
+    if (!sessionDoc.exists) {
+      throw new Error('Session not found');
     }
 
-    // Upsert answer
-    const { data: answer, error } = await supabase
-      .from('exam_answers')
-      .upsert({
-        attempt_id: data.attemptId,
-        question_id: data.questionId,
-        answer: JSON.stringify(data.answer),
-        is_correct: isCorrect,
-        points_earned: pointsEarned,
-        time_spent: data.timeSpent,
-      })
-      .select()
-      .single();
+    const sessionData = sessionDoc.data()!;
+    if (sessionData.status !== 'in_progress') {
+      throw new Error('Cannot submit answer for completed session');
+    }
 
-    if (error) throw new Error(`Failed to submit answer: ${error.message}`);
-    return this.mapAnswerFromDb(answer);
+    // Get question to determine correctness
+    const instructorId = sessionData.instructorId;
+    const examId = sessionData.examId;
+
+    const questionDoc = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .doc(data.questionId)
+      .get();
+
+    if (!questionDoc.exists) {
+      throw new Error('Question not found');
+    }
+
+    const questionData = questionDoc.data()!;
+
+    // Auto-grade if possible
+    let isCorrect: boolean | null = null;
+    let pointsEarned: number | null = null;
+
+    if (['multiple_choice', 'true_false'].includes(questionData.type)) {
+      isCorrect = JSON.stringify(data.answer) === JSON.stringify(questionData.correctAnswer);
+      pointsEarned = isCorrect ? questionData.points : 0;
+    }
+
+    const answerData = {
+      attemptId: data.attemptId,
+      questionId: data.questionId,
+      examId,
+      answer: data.answer,
+      isCorrect,
+      pointsEarned,
+      feedback: null,
+      gradedBy: null,
+      gradedAt: null,
+      timeSpent: data.timeSpent || 0,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    // Check if answer already exists
+    const existingAnswersSnapshot = await db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('examinee_data')
+      .where('attemptId', '==', data.attemptId)
+      .where('questionId', '==', data.questionId)
+      .limit(1)
+      .get();
+
+    let answerRef;
+    if (!existingAnswersSnapshot.empty) {
+      // Update existing answer
+      answerRef = existingAnswersSnapshot.docs[0].ref;
+      await answerRef.update({
+        ...answerData,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      // Create new answer
+      answerRef = await db
+        .collection('examforge_users')
+        .doc(studentId)
+        .collection('examinee_data')
+        .add(answerData);
+    }
+
+    const answerDoc = await answerRef.get();
+    return this.mapAnswerFromDb(answerRef.id, answerDoc.data()!);
   }
 
   /**
    * Submit exam (complete attempt)
    */
   static async submitExam(studentId: string, data: SubmitExamDto): Promise<ExamAttempt> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    // Verify attempt ownership
-    const { data: attempt } = await supabase
-      .from('exam_attempts')
-      .select('*')
-      .eq('id', data.attemptId)
-      .eq('student_id', studentId)
-      .single();
+    // Get session
+    const sessionRef = db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('exam_sessions')
+      .doc(data.attemptId);
 
-    if (!attempt) throw new Error('Unauthorized access to this attempt');
-    if (attempt.status !== 'in_progress') throw new Error('Attempt already submitted');
+    const sessionDoc = await sessionRef.get();
+    if (!sessionDoc.exists) {
+      throw new Error('Session not found');
+    }
+
+    const sessionData = sessionDoc.data()!;
+    if (sessionData.status !== 'in_progress') {
+      throw new Error('Session already submitted');
+    }
+
+    // Get all answers for this attempt
+    const answersSnapshot = await db
+      .collection('examforge_users')
+      .doc(studentId)
+      .collection('examinee_data')
+      .where('attemptId', '==', data.attemptId)
+      .get();
 
     // Calculate score from auto-graded answers
-    const { data: answers } = await supabase
-      .from('exam_answers')
-      .select('points_earned')
-      .eq('attempt_id', data.attemptId);
+    let totalScore = 0;
+    let hasUngradedAnswers = false;
 
-    const totalScore = answers?.reduce((sum: number, ans: any) => sum + (ans.points_earned || 0), 0) || 0;
+    answersSnapshot.docs.forEach(doc => {
+      const answerData = doc.data();
+      if (answerData.pointsEarned !== null) {
+        totalScore += answerData.pointsEarned;
+      } else {
+        hasUngradedAnswers = true;
+      }
+    });
 
     // Get exam to calculate percentage
-    const { data: exam } = await supabase
-      .from('exams')
-      .select('total_points, passing_score')
-      .eq('id', attempt.exam_id)
-      .single();
+    const instructorId = sessionData.instructorId;
+    const examId = sessionData.examId;
 
-    const percentage = exam?.total_points ? (totalScore / exam.total_points) * 100 : 0;
-    const passed = percentage >= (exam?.passing_score || 60);
+    const examDoc = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .get();
 
-    // Check if all questions are auto-graded
-    const { data: unansweredQuestions } = await supabase
-      .from('exam_answers')
-      .select('*')
-      .eq('attempt_id', data.attemptId)
-      .is('is_correct', null);
+    const examData = examDoc.data()!;
+    const percentage = examData.totalPoints > 0 ? (totalScore / examData.totalPoints) * 100 : 0;
+    const passed = percentage >= (examData.passingScore || 60);
 
-    const status = unansweredQuestions && unansweredQuestions.length > 0 ? 'submitted' : 'graded';
+    const status = hasUngradedAnswers ? 'submitted' : 'graded';
 
-    // Update attempt
-    const timeSpent = Math.floor((Date.now() - new Date(attempt.started_at).getTime()) / 1000);
+    // Calculate time spent
+    const startedAt = sessionData.startedAt?.toDate() || new Date();
+    const timeSpent = Math.floor((Date.now() - startedAt.getTime()) / 1000);
 
-    const { data: updatedAttempt, error } = await supabase
-      .from('exam_attempts')
-      .update({
-        status,
-        score: totalScore,
-        percentage,
-        passed,
-        submitted_at: new Date().toISOString(),
-        time_spent: timeSpent,
-      })
-      .eq('id', data.attemptId)
-      .select()
-      .single();
+    // Update session
+    await sessionRef.update({
+      status,
+      score: totalScore,
+      percentage,
+      passed,
+      submittedAt: FieldValue.serverTimestamp(),
+      timeSpent,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
 
-    if (error) throw new Error(`Failed to submit exam: ${error.message}`);
-    return this.mapAttemptFromDb(updatedAttempt);
+    const updatedSession = await sessionRef.get();
+    return this.mapAttemptFromDb(updatedSession.id, updatedSession.data()!);
   }
 
   /**
    * Get exam attempt with answers
    */
   static async getExamAttempt(attemptId: string, userId: string): Promise<ExamAttempt & { answers: ExamAnswer[] }> {
-    const supabase = getSupabase();
+    const db = getFirestore();
 
-    const { data: attempt, error: attemptError } = await supabase
-      .from('exam_attempts')
-      .select('*, exams!inner(instructor_id)')
-      .eq('id', attemptId)
-      .single();
+    // Try to find the session in the user's collection
+    const sessionDoc = await db
+      .collection('examforge_users')
+      .doc(userId)
+      .collection('exam_sessions')
+      .doc(attemptId)
+      .get();
 
-    if (attemptError) throw new Error('Attempt not found');
-
-    // Verify access
-    if (attempt.student_id !== userId && attempt.exams.instructor_id !== userId) {
-      throw new Error('Unauthorized access to this attempt');
+    if (!sessionDoc.exists) {
+      throw new Error('Attempt not found');
     }
 
-    const { data: answers, error: answersError } = await supabase
-      .from('exam_answers')
-      .select('*')
-      .eq('attempt_id', attemptId);
+    const sessionData = sessionDoc.data()!;
 
-    if (answersError) throw new Error('Failed to fetch answers');
+    // Get answers
+    const answersSnapshot = await db
+      .collection('examforge_users')
+      .doc(userId)
+      .collection('examinee_data')
+      .where('attemptId', '==', attemptId)
+      .get();
+
+    const answers = answersSnapshot.docs.map(doc => 
+      this.mapAnswerFromDb(doc.id, doc.data())
+    );
 
     return {
-      ...this.mapAttemptFromDb(attempt),
-      answers: answers.map(this.mapAnswerFromDb),
+      ...this.mapAttemptFromDb(attemptId, sessionData),
+      answers,
     };
   }
 
-  // Helper mapping functions
-  private static mapExamFromDb(data: any): Exam {
+
+  // Helper mapping functions for Firestore documents
+  private static mapExamFromDb(id: string, data: any, instructorId: string): Exam {
     return {
-      id: data.id,
+      id,
       title: data.title,
       description: data.description,
-      instructorId: data.instructor_id,
-      instructorName: data.instructor_name,
+      instructorId: data.instructorId || instructorId,
+      instructorName: data.instructorName,
       status: data.status as ExamStatus,
-      totalPoints: data.total_points,
-      passingScore: data.passing_score,
-      timeLimit: data.time_limit,
-      shuffleQuestions: data.shuffle_questions,
-      shuffleAnswers: data.shuffle_answers,
-      showResults: data.show_results,
-      allowReview: data.allow_review,
-      startDate: data.start_date ? new Date(data.start_date) : undefined,
-      endDate: data.end_date ? new Date(data.end_date) : undefined,
-      accessCode: data.access_code,
-      allowedStudentIds: data.allowed_student_ids,
-      subject: data.subject,
-      grade: data.grade,
-      tags: data.tags,
-      questionCount: data.question_count,
-      attemptCount: data.attempt_count,
-      averageScore: data.average_score,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
+      totalPoints: data.totalPoints || 0,
+      passingScore: data.passingScore || 70,
+      timeLimit: data.timeLimit,
+      shuffleQuestions: data.shuffleQuestions ?? false,
+      shuffleAnswers: data.shuffleAnswers ?? false,
+      showResults: data.showResults ?? true,
+      allowReview: data.allowReview ?? true,
+      startDate: data.startDate?.toDate(),
+      endDate: data.endDate?.toDate(),
+      accessCode: data.accessCode,
+      allowedStudentIds: data.allowedStudentIds || [],
+      subject: data.subject || '',
+      grade: data.grade || '',
+      tags: data.tags || [],
+      questionCount: data.questionCount || 0,
+      attemptCount: data.attemptCount || 0,
+      averageScore: data.averageScore || 0,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   }
 
-  private static mapQuestionFromDb(data: any): Question {
+  private static mapQuestionFromDb(id: string, data: any): Question {
     return {
-      id: data.id,
-      examId: data.exam_id,
+      id,
+      examId: data.examId,
       type: data.type,
       text: data.text,
-      description: data.description,
+      description: data.description || '',
       points: data.points,
-      difficulty: data.difficulty,
-      order: data.order_index,
-      choices: data.choices ? JSON.parse(data.choices) : undefined,
-      correctAnswer: data.correct_answer ? JSON.parse(data.correct_answer) : undefined,
-      matchingPairs: data.matching_pairs ? JSON.parse(data.matching_pairs) : undefined,
-      tags: data.tags,
-      imageUrl: data.image_url,
-      timeLimit: data.time_limit,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
+      difficulty: data.difficulty || 'medium',
+      order: data.order || 0,
+      choices: data.choices || [],
+      correctAnswer: data.correctAnswer,
+      matchingPairs: data.matchingPairs || [],
+      tags: data.tags || [],
+      imageUrl: data.imageUrl,
+      timeLimit: data.timeLimit,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   }
 
-  private static mapAttemptFromDb(data: any): ExamAttempt {
+  private static mapAttemptFromDb(id: string, data: any): ExamAttempt {
     return {
-      id: data.id,
-      examId: data.exam_id,
-      studentId: data.student_id,
-      studentName: data.student_name,
+      id,
+      examId: data.examId,
+      studentId: data.studentId,
+      studentName: data.studentName,
       status: data.status,
-      score: data.score,
-      percentage: data.percentage,
-      passed: data.passed,
-      startedAt: new Date(data.started_at),
-      submittedAt: data.submitted_at ? new Date(data.submitted_at) : undefined,
-      timeSpent: data.time_spent,
-      ipAddress: data.ip_address,
-      userAgent: data.user_agent,
+      score: data.score || 0,
+      percentage: data.percentage || 0,
+      passed: data.passed || false,
+      startedAt: data.startedAt?.toDate() || new Date(),
+      submittedAt: data.submittedAt?.toDate(),
+      timeSpent: data.timeSpent || 0,
+      ipAddress: data.ipAddress,
+      userAgent: data.userAgent,
       answers: [],
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   }
 
-  private static mapAnswerFromDb(data: any): ExamAnswer {
+  private static mapAnswerFromDb(id: string, data: any): ExamAnswer {
     return {
-      id: data.id,
-      attemptId: data.attempt_id,
-      questionId: data.question_id,
-      answer: JSON.parse(data.answer),
-      isCorrect: data.is_correct,
-      pointsEarned: data.points_earned,
+      id,
+      attemptId: data.attemptId,
+      questionId: data.questionId,
+      answer: data.answer,
+      isCorrect: data.isCorrect,
+      pointsEarned: data.pointsEarned,
       feedback: data.feedback,
-      gradedBy: data.graded_by,
-      gradedAt: data.graded_at ? new Date(data.graded_at) : undefined,
-      timeSpent: data.time_spent,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
+      gradedBy: data.gradedBy,
+      gradedAt: data.gradedAt?.toDate(),
+      timeSpent: data.timeSpent || 0,
+      createdAt: data.createdAt?.toDate() || new Date(),
+      updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   }
 }
