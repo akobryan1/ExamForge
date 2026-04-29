@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
 import { pageTransition, stagger, fadeIn } from '../utils/animations';
@@ -192,24 +193,29 @@ export function QuestionsPage() {
 
   if (loading) {
     return (
-      <div className="container" style={{ paddingTop: 'var(--spacing-12)', textAlign: 'center' }}>
-        <p>Loading questions...</p>
-      </div>
+      <MainLayout>
+        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+          <p>Loading questions...</p>
+        </div>
+      </MainLayout>
     );
   }
 
   if (error || !exam) {
     return (
-      <div className="container" style={{ paddingTop: 'var(--spacing-12)' }}>
-        <div className="error-banner">{error || 'Exam not found'}</div>
-        <Button onClick={() => navigate('/exams')}>Back to Exams</Button>
-      </div>
+      <MainLayout>
+        <div style={{ paddingTop: 'var(--spacing-12)' }}>
+          <div className="error-banner">{error || 'Exam not found'}</div>
+          <Button onClick={() => navigate('/exams')}>Back to Exams</Button>
+        </div>
+      </MainLayout>
     );
   }
 
   return (
+    <MainLayout>
     <motion.div
-      className="questions-page container"
+      className="questions-page"
       variants={pageTransition}
       initial="initial"
       animate="animate"
@@ -470,5 +476,6 @@ export function QuestionsPage() {
         )}
       </AnimatePresence>
     </motion.div>
+    </MainLayout>
   );
 }

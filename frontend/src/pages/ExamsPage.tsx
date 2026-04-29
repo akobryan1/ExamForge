@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
+import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import type { Exam, ExamStatus } from '../types/exam';
 import '../styles/pages/exams.css';
@@ -50,26 +51,27 @@ export function ExamsPage() {
 
   if (loading) {
     return (
-      <div className="page-container">
+      <MainLayout>
         <div className="loading-spinner">Loading exams...</div>
-      </div>
+      </MainLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="page-container">
+      <MainLayout>
         <div className="error-message">
           <h2>Error Loading Exams</h2>
           <p>{error}</p>
           <button onClick={loadExams}>Try Again</button>
         </div>
-      </div>
+      </MainLayout>
     );
   }
 
   return (
-    <div className="page-container exams-page">
+    <MainLayout>
+      <div className="exams-page">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -202,5 +204,6 @@ export function ExamsPage() {
         )}
       </motion.div>
     </div>
+    </MainLayout>
   );
 }

@@ -2,56 +2,98 @@ import { useAuth } from '../contexts/AuthContext';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/Button';
-import { pageTransition } from '../utils/animations';
+import { MainLayout } from '../layouts/MainLayout';
+import { pageTransition, fadeIn, stagger } from '../utils/animations';
+import { useEffect, useState } from 'react';
+import { ExamService } from '../services/ExamService';
+import { Exam } from '../types/exam';
 
 export function Dashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalExams: 0,
+    activeExams: 0,
+    draftExams: 0,
+    completedExams: 0
+  });
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      const examsData = await ExamService.getExams();
+      setExams(examsData);
+      
+      // Calculate statistics
+      setStats({
+        totalExams: examsData.length,
+        activeExams: examsData.filter(e => e.status === 'active' || e.status === 'published').length,
+        draftExams: examsData.filter(e => e.status === 'draft').length,
+        completedExams: examsData.filter(e => e.status === 'completed').length
+      });
+    } catch (error) {
+      console.error('Failed to load dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recentExams = exams.slice(0, 5);
 
   return (
-    <motion.div
-      className="container"
-      style={{ paddingTop: 'var(--spacing-12)' }}
-      variants={pageTransition}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-    >
-      <div className="flex justify-between items-center" style={{ marginBottom: 'var(--spacing-8)' }}>
-        <div>
-          <h1 style={{ fontFamily: 'var(--font-display)', marginBottom: 'var(--spacing-2)' }}>
-            Dashboard
-          </h1>
-          <p className="lead">Welcome back, {user?.displayName || user?.username || user?.email}</p>
+    <MainLayout>
+      <motion.div
+        variants={pageTransition}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+      >
+        <div className="page-header">
+          <h1>Dashboard</h1>
+          <p className="page-subtitle">Welcome back, {user?.displayName || user?.username || user?.email}</p>
         </div>
-        <Button variant="outline" onClick={logout}>
-          Logout
-        </Button>
-      </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        <div className="card">
-          <h3 className="card-title" style={{ fontSize: 'var(--text-xl)' }}>Total Exams</h3>
-          <p style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-primary-600)' }}>
-            0
-          </p>
-        </div>
-        <div className="card">
-          <h3 className="card-title" style={{ fontSize: 'var(--text-xl)' }}>Active Sessions</h3>
-          <p style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-success-600)' }}>
-            0
-          </p>
-        </div>
-        <div className="card">
-          <h3 className="card-title" style={{ fontSize: 'var(--text-xl)' }}>Pending Reviews</h3>
-          <p style={{ fontSize: 'var(--text-4xl)', fontWeight: 'var(--font-bold)', color: 'var(--color-warning-600)' }}>
-            0
-          </p>
-        </div>
-      </div>
+        {/* Statistics Cards */}
+        <motion.div 
+          className="stats-grid"
+          variants={stagger}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.div className="stat-card" variants={fadeIn}>
+            <p className="stat-label">Total Exams</p>
+            <p className="stat-value">{loading ? '...' : stats.totalExams}</p>
+          </motion.div>
+          <motion.div className="stat-card" variants={fadeIn}>
+            <p className="stat-label">Active Exams</p>
+            <p className="stat-value" style={{ color: 'var(--success-color)' }}>
+              {loading ? '...' : stats.activeExams}
+            </p>
+          </motion.div>
+          <motion.div className="stat-card" variants={fadeIn}>
+            <p className="stat-label">Draft Exams</p>
+            <p className="stat-value" style={{ color: 'var(--warning-color)' }}>
+              {loading ? '...' : stats.draftExams}
+            </p>
+          </motion.div>
+          <motion.div className="stat-card" variants={fadeIn}>
+            <p className="stat-label">Completed</p>
+            <p className="stat-value" style={{ color: 'var(--text-secondary)' }}>
+              {loading ? '...' : stats.completedExams}
+            </p>
+          </motion.div>
+        </motion.div>
 
-      <div className="card" style={{ marginTop: 'var(--spacing-8)' }}>
-        <h2 className="card-title">Quick Actions</h2>
-        <div className="card-body">
+        {/* Quick Actions */}
+        <div className="section">
+          <div className="section-header">
+            <h2 className="section-title">Quick Actions</h2>
+          </div>
           <div style={{ display: 'flex', gap: 'var(--spacing-4)', flexWrap: 'wrap' }}>
             <Link to="/exams">
               <Button>View All Exams</Button>
@@ -63,23 +105,57 @@ export function Dashboard() {
             )}
           </div>
         </div>
-      </div>
 
-      <div className="card" style={{ marginTop: 'var(--spacing-8)' }}>
-        <h2 className="card-title">Getting Started</h2>
-        <div className="card-body">
-          <p>Phase 2 authentication system is now complete! You can:</p>
-          <ul style={{ marginLeft: 'var(--spacing-6)', marginTop: 'var(--spacing-4)' }}>
-            <li>Login with email/password (Supabase)</li>
-            <li>Login with Google (Firebase)</li>
-            <li>Automatic token refresh</li>
-            <li>Protected routes</li>
-          </ul>
-          <p style={{ marginTop: 'var(--spacing-4)' }}>
-            Phase 3: Exam management system with create, edit, and question management.
-          </p>
-        </div>
-      </div>
-    </motion.div>
+        {/* Recent Exams */}
+        {recentExams.length > 0 && (
+          <div className="section">
+            <div className="section-header">
+              <h2 className="section-title">Recent Exams</h2>
+              <Link to="/exams">
+                <Button variant="outline" size="small">View All</Button>
+              </Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>
+              {recentExams.map((exam) => (
+                <Link
+                  key={exam.id}
+                  to={`/exams/${exam.id}/questions`}
+                  style={{ textDecoration: 'none' }}
+                >
+                  <div className="card" style={{ padding: 'var(--spacing-4)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, marginBottom: 'var(--spacing-1)', color: 'var(--text-primary)' }}>
+                          {exam.title}
+                        </h3>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+                          {exam.subject} • {exam.questionCount || 0} questions • {exam.totalPoints || 0} points
+                        </p>
+                      </div>
+                      <span
+                        className="status-badge"
+                        style={{
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: '9999px',
+                          fontSize: 'var(--text-xs)',
+                          fontWeight: '600',
+                          textTransform: 'capitalize',
+                          background: exam.status === 'published' || exam.status === 'active' ? '#d1fae5' : 
+                                     exam.status === 'draft' ? '#fef3c7' : '#fee2e2',
+                          color: exam.status === 'published' || exam.status === 'active' ? '#065f46' :
+                                 exam.status === 'draft' ? '#92400e' : '#991b1b'
+                        }}
+                      >
+                        {exam.status}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </MainLayout>
   );
 }
