@@ -7,6 +7,7 @@ import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { ExamsPage } from './pages/ExamsPage'
 import { CreateExamPage } from './pages/CreateExamPage'
+import { QuestionsPage } from './pages/QuestionsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +50,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CreateExamPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/exams/:examId/questions"
+              element={
+                <ProtectedRoute>
+                  <QuestionsPage />
                 </ProtectedRoute>
               }
             />
