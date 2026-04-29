@@ -11,6 +11,8 @@ import { QuestionsPage } from './pages/QuestionsPage'
 import { ExamPreviewPage } from './pages/ExamPreviewPage'
 import { TakeExamPage } from './pages/TakeExamPage'
 import { ExamResultsPage } from './pages/ExamResultsPage'
+import { GradingQueuePage } from './pages/GradingQueuePage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -85,6 +87,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ExamResultsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/grading"
+              element={
+                <ProtectedRoute>
+                  <GradingQueuePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/analytics"
+              element={
+                <ProtectedRoute>
+                  <AnalyticsPage />
                 </ProtectedRoute>
               }
             />
