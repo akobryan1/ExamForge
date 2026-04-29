@@ -133,6 +133,39 @@ class ExamServiceClass {
     const response = await apiClient.get(`/api/exams/attempts/${attemptId}`);
     return response.data;
   }
+
+  /**
+   * Get grading queue for essay questions (Instructor only)
+   */
+  async getGradingQueue(): Promise<any[]> {
+    const response = await apiClient.get('/api/exams/grading/queue');
+    return response.data;
+  }
+
+  /**
+   * Submit grade for a question (Instructor only)
+   */
+  async gradeQuestion(
+    attemptId: string,
+    questionId: string,
+    earnedPoints: number,
+    feedback?: string
+  ): Promise<void> {
+    await apiClient.post('/api/exams/grading/submit', {
+      attemptId,
+      questionId,
+      earnedPoints,
+      feedback,
+    });
+  }
+
+  /**
+   * Get analytics for an exam (Instructor only)
+   */
+  async getExamAnalytics(examId: string): Promise<any> {
+    const response = await apiClient.get(`/api/exams/analytics/${examId}`);
+    return response.data;
+  }
 }
 
 export const ExamService = new ExamServiceClass();

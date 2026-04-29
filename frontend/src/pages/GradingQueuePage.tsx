@@ -37,10 +37,8 @@ export function GradingQueuePage() {
   const loadGradingQueue = async () => {
     try {
       setLoading(true);
-      // TODO: Implement API call to fetch grading queue
-      // For now, using mock data
-      const mockItems: GradingItem[] = [];
-      setItems(mockItems);
+      const queueData = await ExamService.getGradingQueue();
+      setItems(queueData);
     } catch (error) {
       console.error('Failed to load grading queue:', error);
     } finally {
@@ -53,8 +51,12 @@ export function GradingQueuePage() {
 
     try {
       setSubmitting(true);
-      // TODO: Implement API call to submit grade
-      // await ExamService.gradeQuestion(attemptId, questionId, grade, feedback);
+      await ExamService.gradeQuestion(
+        selectedItem.attemptId,
+        selectedItem.question.id,
+        parseFloat(gradeValue),
+        feedbackText || undefined
+      );
       
       alert('Grade submitted successfully!');
       setSelectedItem(null);

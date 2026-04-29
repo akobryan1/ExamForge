@@ -59,18 +59,8 @@ export function AnalyticsPage() {
 
   const loadAnalytics = async (examId: string) => {
     try {
-      // TODO: Implement analytics API endpoint
-      // For now, using mock data
-      const mockAnalytics: ExamAnalytics = {
-        examId,
-        examTitle: exams.find((e) => e.id === examId)?.title || 'Exam',
-        totalAttempts: 0,
-        averageScore: 0,
-        passRate: 0,
-        averageTime: 0,
-        questionStats: [],
-      };
-      setAnalytics(mockAnalytics);
+      const analyticsData = await ExamService.getExamAnalytics(examId);
+      setAnalytics(analyticsData);
     } catch (error) {
       console.error('Failed to load analytics:', error);
     }

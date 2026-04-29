@@ -286,4 +286,59 @@ router.get('/attempts/:id', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/grading/queue - Get grading queue for essay questions (Instructor only)
+ */
+router.get(
+  '/grading/queue',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const queue = await ExamService.getGradingQueue(req.user!.userId);
+      return res.json(queue);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * POST /api/grading/submit - Submit grade for a question (Instructor only)
+ */
+router.post(
+  '/grading/submit',
+  authorize('instructor', 'admin'),
+  [
+    body('attemptId').notEmpty().withMessage('Attempt ID is required'),
+    body('questionId').notEmpty().withMessage('Question ID is required'),
+    body('earnedPoints').isNumeric().withMessage('Earned points must be a number'),
+    body('feedback').optional().isString()
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const { attemptId, questionId, earnedPoints, feedback } = req.body;
+      await ExamService.gradeQuestion(attemptId, questionId, earnedPoints, feedback);
+      return res.json({ success: true, message: 'Grade submitted successfully' });
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/analytics/:examId - Get analytics for an exam (Instructor only)
+ */
+router.get(
+  '/analytics/:examId',
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const analytics = await ExamService.getExamAnalytics(req.params.examId, req.user!.userId);
+      return res.json(analytics);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
 export default router;

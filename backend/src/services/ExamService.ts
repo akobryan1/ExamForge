@@ -795,4 +795,276 @@ export class ExamService {
       updatedAt: data.updatedAt?.toDate() || new Date(),
     };
   }
+
+  /**
+   * Get grading queue for essay questions
+   */
+  static async getGradingQueue(instructorId: string): Promise<any[]> {
+    const db = getFirestore();
+    const queue: any[] = [];
+
+    try {
+      // Get all instructor's exams
+      const examsSnapshot = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .get();
+
+      // For each exam, find essay questions that need grading
+      for (const examDoc of examsSnapshot.docs) {
+        const examData = examDoc.data();
+        
+        // Get questions for this exam
+        const questionsSnapshot = await db
+          .collection('examforge_users')
+          .doc(instructorId)
+          .collection('published_exams')
+          .doc(examDoc.id)
+          .collection('questions')
+          .where('type', 'in', ['essay', 'short_answer'])
+          .get();
+
+        // Get attempts for this exam
+        const attemptsSnapshot = await db
+          .collectionGroup('exam_sessions')
+          .where('examId', '==', examDoc.id)
+          .where('status', '==', 'completed')
+          .get();
+
+        // For each attempt, check for essay answers
+        for (const attemptDoc of attemptsSnapshot.docs) {
+          const attemptData = attemptDoc.data();
+          
+          // Get answers for this attempt
+          const answersSnapshot = await db
+            .collection('examforge_users')
+            .doc(attemptData.studentId)
+            .collection('examinee_data')
+            .where('attemptId', '==', attemptDoc.id)
+            .get();
+
+          for (const answerDoc of answersSnapshot.docs) {
+            const answerData = answerDoc.data();
+            const question = questionsSnapshot.docs.find(q => q.id === answerData.questionId);
+            
+            if (question) {
+              const questionData = question.data();
+              
+              queue.push({
+                attemptId: attemptDoc.id,
+                questionId: question.id,
+                examId: examDoc.id,
+                examTitle: examData.title,
+                studentId: attemptData.studentId,
+                studentName: attemptData.studentName || 'Unknown',
+                studentEmail: attemptData.studentEmail || '',
+                question: {
+                  id: question.id,
+                  text: questionData.text,
+                  description: questionData.description,
+                  type: questionData.type,
+                  points: questionData.points,
+                },
+                answer: answerData.answer,
+                currentGrade: answerData.pointsEarned,
+                feedback: answerData.feedback,
+                submittedAt: attemptData.submittedAt?.toDate() || new Date(),
+                isGraded: answerData.gradedBy != null,
+              });
+            }
+          }
+        }
+      }
+
+      return queue;
+    } catch (error) {
+      throw new Error(`Failed to fetch grading queue: ${error}`);
+    }
+  }
+
+  /**
+   * Grade a specific question in an attempt
+   */
+  static async gradeQuestion(
+    attemptId: string,
+    questionId: string,
+    earnedPoints: number,
+    feedback?: string
+  ): Promise<void> {
+    const db = getFirestore();
+
+    try {
+      // Find the attempt
+      const attemptsSnapshot = await db
+        .collectionGroup('exam_sessions')
+        .where(FieldValue.documentId(), '==', attemptId)
+        .get();
+
+      if (attemptsSnapshot.empty) {
+        throw new Error('Attempt not found');
+      }
+
+      const attemptDoc = attemptsSnapshot.docs[0];
+      const attemptData = attemptDoc.data();
+      const studentId = attemptData.studentId;
+
+      // Find and update the answer
+      const answersSnapshot = await db
+        .collection('examforge_users')
+        .doc(studentId)
+        .collection('examinee_data')
+        .where('attemptId', '==', attemptId)
+        .where('questionId', '==', questionId)
+        .get();
+
+      if (answersSnapshot.empty) {
+        throw new Error('Answer not found');
+      }
+
+      const answerDoc = answersSnapshot.docs[0];
+      await answerDoc.ref.update({
+        pointsEarned: earnedPoints,
+        feedback: feedback || null,
+        gradedBy: 'instructor', // TODO: Use actual instructor ID
+        gradedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+      // Recalculate total score for the attempt
+      const allAnswersSnapshot = await db
+        .collection('examforge_users')
+        .doc(studentId)
+        .collection('examinee_data')
+        .where('attemptId', '==', attemptId)
+        .get();
+
+      let totalScore = 0;
+      allAnswersSnapshot.docs.forEach(doc => {
+        const data = doc.data();
+        totalScore += data.pointsEarned || 0;
+      });
+
+      // Update attempt with new total score
+      await attemptDoc.ref.update({
+        score: totalScore,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+    } catch (error) {
+      throw new Error(`Failed to grade question: ${error}`);
+    }
+  }
+
+  /**
+   * Get analytics for an exam
+   */
+  static async getExamAnalytics(examId: string, instructorId: string): Promise<any> {
+    const db = getFirestore();
+
+    try {
+      // Get exam
+      const examDoc = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(examId)
+        .get();
+
+      if (!examDoc.exists) {
+        throw new Error('Exam not found');
+      }
+
+      const examData = examDoc.data()!;
+
+      // Get all attempts for this exam
+      const attemptsSnapshot = await db
+        .collectionGroup('exam_sessions')
+        .where('examId', '==', examId)
+        .where('status', '==', 'completed')
+        .get();
+
+      const attempts = attemptsSnapshot.docs.map(doc => doc.data());
+      const totalAttempts = attempts.length;
+
+      if (totalAttempts === 0) {
+        return {
+          examId,
+          examTitle: examData.title,
+          totalAttempts: 0,
+          averageScore: 0,
+          passRate: 0,
+          averageTime: 0,
+          questionStats: [],
+        };
+      }
+
+      // Calculate statistics
+      const totalScore = attempts.reduce((sum, a) => sum + (a.score || 0), 0);
+      const averageScore = (totalScore / totalAttempts / (examData.totalPoints || 100)) * 100;
+
+      const passedCount = attempts.filter(a => a.passed).length;
+      const passRate = (passedCount / totalAttempts) * 100;
+
+      const totalTime = attempts.reduce((sum, a) => sum + (a.timeSpent || 0), 0);
+      const averageTime = totalTime / totalAttempts;
+
+      // Get question statistics
+      const questionsSnapshot = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(examId)
+        .collection('questions')
+        .get();
+
+      const questionStats = [];
+
+      for (const questionDoc of questionsSnapshot.docs) {
+        const questionData = questionDoc.data();
+        let correctCount = 0;
+        let totalPoints = 0;
+        let answerCount = 0;
+
+        // Get all answers for this question across all attempts
+        for (const attempt of attempts) {
+          const answersSnapshot = await db
+            .collection('examforge_users')
+            .doc(attempt.studentId)
+            .collection('examinee_data')
+            .where('attemptId', '==', attempt.attemptId)
+            .where('questionId', '==', questionDoc.id)
+            .get();
+
+          answersSnapshot.docs.forEach(answerDoc => {
+            const answerData = answerDoc.data();
+            if (answerData.isCorrect) correctCount++;
+            totalPoints += answerData.pointsEarned || 0;
+            answerCount++;
+          });
+        }
+
+        questionStats.push({
+          questionId: questionDoc.id,
+          questionText: questionData.text,
+          correctRate: answerCount > 0 ? (correctCount / answerCount) * 100 : 0,
+          averagePoints: answerCount > 0 ? totalPoints / answerCount : 0,
+          maxPoints: questionData.points,
+        });
+      }
+
+      return {
+        examId,
+        examTitle: examData.title,
+        totalAttempts,
+        averageScore,
+        passRate,
+        averageTime,
+        questionStats,
+      };
+
+    } catch (error) {
+      throw new Error(`Failed to get exam analytics: ${error}`);
+    }
+  }
 }
