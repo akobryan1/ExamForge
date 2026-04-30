@@ -5,7 +5,7 @@ import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { apiClient } from '../services/apiClient';
 import { ExamService } from '../services/ExamService';
-import { QuestionType } from '../types/exam';
+import { QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/ai-generator.css';
 
 interface GeneratedQuestion {
@@ -30,9 +30,9 @@ export function AIQuestionGeneratorPage() {
   const [topic, setTopic] = useState('');
 
   // Step 2: Generation config
-  const [questionType, setQuestionType] = useState<QuestionType>('multiple_choice');
+  const [questionType, setQuestionType] = useState<QuestionType>(QuestionType.MULTIPLE_CHOICE);
   const [count, setCount] = useState(5);
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(DifficultyLevel.MEDIUM);
 
   // Step 3: Review generated questions
   const [generatedQuestions, setGeneratedQuestions] = useState<GeneratedQuestion[]>([]);
@@ -86,8 +86,7 @@ export function AIQuestionGeneratorPage() {
           type: question.type,
           text: question.text,
           description: question.description,
-          points: question.points,
-          choices: question.choices,
+          points: question.points,          difficulty: difficulty,          choices: question.choices?.map((c, idx) => ({ text: c, isCorrect: false, order: idx })),
           correctAnswer: question.correctAnswer,
         });
       }

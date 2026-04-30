@@ -62,7 +62,7 @@ export class AIQuestionGeneratorService {
         throw new Error(`OpenAI API error: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data: any = await response.json();
       const content = data.choices[0].message.content;
       
       // Parse JSON response
@@ -167,7 +167,7 @@ export class AIQuestionGeneratorService {
       switch (questionType) {
         case 'multiple_choice':
           questions.push({
-            type: 'multiple_choice',
+            type: questionType,
             text: `Sample Multiple Choice Question ${i + 1}?`,
             description: 'This is a mock question generated for testing',
             points: 1,
@@ -179,7 +179,7 @@ export class AIQuestionGeneratorService {
 
         case 'true_false':
           questions.push({
-            type: 'true_false',
+            type: questionType,
             text: `Sample True/False Statement ${i + 1}`,
             points: 1,
             correctAnswer: 'true',
@@ -189,7 +189,7 @@ export class AIQuestionGeneratorService {
 
         case 'modified_true_false':
           questions.push({
-            type: 'modified_true_false',
+            type: questionType,
             text: `Sample Modified True/False Statement ${i + 1}`,
             points: 2,
             correctAnswer: 'false. The correct answer is: Sample correction text',
@@ -199,7 +199,7 @@ export class AIQuestionGeneratorService {
 
         case 'essay':
           questions.push({
-            type: 'essay',
+            type: questionType,
             text: `Sample Essay Question ${i + 1}`,
             description: 'Discuss the topic in detail',
             points: 10,
@@ -209,7 +209,7 @@ export class AIQuestionGeneratorService {
 
         case 'identification':
           questions.push({
-            type: 'identification',
+            type: questionType,
             text: `Identify: Sample Question ${i + 1}`,
             points: 1,
             correctAnswer: 'Sample Answer',
@@ -218,7 +218,7 @@ export class AIQuestionGeneratorService {
 
         case 'enumeration':
           questions.push({
-            type: 'enumeration',
+            type: questionType,
             text: `Enumerate: Sample Question ${i + 1}`,
             points: 3,
             correctAnswer: ['Item 1', 'Item 2', 'Item 3'],

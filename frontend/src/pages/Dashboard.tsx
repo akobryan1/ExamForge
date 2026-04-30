@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/Button';
 import { MainLayout } from '../layouts/MainLayout';
-import { pageTransition, fadeIn, stagger } from '../utils/animations';
+import { pageTransition, fadeIn, staggerContainer, staggerItem } from '../utils/animations';
 import { useEffect, useState } from 'react';
 import { ExamService } from '../services/ExamService';
 import { Exam } from '../types/exam';
@@ -61,7 +61,7 @@ export function Dashboard() {
         {/* Statistics Cards */}
         <motion.div 
           className="stats-grid"
-          variants={stagger}
+          variants={staggerContainer}
           initial="initial"
           animate="animate"
         >
@@ -112,7 +112,7 @@ export function Dashboard() {
             <div className="section-header">
               <h2 className="section-title">Recent Exams</h2>
               <Link to="/exams">
-                <Button variant="outline" size="small">View All</Button>
+                <Button variant="outline" size="sm">View All</Button>
               </Link>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-3)' }}>

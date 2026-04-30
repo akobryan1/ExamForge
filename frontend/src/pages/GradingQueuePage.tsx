@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
+import { ExamService } from '../services/ExamService';
 import { pageTransition, fadeIn } from '../utils/animations';
-import { useAuth } from '../contexts/AuthContext';
-import type { ExamAttempt, Question } from '../types/exam';
+import type { Question } from '../types/exam';
 import '../styles/pages/grading-queue.css';
 
 interface GradingItem {
@@ -21,7 +21,6 @@ interface GradingItem {
 }
 
 export function GradingQueuePage() {
-  const { user } = useAuth();
   const [items, setItems] = useState<GradingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'graded' | 'all'>('pending');

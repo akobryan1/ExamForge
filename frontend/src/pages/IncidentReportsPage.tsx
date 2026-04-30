@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
-import { pageTransition, stagger, fadeIn } from '../utils/animations';
+import { pageTransition } from '../utils/animations';
 import '../styles/pages/incident-reports.css';
 
 interface IncidentReport {
@@ -206,13 +206,13 @@ export function IncidentReportsPage() {
           {selectedIncidents.size > 0 && (
             <div className="bulk-actions">
               <span className="selection-count">{selectedIncidents.size} selected</span>
-              <Button variant="outline" size="small" onClick={handleArchiveSelected}>
+              <Button variant="outline" size="sm" onClick={handleArchiveSelected}>
                 Archive
               </Button>
-              <Button variant="outline" size="small" onClick={handleUnarchiveSelected}>
+              <Button variant="outline" size="sm" onClick={handleUnarchiveSelected}>
                 Unarchive
               </Button>
-              <Button variant="outline" size="small" onClick={handleDeleteSelected}>
+              <Button variant="outline" size="sm" onClick={handleDeleteSelected}>
                 Delete
               </Button>
             </div>

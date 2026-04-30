@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
-import { pageTransition, stagger, fadeIn } from '../utils/animations';
+import { pageTransition, fadeIn } from '../utils/animations';
 import type { Exam, Question } from '../types/exam';
 import '../styles/pages/exam-preview.css';
 
@@ -243,15 +243,21 @@ export function ExamPreviewPage() {
                   <p className="question-text">{question.text}</p>
                   {question.type === 'multiple_choice' && question.choices && (
                     <div className="choices-preview">
-                      {question.choices.map((choice, i) => (
-                        <div
-                          key={i}
-                          className={`choice-preview ${choice === question.correctAnswer ? 'correct' : ''}`}
-                        >
-                          {String.fromCharCode(65 + i)}. {choice}
-                          {choice === question.correctAnswer && <span className="correct-mark">✓</span>}
-                        </div>
-                      ))}
+                      {question.choices.map((choice, i) => {
+                        const choiceText = typeof choice === 'object' ? choice.text : choice;
+                        const isCorrect = typeof choice === 'object' 
+                          ? choice.isCorrect 
+                          : choice === question.correctAnswer;
+                        return (
+                          <div
+                            key={i}
+                            className={`choice-preview ${isCorrect ? 'correct' : ''}`}
+                          >
+                            {String.fromCharCode(65 + i)}. {choiceText}
+                            {isCorrect && <span className="correct-mark">✓</span>}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

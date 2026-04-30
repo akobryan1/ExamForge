@@ -258,7 +258,6 @@ export class ExamService {
       order: nextOrder,
       choices: data.choices || [],
       correctAnswer: data.correctAnswer || null,
-      matchingPairs: data.matchingPairs || [],
       tags: data.tags || [],
       imageUrl: data.imageUrl || null,
       timeLimit: data.timeLimit || null,
@@ -341,7 +340,6 @@ export class ExamService {
     if (data.difficulty) updateData.difficulty = data.difficulty;
     if (data.choices) updateData.choices = data.choices;
     if (data.correctAnswer !== undefined) updateData.correctAnswer = data.correctAnswer;
-    if (data.matchingPairs) updateData.matchingPairs = data.matchingPairs;
     if (data.tags) updateData.tags = data.tags;
     if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
     if (data.timeLimit !== undefined) updateData.timeLimit = data.timeLimit;
@@ -749,7 +747,6 @@ export class ExamService {
       order: data.order || 0,
       choices: data.choices || [],
       correctAnswer: data.correctAnswer,
-      matchingPairs: data.matchingPairs || [],
       tags: data.tags || [],
       imageUrl: data.imageUrl,
       timeLimit: data.timeLimit,
@@ -898,7 +895,7 @@ export class ExamService {
       // Find the attempt
       const attemptsSnapshot = await db
         .collectionGroup('exam_sessions')
-        .where(FieldValue.documentId(), '==', attemptId)
+        .where('__name__', '==', attemptId)
         .get();
 
       if (attemptsSnapshot.empty) {

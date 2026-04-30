@@ -5,14 +5,12 @@ import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
 import { PreExamRules } from '../components/PreExamRules';
-import { useAuth } from '../contexts/AuthContext';
-import type { Exam, Question, ExamAttempt } from '../types/exam';
+import type { Exam, Question } from '../types/exam';
 import '../styles/pages/take-exam.css';
 
 export function TakeExamPage() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   
   // Exam state
   const [exam, setExam] = useState<Exam | null>(null);
@@ -37,8 +35,8 @@ export function TakeExamPage() {
   const [rulesAccepted, setRulesAccepted] = useState(false);
   
   // Proctoring state
-  const [violations, setViolations] = useState<Array<{type: string, timestamp: number}>>([]);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [, setViolations] = useState<Array<{type: string, timestamp: number}>>([]);
+  const [, setIsFullscreen] = useState(false);
   
   // Timer
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -123,11 +121,11 @@ export function TakeExamPage() {
   // Browser lockdown: Copy/Paste detection
   useEffect(() => {
     if (examStarted && exam?.proctorConfig?.detectCopyPaste && !examSubmitted) {
-      const handleCopy = (e: ClipboardEvent) => {
+      const handleCopy = () => {
         recordViolation('copy_attempt');
       };
 
-      const handlePaste = (e: ClipboardEvent) => {
+      const handlePaste = () => {
         recordViolation('paste_attempt');
       };
 

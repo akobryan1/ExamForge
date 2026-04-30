@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
-import { pageTransition, stagger, fadeIn } from '../utils/animations';
-import type { Exam, Question, QuestionType, DifficultyLevel } from '../types/exam';
+import { pageTransition, staggerContainer, staggerItem, fadeIn } from '../utils/animations';
+import type { Exam, Question } from '../types/exam';
+import { QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/questions.css';
 
 export function QuestionsPage() {
@@ -58,11 +59,11 @@ export function QuestionsPage() {
   const handleAddQuestion = () => {
     setEditingQuestion(null);
     setFormData({
-      type: 'multiple_choice',
+      type: QuestionType.MULTIPLE_CHOICE,
       text: '',
       description: '',
       points: 1,
-      difficulty: 'medium',
+      difficulty: DifficultyLevel.MEDIUM,
       choices: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
       correctAnswer: '',
       enumerationItems: [''],
@@ -244,9 +245,9 @@ export function QuestionsPage() {
           <Button onClick={handleAddQuestion}>Add Question</Button>
         </div>
       ) : (
-        <motion.div className="questions-list" variants={stagger}>
+        <motion.div className="questions-list" variants={staggerContainer}>
           {questions.map((question, index) => (
-            <motion.div key={question.id} className="question-card" variants={fadeIn}>
+            <motion.div key={question.id} className="question-card" variants={staggerItem}>
               <div className="question-header">
                 <span className="question-number">Question {index + 1}</span>
                 <div className="question-meta">
@@ -276,10 +277,10 @@ export function QuestionsPage() {
               )}
 
               <div className="question-actions">
-                <Button variant="outline" size="small" onClick={() => handleEditQuestion(question)}>
+                <Button variant="outline" size="sm" onClick={() => handleEditQuestion(question)}>
                   Edit
                 </Button>
-                <Button variant="outline" size="small" onClick={() => handleDeleteQuestion(question.id)}>
+                <Button variant="outline" size="sm" onClick={() => handleDeleteQuestion(question.id)}>
                   Delete
                 </Button>
               </div>
@@ -397,7 +398,7 @@ export function QuestionsPage() {
                         )}
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="small" onClick={addChoice}>
+                    <Button type="button" variant="outline" size="sm" onClick={addChoice}>
                       Add Choice
                     </Button>
                   </div>
@@ -467,7 +468,7 @@ export function QuestionsPage() {
                         )}
                       </div>
                     ))}
-                    <Button type="button" variant="outline" size="small" onClick={addEnumerationItem}>
+                    <Button type="button" variant="outline" size="sm" onClick={addEnumerationItem}>
                       Add Item
                     </Button>
                   </div>

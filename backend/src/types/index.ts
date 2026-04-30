@@ -33,6 +33,7 @@ export interface SignupRequest {
   password: string;
   username: string;
   displayName?: string;
+  role?: 'instructor' | 'student' | 'admin';
 }
 
 export interface GoogleAuthRequest {

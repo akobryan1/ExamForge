@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
-import { pageTransition, fadeIn, stagger } from '../utils/animations';
+import { pageTransition, fadeIn, staggerContainer, staggerItem } from '../utils/animations';
 import type { Exam } from '../types/exam';
 import '../styles/pages/analytics.css';
 
@@ -117,7 +117,7 @@ export function AnalyticsPage() {
         </div>
 
         {analytics && (
-          <motion.div variants={stagger}>
+          <motion.div variants={staggerContainer}>
             {/* Overview Cards */}
             <div className="stats-grid">
               <motion.div className="stat-card" variants={fadeIn}>

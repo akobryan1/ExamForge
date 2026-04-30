@@ -133,7 +133,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'File not found on server' });
     }
 
-    res.download(filePath, file.originalName);
+    return res.download(filePath, file.originalName);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

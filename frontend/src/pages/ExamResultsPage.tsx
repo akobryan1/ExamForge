@@ -138,7 +138,9 @@ export function ExamResultsPage() {
             <h2>Question Review</h2>
             <div className="questions-review">
               {questions.map((question, index) => {
-                const studentAnswer = attempt.answers?.[question.id];
+                const studentAnswer: any = Array.isArray(attempt.answers)
+                  ? attempt.answers.find(a => a.questionId === question.id)
+                  : Object.values(attempt.answers || {}).find((a: any) => a.questionId === question.id);
                 const isCorrect = studentAnswer?.isCorrect;
                 const earnedPoints = studentAnswer?.earnedPoints || 0;
 

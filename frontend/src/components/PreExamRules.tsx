@@ -11,7 +11,6 @@ interface PreExamRulesProps {
 
 export function PreExamRules({ exam, onAccept, onCancel }: PreExamRulesProps) {
   const hasTimeLimit = exam.timeLimit && exam.timeLimit > 0;
-  const hasAccessCode = !!exam.accessCode;
   const proctorEnabled = exam.proctorConfig?.enabled;
   const retakesAllowed = exam.retakeConfig?.enabled;
   const lateSubmissionAllowed = exam.lateSubmissionConfig?.policy !== 'disabled';

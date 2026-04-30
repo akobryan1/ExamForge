@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/Button';
 import { pageTransition } from '../utils/animations';
-import '../styles/pages/auth.css';
+import '../styles/components.css';
 
 export function StudentRegistrationPage() {
   const navigate = useNavigate();
@@ -198,7 +198,7 @@ export function StudentRegistrationPage() {
 
           <Button
             type="submit"
-            size="large"
+            size="lg"
             style={{ width: '100%' }}
             disabled={loading}
           >
