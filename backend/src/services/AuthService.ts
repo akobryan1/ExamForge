@@ -1,5 +1,4 @@
-import { getSupabase, getSupabaseAdmin } from '../config/supabase';
-import { getAuth } from '../config/firebase';
+import { getAuth, getFirestore } from '../config/firebase';
 import { User, JwtPayload, AuthTokens, LoginRequest, SignupRequest } from '../types';
 import { generateTokens } from '../utils/jwt';
 import bcrypt from 'bcrypt';
@@ -7,59 +6,63 @@ import bcrypt from 'bcrypt';
 const SALT_ROUNDS = 10;
 
 /**
- * Authentication service handling multiple auth providers
+ * Authentication service using Firebase/Firestore
  */
 export class AuthService {
   /**
-   * Supabase email/password signup
+   * Firebase email/password signup
    */
   async signupWithEmail(data: SignupRequest): Promise<{ user: User; tokens: AuthTokens }> {
     try {
-      const supabase = getSupabase();
+      const auth = getAuth();
+      const db = getFirestore();
 
-      // 1. Create auth user in Supabase
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+      // 1. Check if user already exists
+      const usersRef = db.collection('examforge_users');
+      const emailQuery = await usersRef.where('email', '==', data.email).get();
+      
+      if (!emailQuery.empty) {
+        throw new Error('Email already registered');
+      }
+
+      const usernameQuery = await usersRef.where('username', '==', data.username).get();
+      if (!usernameQuery.empty) {
+        throw new Error('Username already taken');
+      }
+
+      // 2. Hash password
+      const passwordHash = await bcrypt.hash(data.password, SALT_ROUNDS);
+
+      // 3. Create user in Firebase Auth
+      const userRecord = await auth.createUser({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            username: data.username,
-            display_name: data.displayName || data.username,
-          },
-        },
+        displayName: data.displayName || data.username,
       });
 
-      if (signUpError || !authData.user) {
-        throw new Error(signUpError?.message || 'Signup failed');
-      }
+      // 4. Create user profile in Firestore
+      const role = data.role || 'instructor';
+      await db.collection('examforge_users').doc(userRecord.uid).set({
+        username: data.username,
+        email: data.email,
+        displayName: data.displayName || data.username,
+        role: role,
+        passwordHash: passwordHash,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-      // 2. Create user profile in examforge_users table
-      const { error: profileError } = await supabase
-        .from('examforge_users')
-        .insert({
-          userid: authData.user.id,
-          username: data.username,
-          email: data.email,
-          created_at: new Date().toISOString(),
-        });
-
-      if (profileError) {
-        // If profile creation fails, clean up auth user
-        await supabase.auth.admin.deleteUser(authData.user.id);
-        throw new Error('Failed to create user profile: ' + profileError.message);
-      }
-
-      // 3. Create user object
+      // 5. Create user object
       const user: User = {
-        id: authData.user.id,
+        id: userRecord.uid,
         email: data.email,
         username: data.username,
         displayName: data.displayName || data.username,
-        role: 'instructor', // Default role
+        role: role,
         createdAt: new Date(),
       };
 
-      // 4. Generate JWT tokens
+      // 6. Generate JWT tokens
       const tokens = generateTokens({
         userId: user.id,
         email: user.email,
@@ -74,41 +77,37 @@ export class AuthService {
   }
 
   /**
-   * Supabase email/password login
+   * Firebase email/password login
    */
   async loginWithEmail(data: LoginRequest): Promise<{ user: User; tokens: AuthTokens }> {
     try {
-      const supabase = getSupabase();
+      const db = getFirestore();
 
-      // 1. Authenticate with Supabase
-      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
+      // 1. Find user by email
+      const usersRef = db.collection('examforge_users');
+      const snapshot = await usersRef.where('email', '==', data.email).get();
 
-      if (signInError || !authData.user) {
+      if (snapshot.empty) {
         throw new Error('Invalid email or password');
       }
 
-      // 2. Get user profile
-      const { data: profile, error: profileError } = await supabase
-        .from('examforge_users')
-        .select('*')
-        .eq('userid', authData.user.id)
-        .single();
+      const userDoc = snapshot.docs[0];
+      const userData = userDoc.data();
 
-      if (profileError) {
-        throw new Error('User profile not found');
+      // 2. Verify password
+      const passwordMatch = await bcrypt.compare(data.password, userData.passwordHash);
+      if (!passwordMatch) {
+        throw new Error('Invalid email or password');
       }
 
       // 3. Create user object
       const user: User = {
-        id: authData.user.id,
-        email: authData.user.email || data.email,
-        username: profile.username,
-        displayName: authData.user.user_metadata?.display_name || profile.username,
-        role: 'instructor', // Could be stored in profile
-        createdAt: new Date(profile.created_at),
+        id: userDoc.id,
+        email: userData.email,
+        username: userData.username,
+        displayName: userData.displayName || userData.username,
+        role: userData.role || 'instructor',
+        createdAt: userData.createdAt?.toDate() || new Date(),
       };
 
       // 4. Generate JWT tokens
@@ -131,11 +130,12 @@ export class AuthService {
   async loginWithGoogle(idToken: string): Promise<{ user: User; tokens: AuthTokens }> {
     try {
       const auth = getAuth();
+      const db = getFirestore();
 
       // 1. Verify Google ID token
       const decodedToken = await auth.verifyIdToken(idToken);
       
-      // 2. Get or create user
+      // 2. Get or create Firebase user
       let firebaseUser;
       try {
         firebaseUser = await auth.getUser(decodedToken.uid);
@@ -149,16 +149,39 @@ export class AuthService {
         });
       }
 
-      // 3. Create user object
+      // 3. Get or create Firestore user profile
+      const userDoc = await db.collection('examforge_users').doc(firebaseUser.uid).get();
+      
+      if (!userDoc.exists) {
+        // Create new user profile
+        await db.collection('examforge_users').doc(firebaseUser.uid).set({
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          username: firebaseUser.email?.split('@')[0] || firebaseUser.uid,
+          role: 'instructor',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+
+      const userData = userDoc.exists ? userDoc.data() : {
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName,
+        username: firebaseUser.email?.split('@')[0],
+        role: 'instructor',
+      };
+
+      // 4. Create user object
       const user: User = {
         id: firebaseUser.uid,
         email: firebaseUser.email || decodedToken.email!,
+        username: userData?.username,
         displayName: firebaseUser.displayName || decodedToken.name,
-        role: 'instructor',
+        role: userData?.role || 'instructor',
         createdAt: new Date(firebaseUser.metadata.creationTime),
       };
 
-      // 4. Generate JWT tokens
+      // 5. Generate JWT tokens
       const tokens = generateTokens({
         userId: user.id,
         email: user.email,
@@ -173,29 +196,17 @@ export class AuthService {
   }
 
   /**
-   * Refresh access token using refresh token
+   * Refresh access token using refresh token (JWT-based)
    */
   async refreshAccessToken(refreshToken: string): Promise<AuthTokens> {
     try {
-      const supabase = getSupabase();
-
-      // Refresh session with Supabase
-      const { data, error } = await supabase.auth.refreshSession({
-        refresh_token: refreshToken,
-      });
-
-      if (error || !data.user) {
-        throw new Error('Invalid refresh token');
-      }
-
-      // Generate new JWT tokens
-      const tokens = generateTokens({
-        userId: data.user.id,
-        email: data.user.email!,
-        role: 'instructor', // Should be fetched from profile
-      });
-
-      return tokens;
+      const db = getFirestore();
+      
+      // For JWT-based refresh, you would verify the refresh token
+      // and generate new tokens. This is a simplified version.
+      // In production, you should verify the refresh token signature
+      
+      throw new Error('Refresh token not implemented - please login again');
     } catch (error) {
       console.error('Token refresh error:', error);
       throw error;
@@ -203,12 +214,13 @@ export class AuthService {
   }
 
   /**
-   * Logout user
+   * Logout user (Firebase)
    */
   async logout(userId: string): Promise<void> {
     try {
-      const supabase = getSupabase();
-      await supabase.auth.signOut();
+      // With JWT tokens, logout is handled client-side by removing tokens
+      // No server-side action needed for Firebase Auth
+      console.log(`User ${userId} logged out`);
     } catch (error) {
       console.error('Logout error:', error);
       // Don't throw - logout should always succeed client-side
@@ -216,29 +228,27 @@ export class AuthService {
   }
 
   /**
-   * Get user by ID
+   * Get user by ID from Firestore
    */
   async getUserById(userId: string): Promise<User | null> {
     try {
-      const supabase = getSupabase();
+      const db = getFirestore();
 
-      const { data: profile, error } = await supabase
-        .from('examforge_users')
-        .select('*')
-        .eq('userid', userId)
-        .single();
+      const userDoc = await db.collection('examforge_users').doc(userId).get();
 
-      if (error || !profile) {
+      if (!userDoc.exists) {
         return null;
       }
 
+      const userData = userDoc.data()!;
+
       return {
-        id: profile.userid,
-        email: profile.email,
-        username: profile.username,
-        displayName: profile.username,
-        role: 'instructor',
-        createdAt: new Date(profile.created_at),
+        id: userDoc.id,
+        email: userData.email,
+        username: userData.username,
+        displayName: userData.displayName || userData.username,
+        role: userData.role || 'instructor',
+        createdAt: userData.createdAt?.toDate() || new Date(),
       };
     } catch (error) {
       console.error('Get user error:', error);
