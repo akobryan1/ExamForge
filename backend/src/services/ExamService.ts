@@ -91,6 +91,13 @@ export class ExamService {
   }
 
   /**
+   * Get exam by ID from instructor's own collection (direct path, no index needed)
+   */
+  static async getExamByIdForInstructor(examId: string, userId: string): Promise<Exam | null> {
+    return this.getExamById(examId, userId, userId);
+  }
+
+  /**
    * Get exam by ID from instructor's collection
    */
   static async getExamById(examId: string, instructorId: string, userId?: string): Promise<Exam | null> {

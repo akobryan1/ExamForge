@@ -53,7 +53,16 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    // Find exam across all users
+    const userId = req.user!.userId;
+    const isInstructor = req.user!.role === 'instructor' || req.user!.role === 'admin';
+    
+    // For instructors: try direct path first (no index needed)
+    if (isInstructor) {
+      const exam = await ExamService.getExamByIdForInstructor(req.params.id, userId);
+      if (exam) return res.json(exam);
+    }
+    
+    // For students / fallback: use collection group query
     const result = await ExamService.findExamById(req.params.id);
     if (!result) {
       return res.status(404).json({ error: 'Exam not found' });
@@ -61,13 +70,13 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const { exam, instructorId } = result;
     
-    // Check access: instructor owns it OR exam is published/active
-    if (exam.instructorId !== req.user!.userId && !['published', 'active'].includes(exam.status)) {
+    if (exam.instructorId !== userId && !['published', 'active'].includes(exam.status)) {
       return res.status(403).json({ error: 'Unauthorized access to exam' });
     }
 
     return res.json(exam);
   } catch (error: any) {
+    console.error('[Exams] GET /:id error:', error);
     return res.status(400).json({ error: error.message });
   }
 });
@@ -113,19 +122,26 @@ router.delete(
  */
 router.get('/:id/questions', async (req: Request, res: Response) => {
   try {
-    // Find exam to get instructorId
+    const userId = req.user!.userId;
+    const isInstructor = req.user!.role === 'instructor' || req.user!.role === 'admin';
+    
+    // For instructors: direct path
+    if (isInstructor) {
+      const exam = await ExamService.getExamByIdForInstructor(req.params.id, userId);
+      if (!exam) return res.status(404).json({ error: 'Exam not found' });
+      const questions = await ExamService.getExamQuestions(req.params.id, userId);
+      return res.json(questions);
+    }
+    
+    // For students: find via collection group
     const result = await ExamService.findExamById(req.params.id);
     if (!result) {
       return res.status(404).json({ error: 'Exam not found' });
     }
-
-    const { instructorId } = result;
-    const questions = await ExamService.getExamQuestions(
-      req.params.id,
-      instructorId
-    );
+    const questions = await ExamService.getExamQuestions(req.params.id, result.instructorId);
     return res.json(questions);
   } catch (error: any) {
+    console.error('[Exams] GET questions error:', error);
     return res.status(400).json({ error: error.message });
   }
 });
