@@ -32,6 +32,7 @@ export interface SignupCredentials {
   password: string;
   username: string;
   displayName?: string;
+  role?: 'instructor' | 'student' | 'admin';
 }
 
 /* ============================================

@@ -2,22 +2,18 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { AuthService } from '../services/AuthService';
 import { authenticate } from '../middleware/auth';
-import { LoginRequest, SignupRequest } from '../types';
 
 const router = Router();
 const authService = new AuthService();
 
 /**
  * POST /api/auth/signup
- * Register a new user with email/password
+ * Register via Firebase — frontend creates Firebase auth user, sends idToken + profile
  */
 router.post(
   '/signup',
   [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password')
-      .isLength({ min: 8 })
-      .withMessage('Password must be at least 8 characters'),
+    body('idToken').notEmpty().withMessage('Firebase ID token is required'),
     body('username')
       .isLength({ min: 3 })
       .withMessage('Username must be at least 3 characters')
@@ -26,33 +22,25 @@ router.post(
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
-      // Validate request
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         res.status(400).json({ errors: errors.array() });
         return;
       }
 
-      const signupData: SignupRequest = req.body;
+      console.log('[AuthRoute] Signup request:', { username: req.body.username });
+      const { user, tokens } = await authService.signupWithEmail(req.body);
 
-      // Create user
-      const { user, tokens } = await authService.signupWithEmail(signupData);
-
-      // Set refresh token in httpOnly cookie
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      res.status(201).json({
-        user,
-        accessToken: tokens.accessToken,
-        expiresIn: tokens.expiresIn,
-      });
+      res.status(201).json({ user, accessToken: tokens.accessToken, expiresIn: tokens.expiresIn });
     } catch (error) {
-      console.error('Signup error:', error);
+      console.error('[AuthRoute] Signup error:', error);
       res.status(400).json({
         error: 'Signup failed',
         message: error instanceof Error ? error.message : 'Unknown error',
@@ -63,45 +51,33 @@ router.post(
 
 /**
  * POST /api/auth/login
- * Login with email/password
+ * Login via Firebase — frontend authenticates with Firebase, sends idToken
  */
 router.post(
   '/login',
   [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password').notEmpty().withMessage('Password is required'),
+    body('idToken').notEmpty().withMessage('Firebase ID token is required'),
   ],
   async (req: Request, res: Response): Promise<void> => {
     try {
-      // Validate request
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         res.status(400).json({ errors: errors.array() });
         return;
       }
 
-      const loginData: LoginRequest = req.body;
-      console.log('[AuthRoute] Login request received:', { email: loginData.email, bodyKeys: Object.keys(req.body) });
+      console.log('[AuthRoute] Login request via Firebase');
+      const { user, tokens } = await authService.loginWithEmail(req.body.idToken);
+      console.log('[AuthRoute] Login successful:', user.email, 'role:', user.role);
 
-      // Authenticate user
-      console.log('[AuthRoute] Calling authService.loginWithEmail...');
-      const { user, tokens } = await authService.loginWithEmail(loginData);
-      console.log('[AuthRoute] Login successful for:', user.email, 'role:', user.role);
-
-      // Set refresh token in httpOnly cookie
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      console.log('[AuthRoute] Sending response with token');
-      res.json({
-        user,
-        accessToken: tokens.accessToken,
-        expiresIn: tokens.expiresIn,
-      });
+      res.json({ user, accessToken: tokens.accessToken, expiresIn: tokens.expiresIn });
     } catch (error) {
       console.error('[AuthRoute] Login error:', error);
       res.status(401).json({
@@ -258,10 +234,7 @@ router.get('/me', authenticate, async (req: Request, res: Response): Promise<voi
 router.post(
   '/register/student',
   [
-    body('email').isEmail().withMessage('Valid email is required'),
-    body('password')
-      .isLength({ min: 6 })
-      .withMessage('Password must be at least 6 characters'),
+    body('idToken').notEmpty().withMessage('Firebase ID token is required'),
     body('studentId')
       .notEmpty()
       .withMessage('Student ID is required'),
@@ -278,12 +251,11 @@ router.post(
         return;
       }
 
-      const { email, password, studentId, studentName, section } = req.body;
+      const { idToken, studentId, studentName, section } = req.body;
 
-      // Create student account
+      // Create student account via Firebase
       const { user, tokens } = await authService.signupWithEmail({
-        email,
-        password,
+        idToken,
         username: studentId,
         displayName: studentName,
         role: 'student',

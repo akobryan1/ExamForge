@@ -24,13 +24,11 @@ export interface AuthTokens {
 }
 
 export interface LoginRequest {
-  email: string;
-  password: string;
+  idToken: string;
 }
 
 export interface SignupRequest {
-  email: string;
-  password: string;
+  idToken: string;
   username: string;
   displayName?: string;
   role?: 'instructor' | 'student' | 'admin';

@@ -79,9 +79,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(loggedInUser);
     } catch (err: any) {
+      // Firebase errors have err.code, backend errors have err.response.data
       const data = err.response?.data;
-      const errorMessage = data?.message || data?.error || 'Login failed';
-      console.error('[AuthContext] Login failed:', errorMessage, 'Status:', err.response?.status, 'Full error:', err);
+      const firebaseCode = err.code?.replace('auth/', '');
+      let errorMessage: string;
+      if (data?.message) errorMessage = data.message;
+      else if (firebaseCode === 'invalid-credential') errorMessage = 'Invalid email or password';
+      else if (firebaseCode === 'user-not-found') errorMessage = 'No account found with this email';
+      else if (firebaseCode === 'too-many-requests') errorMessage = 'Too many attempts. Try again later.';
+      else if (firebaseCode) errorMessage = firebaseCode.replace(/-/g, ' ');
+      else errorMessage = 'Login failed';
+      
+      console.error('[AuthContext] Login failed:', errorMessage, err);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -109,16 +118,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(newUser);
     } catch (err: any) {
       const data = err.response?.data;
-      let errorMessage;
-
-      if (data?.errors) {
-        // Backend validation errors
-        errorMessage = data.errors.map((e: any) => e.msg).join(', ');
-      } else {
-        errorMessage = data?.message || data?.error || 'Signup failed';
-      }
+      const firebaseCode = err.code?.replace('auth/', '');
+      let errorMessage: string;
+      if (data?.message) errorMessage = data.message;
+      else if (firebaseCode === 'email-already-in-use') errorMessage = 'An account with this email already exists';
+      else if (firebaseCode === 'weak-password') errorMessage = 'Password must be at least 6 characters';
+      else if (firebaseCode === 'invalid-email') errorMessage = 'Invalid email address';
+      else if (firebaseCode) errorMessage = firebaseCode.replace(/-/g, ' ');
+      else errorMessage = 'Signup failed';
       
-      console.error('[AuthContext] Signup failed:', errorMessage, 'Status:', err.response?.status, 'Data:', data);
+      console.error('[AuthContext] Signup failed:', errorMessage, err);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

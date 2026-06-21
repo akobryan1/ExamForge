@@ -1,7 +1,10 @@
 import apiClient from './api';
-import { supabase } from '../config/supabase';
 import { auth, googleProvider } from '../config/firebase';
-import { signInWithPopup } from 'firebase/auth';
+import {
+  signInWithPopup,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth';
 import {
   User,
   LoginCredentials,
@@ -9,30 +12,69 @@ import {
 } from '../types';
 
 /**
- * Authentication API service
+ * Authentication API service — Firebase-only
+ * Frontend handles Firebase Auth, backend stores profiles and issues JWT
  */
 export class AuthAPI {
   /**
-   * Sign up with email/password
+   * Sign up with email/password via Firebase
    */
   static async signup(credentials: SignupCredentials): Promise<{ user: User; accessToken: string }> {
     console.log('[AuthAPI] signup called:', { email: credentials.email, username: credentials.username });
-    const { data } = await apiClient.post('/api/auth/signup', credentials);
-    console.log('[AuthAPI] signup response received');
-    return data;
+    try {
+      // 1. Create Firebase auth user
+      console.log('[AuthAPI] Creating Firebase auth user...');
+      const result = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+      console.log('[AuthAPI] Firebase auth user created:', result.user.uid);
+
+      // 2. Get ID token
+      const idToken = await result.user.getIdToken();
+      console.log('[AuthAPI] ID token obtained');
+
+      // 3. Send to backend to create Firestore profile
+      console.log('[AuthAPI] Sending profile data to backend...');
+      const { data } = await apiClient.post('/api/auth/signup', {
+        idToken,
+        username: credentials.username,
+        displayName: credentials.displayName || credentials.username,
+        role: credentials.role || 'instructor',
+      });
+      console.log('[AuthAPI] Signup complete:', data.user?.email);
+      return data;
+    } catch (err: any) {
+      console.error('[AuthAPI] Signup error:', err.code, err.message);
+      if (err.response) {
+        console.error('[AuthAPI] Backend response:', err.response.status, err.response.data);
+      }
+      throw err;
+    }
   }
 
   /**
-   * Login with email/password
+   * Login with email/password via Firebase
    */
   static async login(credentials: LoginCredentials): Promise<{ user: User; accessToken: string }> {
-    console.log('[AuthAPI] login called, sending POST to /api/auth/login');
+    console.log('[AuthAPI] login called:', { email: credentials.email });
     try {
-      const { data } = await apiClient.post('/api/auth/login', credentials);
-      console.log('[AuthAPI] login response received:', { email: data.user?.email, hasToken: !!data.accessToken });
+      // 1. Authenticate with Firebase
+      console.log('[AuthAPI] Authenticating with Firebase...');
+      const result = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      console.log('[AuthAPI] Firebase auth successful:', result.user.uid);
+
+      // 2. Get ID token
+      const idToken = await result.user.getIdToken();
+      console.log('[AuthAPI] ID token obtained');
+
+      // 3. Send to backend for JWT generation
+      console.log('[AuthAPI] Sending ID token to backend...');
+      const { data } = await apiClient.post('/api/auth/login', { idToken });
+      console.log('[AuthAPI] Login complete:', data.user?.email);
       return data;
     } catch (err: any) {
-      console.error('[AuthAPI] login HTTP error:', err.message, err.response?.status, err.response?.data);
+      console.error('[AuthAPI] Login error:', err.code, err.message);
+      if (err.response) {
+        console.error('[AuthAPI] Backend response:', err.response.status, err.response.data);
+      }
       throw err;
     }
   }
@@ -89,22 +131,5 @@ export class AuthAPI {
   static async getCurrentUser(): Promise<User> {
     const { data } = await apiClient.get('/api/auth/me');
     return data.user;
-  }
-
-  /**
-   * Check username availability
-   */
-  static async checkUsernameAvailability(username: string): Promise<boolean> {
-    try {
-      const { data } = await supabase
-        .from('examforge_users')
-        .select('username')
-        .eq('username', username)
-        .single();
-
-      return !data; // Available if no data found
-    } catch {
-      return true; // Assume available on error
-    }
   }
 }

@@ -15,7 +15,7 @@ export function generateTokens(payload: JwtPayload): AuthTokens {
   } as jwt.SignOptions);
 
   const refreshToken = jwt.sign(
-    { userId: payload.userId },
+    { userId: payload.userId, email: payload.email },
     JWT_REFRESH_SECRET,
     {
       expiresIn: JWT_REFRESH_EXPIRES_IN,
@@ -48,9 +48,9 @@ export function verifyAccessToken(token: string): JwtPayload {
 /**
  * Verify JWT refresh token
  */
-export function verifyRefreshToken(token: string): { userId: string } {
+export function verifyRefreshToken(token: string): { userId: string; email: string } {
   try {
-    const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_REFRESH_SECRET) as { userId: string; email: string };
     return decoded;
   } catch (error) {
     throw new Error('Invalid or expired refresh token');
