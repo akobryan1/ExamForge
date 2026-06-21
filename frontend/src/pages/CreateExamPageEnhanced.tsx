@@ -175,7 +175,10 @@ export function CreateExamPageEnhanced() {
       // Redirect to exam questions page
       navigate(`/exams/${exam.id}/questions`);
     } catch (err: any) {
-      setError(err.message || 'Failed to create exam');
+      const serverError = err.response?.data?.error;
+      const errorMsg = serverError || err.message || 'Failed to create exam';
+      console.error('[CreateExam] Error:', errorMsg, '| Server:', serverError, '| Full:', err);
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
