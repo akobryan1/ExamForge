@@ -128,7 +128,7 @@ export function Signup() {
           )}
 
           {/* Signup Form */}
-          <motion.form onSubmit={handleSubmit} variants={staggerItem}>
+          <form onSubmit={handleSubmit}>
             <Input
               type="email"
               name="email"
@@ -178,17 +178,14 @@ export function Signup() {
               autoComplete="new-password"
             />
 
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              size="lg"
-              className="auth-submit"
-              isLoading={isLoading}
+              className="btn btn-primary btn-lg auth-submit"
               disabled={isLoading}
             >
-              Create Account
-            </Button>
-          </motion.form>
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </button>
+          </form>
 
           {/* Divider */}
           <motion.div className="auth-divider" variants={staggerItem}>

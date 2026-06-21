@@ -98,7 +98,7 @@ export function Login() {
           )}
 
           {/* Login Form */}
-          <motion.form onSubmit={handleSubmit} variants={staggerItem}>
+          <form onSubmit={handleSubmit}>
             <Input
               type="email"
               name="email"
@@ -127,18 +127,15 @@ export function Login() {
               </Link>
             </div>
 
-            <Button
+            <button
               type="submit"
-              variant="primary"
-              size="lg"
-              className="auth-submit"
-              isLoading={isLoading}
+              className="btn btn-primary btn-lg auth-submit"
               disabled={isLoading}
               onClick={() => console.log('[Login] Sign In button clicked, email:', formData.email)}
             >
-              Sign In
-            </Button>
-          </motion.form>
+              {isLoading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
 
           {/* Divider */}
           <motion.div className="auth-divider" variants={staggerItem}>
