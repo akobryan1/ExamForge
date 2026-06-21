@@ -53,7 +53,10 @@ class ApiClient {
           } catch (refreshError) {
             // Refresh failed - logout user
             localStorage.removeItem('accessToken');
-            window.location.href = '/';
+            const path = window.location.pathname;
+            if (path !== '/login' && path !== '/signup' && path !== '/register/student') {
+              window.location.href = '/';
+            }
             return Promise.reject(refreshError);
           }
         }

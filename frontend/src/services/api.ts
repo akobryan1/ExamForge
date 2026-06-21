@@ -51,11 +51,19 @@ apiClient.interceptors.response.use(
 
     // If 401 and not already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const token = localStorage.getItem('accessToken');
+      
+      // Only attempt refresh if we have a token
+      if (!token) {
+        // No token at all - just reject silently (user needs to login)
+        console.log('[API] 401 on', url, '- no token, not redirecting');
+        return Promise.reject(error);
+      }
+
       console.log('[API] 401 received, attempting token refresh...');
       originalRequest._retry = true;
 
       try {
-        // Attempt to refresh token
         console.log('[API] Calling refresh endpoint...');
         const { data } = await axios.post(
           `${API_BASE_URL}/api/auth/refresh`,
@@ -64,10 +72,8 @@ apiClient.interceptors.response.use(
         );
 
         console.log('[API] Token refreshed successfully');
-        // Save new token
         localStorage.setItem('accessToken', data.accessToken);
 
-        // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError: any) {
@@ -75,8 +81,15 @@ apiClient.interceptors.response.use(
         console.error('[API] Token refresh failed:', refreshError.message);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        console.log('[API] Redirecting to /');
-        window.location.href = '/';
+        
+        // Only redirect if not already on login/signup page
+        const path = window.location.pathname;
+        if (path !== '/login' && path !== '/signup' && path !== '/register/student') {
+          console.log('[API] Redirecting to /');
+          window.location.href = '/';
+        } else {
+          console.log('[API] Already on auth page, not redirecting');
+        }
         return Promise.reject(refreshError);
       }
     }
