@@ -79,9 +79,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(loggedInUser);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Login failed';
-      const errorDetail = err.response?.data?.error || '';
-      console.error('[AuthContext] Login failed:', errorMessage, errorDetail, 'Status:', err.response?.status);
+      const data = err.response?.data;
+      const errorMessage = data?.message || data?.error || 'Login failed';
+      console.error('[AuthContext] Login failed:', errorMessage, 'Status:', err.response?.status, 'Full error:', err);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
@@ -93,11 +93,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Sign up with email/password
    */
   const signup = async (credentials: SignupCredentials) => {
+    console.log('[AuthContext] signup called:', { email: credentials.email, username: credentials.username });
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log('[AuthContext] Calling AuthAPI.signup...');
       const { user: newUser, accessToken } = await AuthAPI.signup(credentials);
+      console.log('[AuthContext] Signup API success:', newUser.email);
 
       // Store in localStorage
       localStorage.setItem('user', JSON.stringify(newUser));
@@ -105,7 +108,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(newUser);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Signup failed';
+      const data = err.response?.data;
+      let errorMessage;
+
+      if (data?.errors) {
+        // Backend validation errors
+        errorMessage = data.errors.map((e: any) => e.msg).join(', ');
+      } else {
+        errorMessage = data?.message || data?.error || 'Signup failed';
+      }
+      
+      console.error('[AuthContext] Signup failed:', errorMessage, 'Status:', err.response?.status, 'Data:', data);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
