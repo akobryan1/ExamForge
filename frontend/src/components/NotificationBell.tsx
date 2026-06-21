@@ -13,6 +13,10 @@ export function NotificationBell() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Only fetch for authenticated users
+    const token = localStorage.getItem('accessToken');
+    if (!token) return;
+    
     loadUnreadCount();
     
     // Poll for new notifications every 30 seconds
