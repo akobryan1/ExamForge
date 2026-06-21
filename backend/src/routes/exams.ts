@@ -1,18 +1,18 @@
 import express, { Router, Request, Response } from 'express';
 import { body, param } from 'express-validator';
 import { ExamService } from '../services/ExamService';
-import { authenticate, authorize } from '../middleware/auth';
+import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 
 const router: Router = express.Router();
 
-// All exam routes require authentication
-router.use(authenticate);
+// NOTE: No global authenticate — public routes (take exam, view exam) must work for guests
 
 /**
  * POST /api/exams - Create a new exam (Instructor only)
  */
 router.post(
   '/',
+  authenticate,
   authorize('instructor', 'admin'),
   [
     body('title').trim().notEmpty().withMessage('Title is required'),
@@ -36,11 +36,16 @@ router.post(
 /**
  * GET /api/exams - Get exams (instructor: their exams, student: available exams)
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const exams = req.user!.role === 'instructor' || req.user!.role === 'admin'
-      ? await ExamService.getInstructorExams(req.user!.userId)
-      : await ExamService.getAvailableExams(req.user!.userId);
+    if (!req.user) {
+      // Guest — show published/active exams only
+      const exams = await ExamService.getAvailableExams('guest');
+      return res.json(exams);
+    }
+    const exams = req.user.role === 'instructor' || req.user.role === 'admin'
+      ? await ExamService.getInstructorExams(req.user.userId)
+      : await ExamService.getAvailableExams(req.user.userId);
     
     return res.json(exams);
   } catch (error: any) {
@@ -51,24 +56,24 @@ router.get('/', async (req: Request, res: Response) => {
 /**
  * GET /api/exams/:id - Get exam by ID
  */
-router.get('/:id', async (req: Request, res: Response) => {
+router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
-    const isInstructor = req.user!.role === 'instructor' || req.user!.role === 'admin';
+    const userId = req.user?.userId;
+    const isInstructor = req.user?.role === 'instructor' || req.user?.role === 'admin';
     
-    // For instructors: try direct path first (no index needed)
-    if (isInstructor) {
+    // For instructors: try direct path first
+    if (isInstructor && userId) {
       const exam = await ExamService.getExamByIdForInstructor(req.params.id, userId);
       if (exam) return res.json(exam);
     }
     
-    // For students / fallback: use collection group query
+    // For students / guests: use collection group query
     const result = await ExamService.findExamById(req.params.id);
     if (!result) {
       return res.status(404).json({ error: 'Exam not found' });
     }
 
-    const { exam, instructorId } = result;
+    const { exam } = result;
     
     if (exam.instructorId !== userId && !['published', 'active'].includes(exam.status)) {
       return res.status(403).json({ error: 'Unauthorized access to exam' });
@@ -86,6 +91,7 @@ router.get('/:id', async (req: Request, res: Response) => {
  */
 router.put(
   '/:id',
+  authenticate,
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
@@ -106,6 +112,7 @@ router.put(
  */
 router.delete(
   '/:id',
+  authenticate,
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
@@ -120,24 +127,20 @@ router.delete(
 /**
  * GET /api/exams/:id/questions - Get all questions for an exam
  */
-router.get('/:id/questions', async (req: Request, res: Response) => {
+router.get('/:id/questions', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user!.userId;
-    const isInstructor = req.user!.role === 'instructor' || req.user!.role === 'admin';
+    const userId = req.user?.userId;
+    const isInstructor = req.user?.role === 'instructor' || req.user?.role === 'admin';
     
-    // For instructors: direct path
-    if (isInstructor) {
+    if (isInstructor && userId) {
       const exam = await ExamService.getExamByIdForInstructor(req.params.id, userId);
       if (!exam) return res.status(404).json({ error: 'Exam not found' });
       const questions = await ExamService.getExamQuestions(req.params.id, userId);
       return res.json(questions);
     }
     
-    // For students: find via collection group
     const result = await ExamService.findExamById(req.params.id);
-    if (!result) {
-      return res.status(404).json({ error: 'Exam not found' });
-    }
+    if (!result) return res.status(404).json({ error: 'Exam not found' });
     const questions = await ExamService.getExamQuestions(req.params.id, result.instructorId);
     return res.json(questions);
   } catch (error: any) {
@@ -151,6 +154,7 @@ router.get('/:id/questions', async (req: Request, res: Response) => {
  */
 router.post(
   '/:id/questions',
+  authenticate,
   authorize('instructor', 'admin'),
   [
     body('type').isIn(['multiple_choice', 'true_false', 'modified_true_false', 'essay', 'identification', 'enumeration']),
@@ -222,12 +226,12 @@ router.delete(
  */
 router.post(
   '/:id/start',
-  authorize('student'),
+  optionalAuth,
   async (req: Request, res: Response) => {
     try {
       const attempt = await ExamService.startExamAttempt(
-        req.user!.userId,
-        req.user!.email,
+        req.user?.userId || 'guest',
+        req.user?.email || 'guest@anonymous.com',
         {
           examId: req.params.id,
           accessCode: req.body.accessCode,

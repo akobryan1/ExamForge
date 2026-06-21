@@ -42,6 +42,26 @@ export async function authenticate(
 }
 
 /**
+ * Optional authentication middleware — sets req.user if token present, but doesn't reject
+ */
+export async function optionalAuth(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const token = extractTokenFromHeader(req.headers.authorization);
+    if (token) {
+      const decoded = verifyAccessToken(token);
+      req.user = decoded;
+    }
+  } catch {
+    // Token invalid — just proceed without user
+  }
+  next();
+}
+
+/**
  * Role-based authorization middleware
  */
 export function authorize(...allowedRoles: string[]) {
@@ -64,24 +84,4 @@ export function authorize(...allowedRoles: string[]) {
 
     next();
   };
-}
-
-/**
- * Optional authentication - doesn't fail if no token
- */
-export async function optionalAuth(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
-  try {
-    const token = extractTokenFromHeader(req.headers.authorization);
-    if (token) {
-      const decoded = verifyAccessToken(token);
-      req.user = decoded;
-    }
-  } catch (error) {
-    // Silently fail - user remains undefined
-  }
-  next();
 }

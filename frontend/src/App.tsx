@@ -93,13 +93,10 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            {/* Public route — guests allowed if exam has allowGuestAccess */}
             <Route
               path="/exams/:examId/take"
-              element={
-                <ProtectedRoute>
-                  <TakeExamPage />
-                </ProtectedRoute>
-              }
+              element={<TakeExamPage />}
             />
             <Route
               path="/attempts/:attemptId/results"
