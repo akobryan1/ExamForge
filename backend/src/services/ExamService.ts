@@ -62,6 +62,14 @@ export class ExamService {
       .collection('published_exams')
       .add(examData);
 
+    // Also write to flat exams index for fast lookups (avoids collectionGroup index)
+    await db.collection('exams').doc(examRef.id).set({
+      instructorId,
+      status: 'draft',
+      title: data.title,
+      examRef: examRef.path,
+    });
+
     const examDoc = await examRef.get();
     return this.mapExamFromDb(examRef.id, examDoc.data()!, instructorId);
   }
@@ -72,20 +80,24 @@ export class ExamService {
   static async findExamById(examId: string): Promise<{ exam: Exam; instructorId: string } | null> {
     const db = getFirestore();
 
-    const examsSnapshot = await db
-      .collectionGroup('published_exams')
-      .where('__name__', '==', examId)
-      .limit(1)
+    // Use flat exams index collection (no composite index needed)
+    const indexDoc = await db.collection('exams').doc(examId).get();
+    if (!indexDoc.exists) return null;
+
+    const { instructorId } = indexDoc.data()!;
+    
+    // Get actual exam from instructor's subcollection
+    const examDoc = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
       .get();
 
-    if (examsSnapshot.empty) return null;
-
-    const examDoc = examsSnapshot.docs[0];
-    const examData = examDoc.data();
-    const instructorId = examData.instructorId;
+    if (!examDoc.exists) return null;
 
     return {
-      exam: this.mapExamFromDb(examDoc.id, examData, instructorId),
+      exam: this.mapExamFromDb(examDoc.id, examDoc.data()!, instructorId),
       instructorId,
     };
   }
@@ -146,27 +158,34 @@ export class ExamService {
   static async getAvailableExams(studentId: string): Promise<Exam[]> {
     const db = getFirestore();
 
-    // Use collection group query to find all published_exams across all users
-    const examsSnapshot = await db
-      .collectionGroup('published_exams')
+    // Use flat exams index (no collectionGroup index needed)
+    const indexSnapshot = await db
+      .collection('exams')
       .where('status', 'in', ['published', 'active'])
-      .orderBy('createdAt', 'desc')
       .get();
 
     const now = new Date();
     const exams: Exam[] = [];
 
-    for (const doc of examsSnapshot.docs) {
-      const examData = doc.data();
+    for (const indexDoc of indexSnapshot.docs) {
+      const { instructorId } = indexDoc.data();
       
-      // Check if exam is within scheduled time
+      // Get actual exam data
+      const examDoc = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(indexDoc.id)
+        .get();
+
+      if (!examDoc.exists) continue;
+      const examData = examDoc.data()!;
+      
       if (examData.startDate && examData.startDate.toDate() > now) continue;
       if (examData.endDate && examData.endDate.toDate() < now) continue;
-      
-      // Check if student is in allowed list (if specified)
       if (examData.allowedStudentIds?.length > 0 && !examData.allowedStudentIds.includes(studentId)) continue;
 
-      exams.push(this.mapExamFromDb(doc.id, examData, examData.instructorId));
+      exams.push(this.mapExamFromDb(indexDoc.id, examData, instructorId));
     }
 
     return exams;
@@ -218,6 +237,11 @@ export class ExamService {
 
     await examRef.update(updateData);
 
+    // Sync status to flat exams index
+    if (data.status) {
+      await db.collection('exams').doc(examId).update({ status: data.status });
+    }
+
     const updatedDoc = await examRef.get();
     return this.mapExamFromDb(updatedDoc.id, updatedDoc.data()!, instructorId);
   }
@@ -248,6 +272,9 @@ export class ExamService {
       .collection('published_exams')
       .doc(examId)
       .delete();
+
+    // Clean up flat index
+    await db.collection('exams').doc(examId).delete();
   }
 
 
