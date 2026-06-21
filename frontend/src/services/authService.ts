@@ -41,15 +41,31 @@ export class AuthAPI {
    * Login with Google OAuth
    */
   static async loginWithGoogle(): Promise<{ user: User; accessToken: string }> {
-    // 1. Sign in with Firebase Google provider
-    const result = await signInWithPopup(auth, googleProvider);
-    
-    // 2. Get ID token
-    const idToken = await result.user.getIdToken();
+    console.log('[AuthAPI] loginWithGoogle called');
+    try {
+      // 1. Sign in with Firebase Google provider
+      console.log('[AuthAPI] Opening Firebase Google sign-in popup...');
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('[AuthAPI] Firebase popup succeeded:', result.user.email);
+      
+      // 2. Get ID token
+      console.log('[AuthAPI] Getting Firebase ID token...');
+      const idToken = await result.user.getIdToken();
+      console.log('[AuthAPI] ID token obtained, length:', idToken.length);
 
-    // 3. Send to backend for verification and JWT generation
-    const { data } = await apiClient.post('/api/auth/google', { idToken });
-    return data;
+      // 3. Send to backend for verification and JWT generation
+      console.log('[AuthAPI] Sending ID token to backend /api/auth/google...');
+      const { data } = await apiClient.post('/api/auth/google', { idToken });
+      console.log('[AuthAPI] Backend Google auth succeeded:', data.user?.email);
+      return data;
+    } catch (err: any) {
+      console.error('[AuthAPI] Google login error:', err);
+      console.error('[AuthAPI] Error code:', err.code, 'message:', err.message);
+      if (err.response) {
+        console.error('[AuthAPI] Backend response:', err.response.status, err.response.data);
+      }
+      throw err;
+    }
   }
 
   /**

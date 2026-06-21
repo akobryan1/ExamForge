@@ -117,11 +117,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Login with Google OAuth
    */
   const loginWithGoogle = async () => {
+    console.log('[AuthContext] loginWithGoogle called');
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log('[AuthContext] Calling AuthAPI.loginWithGoogle...');
       const { user: loggedInUser, accessToken } = await AuthAPI.loginWithGoogle();
+      console.log('[AuthContext] Google login API success:', loggedInUser.email, 'role:', loggedInUser.role);
 
       // Store in localStorage
       localStorage.setItem('user', JSON.stringify(loggedInUser));
@@ -129,7 +132,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(loggedInUser);
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Google login failed';
+      const errorMessage = err.response?.data?.message || err.message || 'Google login failed';
+      console.error('[AuthContext] Google login ERROR:', errorMessage, err);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {
