@@ -114,7 +114,9 @@ export class AuthService {
       }
 
       if (signInError || !authData.user) {
-        throw new Error('Invalid email or password');
+        // Use the actual Supabase error message instead of a generic one
+        const message = signInError?.message || 'Invalid email or password';
+        throw new Error(message);
       }
 
       console.log('[AuthService] Supabase auth successful:', { id: authData.user.id, email: authData.user.email });
