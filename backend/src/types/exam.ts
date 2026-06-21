@@ -249,6 +249,14 @@ export interface CreateExamDto {
   startDate?: Date;
   endDate?: Date;
   accessCode?: string;
+  allowGuestAccess?: boolean;
+  sections?: string[];
+  tags?: string[];
+  retakeConfig?: RetakeConfiguration;
+  lateSubmissionConfig?: LateSubmissionConfiguration;
+  proctorConfig?: ProctorConfiguration;
+  customInstructions?: string;
+  showRulesBeforeExam?: boolean;
 }
 
 export interface UpdateExamDto extends Partial<CreateExamDto> {

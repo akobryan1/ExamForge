@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
@@ -10,6 +10,8 @@ type TabType = 'basic' | 'access' | 'timing' | 'questions' | 'proctoring' | 'adv
 
 export function CreateExamPageEnhanced() {
   const navigate = useNavigate();
+  const { examId } = useParams<{ examId?: string }>();
+  const isEditing = !!examId;
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,8 +37,8 @@ export function CreateExamPageEnhanced() {
     sections: [] as string[],
     
     // Scheduling
-    startDate: undefined as Date | undefined,
-    endDate: undefined as Date | undefined,
+    startDate: '' as string,
+    endDate: '' as string,
     
     // Retake Configuration
     retakeEnabled: false,
@@ -69,6 +71,56 @@ export function CreateExamPageEnhanced() {
   });
 
   const [sectionInput, setSectionInput] = useState('');
+
+  // Load existing exam data for editing
+  useEffect(() => {
+    if (examId) {
+      setLoading(true);
+      ExamService.getExamById(examId)
+        .then(exam => {
+          setFormData({
+            title: exam.title || '',
+            description: exam.description || '',
+            subject: exam.subject || '',
+            grade: exam.grade || '',
+            passingScore: exam.passingScore || 70,
+            timeLimit: exam.timeLimit || 0,
+            shuffleQuestions: exam.shuffleQuestions ?? false,
+            shuffleAnswers: exam.shuffleAnswers ?? false,
+            showResults: exam.showResults ?? true,
+            allowReview: exam.allowReview ?? true,
+            accessCode: exam.accessCode || '',
+            allowGuestAccess: exam.allowGuestAccess ?? false,
+            sections: exam.sections || [],
+            startDate: exam.startDate ? new Date(exam.startDate).toISOString().slice(0, 16) : '',
+            endDate: exam.endDate ? new Date(exam.endDate).toISOString().slice(0, 16) : '',
+            retakeEnabled: exam.retakeConfig?.enabled ?? false,
+            retakeMaxRetakes: exam.retakeConfig?.maxRetakes || 0,
+            retakeRequireApproval: exam.retakeConfig?.requireApproval ?? false,
+            retakeScoringMethod: exam.retakeConfig?.scoringMethod || 'latest',
+            lateSubmissionPolicy: exam.lateSubmissionConfig?.policy || 'disabled',
+            lateGracePeriodMinutes: exam.lateSubmissionConfig?.gracePeriodMinutes || 0,
+            latePenaltyPoints: exam.lateSubmissionConfig?.penaltyPoints || 0,
+            latePenaltyInterval: exam.lateSubmissionConfig?.penaltyInterval || 'minute',
+            proctorEnabled: exam.proctorConfig?.enabled ?? false,
+            proctorEnforceFullscreen: exam.proctorConfig?.enforceFullscreen ?? false,
+            proctorDetectTabSwitch: exam.proctorConfig?.detectTabSwitch ?? false,
+            proctorDetectCopyPaste: exam.proctorConfig?.detectCopyPaste ?? false,
+            proctorDisableRightClick: exam.proctorConfig?.disableRightClick ?? false,
+            proctorPointDeductionTabSwitch: exam.proctorConfig?.pointDeductions?.tabSwitch || 0,
+            proctorPointDeductionCopyPaste: exam.proctorConfig?.pointDeductions?.copyPaste || 0,
+            proctorPointDeductionRightClick: exam.proctorConfig?.pointDeductions?.rightClick || 0,
+            proctorPointDeductionExitFullscreen: exam.proctorConfig?.pointDeductions?.exitFullscreen || 0,
+            proctorPointDeductionGeneral: exam.proctorConfig?.pointDeductions?.generalViolation || 0,
+            proctorCustomRules: exam.proctorConfig?.customRules || '',
+            customInstructions: exam.customInstructions || '',
+            showRulesBeforeExam: exam.showRulesBeforeExam ?? true,
+          });
+        })
+        .catch(err => setError(err.message || 'Failed to load exam'))
+        .finally(() => setLoading(false));
+    }
+  }, [examId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -170,14 +222,16 @@ export function CreateExamPageEnhanced() {
         showRulesBeforeExam: formData.showRulesBeforeExam,
       };
       
-      const exam = await ExamService.createExam(examData);
+      const exam = isEditing
+        ? await ExamService.updateExam(examId!, examData)
+        : await ExamService.createExam(examData);
       
       // Redirect to exam questions page
       navigate(`/exams/${exam.id}/questions`);
     } catch (err: any) {
       const serverError = err.response?.data?.error;
-      const errorMsg = serverError || err.message || 'Failed to create exam';
-      console.error('[CreateExam] Error:', errorMsg, '| Server:', serverError, '| Full:', err);
+      const errorMsg = serverError || err.message || (isEditing ? 'Failed to update exam' : 'Failed to create exam');
+      console.error('[ExamForm] Error:', errorMsg, '| Server:', serverError, '| Full:', err);
       setError(errorMsg);
     } finally {
       setLoading(false);
@@ -203,7 +257,7 @@ export function CreateExamPageEnhanced() {
         transition={{ duration: 0.4 }}
       >
         <div className="form-header">
-          <h1>Create New Exam</h1>
+          <h1>{isEditing ? 'Edit Exam' : 'Create New Exam'}</h1>
           <p className="form-subtitle">Configure all exam settings using the tabs below</p>
         </div>
 
@@ -404,11 +458,8 @@ export function CreateExamPageEnhanced() {
                     type="datetime-local"
                     id="startDate"
                     name="startDate"
-                    value={formData.startDate ? new Date(formData.startDate).toISOString().slice(0, 16) : ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      startDate: e.target.value ? new Date(e.target.value) : undefined 
-                    }))}
+                    value={formData.startDate}
+                    onChange={handleChange}
                   />
                   <small>When students can start taking the exam</small>
                 </div>
@@ -419,11 +470,8 @@ export function CreateExamPageEnhanced() {
                     type="datetime-local"
                     id="endDate"
                     name="endDate"
-                    value={formData.endDate ? new Date(formData.endDate).toISOString().slice(0, 16) : ''}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      endDate: e.target.value ? new Date(e.target.value) : undefined 
-                    }))}
+                    value={formData.endDate}
+                    onChange={handleChange}
                   />
                   <small>When the exam becomes unavailable</small>
                 </div>
@@ -855,7 +903,7 @@ export function CreateExamPageEnhanced() {
               className="btn btn-primary"
               disabled={loading}
             >
-              {loading ? 'Creating...' : 'Create Exam & Add Questions'}
+              {loading ? 'Saving...' : isEditing ? 'Update Exam' : 'Create Exam & Add Questions'}
             </button>
           </div>
         </form>

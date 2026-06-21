@@ -39,8 +39,15 @@ export class ExamService {
       showResults: data.showResults ?? true,
       allowReview: data.allowReview ?? true,
       accessCode: data.accessCode || null,
+      allowGuestAccess: data.allowGuestAccess ?? false,
+      sections: data.sections || [],
+      tags: data.tags || [],
+      retakeConfig: data.retakeConfig || null,
+      lateSubmissionConfig: data.lateSubmissionConfig || null,
+      proctorConfig: data.proctorConfig || null,
+      customInstructions: data.customInstructions || null,
+      showRulesBeforeExam: data.showRulesBeforeExam ?? false,
       allowedStudentIds: [],
-      tags: [],
       questionCount: 0,
       totalPoints: 0,
       attemptCount: 0,
@@ -193,6 +200,14 @@ export class ExamService {
     if (data.showResults !== undefined) updateData.showResults = data.showResults;
     if (data.allowReview !== undefined) updateData.allowReview = data.allowReview;
     if (data.accessCode !== undefined) updateData.accessCode = data.accessCode;
+    if (data.allowGuestAccess !== undefined) updateData.allowGuestAccess = data.allowGuestAccess;
+    if (data.sections !== undefined) updateData.sections = data.sections;
+    if (data.tags !== undefined) updateData.tags = data.tags;
+    if (data.retakeConfig !== undefined) updateData.retakeConfig = data.retakeConfig;
+    if (data.lateSubmissionConfig !== undefined) updateData.lateSubmissionConfig = data.lateSubmissionConfig;
+    if (data.proctorConfig !== undefined) updateData.proctorConfig = data.proctorConfig;
+    if (data.customInstructions !== undefined) updateData.customInstructions = data.customInstructions;
+    if (data.showRulesBeforeExam !== undefined) updateData.showRulesBeforeExam = data.showRulesBeforeExam;
 
     await examRef.update(updateData);
 
@@ -723,10 +738,17 @@ export class ExamService {
       startDate: data.startDate?.toDate(),
       endDate: data.endDate?.toDate(),
       accessCode: data.accessCode,
+      allowGuestAccess: data.allowGuestAccess ?? false,
       allowedStudentIds: data.allowedStudentIds || [],
+      sections: data.sections || [],
+      tags: data.tags || [],
+      retakeConfig: data.retakeConfig || undefined,
+      lateSubmissionConfig: data.lateSubmissionConfig || undefined,
+      proctorConfig: data.proctorConfig || undefined,
+      customInstructions: data.customInstructions || undefined,
+      showRulesBeforeExam: data.showRulesBeforeExam ?? false,
       subject: data.subject || '',
       grade: data.grade || '',
-      tags: data.tags || [],
       questionCount: data.questionCount || 0,
       attemptCount: data.attemptCount || 0,
       averageScore: data.averageScore || 0,

@@ -62,6 +62,14 @@ function App() {
               }
             />
             <Route
+              path="/exams/:examId/edit"
+              element={
+                <ProtectedRoute>
+                  <CreateExamPageEnhanced />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/exams/:examId/questions"
               element={
                 <ProtectedRoute>

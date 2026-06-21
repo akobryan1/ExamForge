@@ -137,7 +137,7 @@ router.post(
   '/:id/questions',
   authorize('instructor', 'admin'),
   [
-    body('type').isIn(['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_in_blank', 'matching']),
+    body('type').isIn(['multiple_choice', 'true_false', 'modified_true_false', 'essay', 'identification', 'enumeration']),
     body('text').trim().notEmpty().withMessage('Question text is required'),
     body('points').isInt({ min: 1 }).withMessage('Points must be at least 1'),
     body('difficulty').isIn(['easy', 'medium', 'hard']),

@@ -120,6 +120,9 @@ export function ExamPreviewPage() {
               </div>
             </div>
             <div className="header-actions">
+              <Link to={`/exams/${examId}/edit`}>
+                <Button variant="outline">Edit Exam</Button>
+              </Link>
               <Link to={`/exams/${examId}/questions`}>
                 <Button variant="outline">Edit Questions</Button>
               </Link>
