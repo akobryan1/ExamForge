@@ -34,17 +34,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const storedUser = localStorage.getItem('user');
         const accessToken = localStorage.getItem('accessToken');
 
+        console.log('[AuthContext] initAuth started, storedUser:', !!storedUser, 'accessToken:', !!accessToken);
+
         if (storedUser && accessToken) {
           // Verify token is still valid by fetching current user
+          console.log('[AuthContext] Verifying existing token with getCurrentUser...');
           const currentUser = await AuthAPI.getCurrentUser();
+          console.log('[AuthContext] Token valid, user restored:', currentUser.email);
           setUser(currentUser);
+        } else {
+          console.log('[AuthContext] No stored credentials found');
         }
       } catch (err) {
         // Token invalid or expired - clear storage
+        console.log('[AuthContext] Token validation failed, clearing storage');
         localStorage.removeItem('user');
         localStorage.removeItem('accessToken');
       } finally {
         setIsLoading(false);
+        console.log('[AuthContext] initAuth complete, isLoading:', false);
       }
     };
 
@@ -55,19 +63,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
    * Login with email/password
    */
   const login = async (credentials: LoginCredentials) => {
+    console.log('[AuthContext] login called:', { email: credentials.email });
     try {
       setIsLoading(true);
       setError(null);
 
+      console.log('[AuthContext] Calling AuthAPI.login...');
       const { user: loggedInUser, accessToken } = await AuthAPI.login(credentials);
+      console.log('[AuthContext] Login API success:', loggedInUser.email, 'role:', loggedInUser.role);
 
       // Store in localStorage
       localStorage.setItem('user', JSON.stringify(loggedInUser));
       localStorage.setItem('accessToken', accessToken);
+      console.log('[AuthContext] Credentials stored in localStorage');
 
       setUser(loggedInUser);
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Login failed';
+      const errorDetail = err.response?.data?.error || '';
+      console.error('[AuthContext] Login failed:', errorMessage, errorDetail, 'Status:', err.response?.status);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

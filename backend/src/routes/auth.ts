@@ -81,9 +81,12 @@ router.post(
       }
 
       const loginData: LoginRequest = req.body;
+      console.log('[AuthRoute] Login request received:', { email: loginData.email, bodyKeys: Object.keys(req.body) });
 
       // Authenticate user
+      console.log('[AuthRoute] Calling authService.loginWithEmail...');
       const { user, tokens } = await authService.loginWithEmail(loginData);
+      console.log('[AuthRoute] Login successful for:', user.email, 'role:', user.role);
 
       // Set refresh token in httpOnly cookie
       res.cookie('refreshToken', tokens.refreshToken, {
@@ -93,13 +96,14 @@ router.post(
         maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
       });
 
+      console.log('[AuthRoute] Sending response with token');
       res.json({
         user,
         accessToken: tokens.accessToken,
         expiresIn: tokens.expiresIn,
       });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('[AuthRoute] Login error:', error);
       res.status(401).json({
         error: 'Login failed',
         message: error instanceof Error ? error.message : 'Invalid credentials',

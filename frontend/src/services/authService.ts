@@ -16,7 +16,9 @@ export class AuthAPI {
    * Sign up with email/password
    */
   static async signup(credentials: SignupCredentials): Promise<{ user: User; accessToken: string }> {
+    console.log('[AuthAPI] signup called:', { email: credentials.email, username: credentials.username });
     const { data } = await apiClient.post('/api/auth/signup', credentials);
+    console.log('[AuthAPI] signup response received');
     return data;
   }
 
@@ -24,8 +26,15 @@ export class AuthAPI {
    * Login with email/password
    */
   static async login(credentials: LoginCredentials): Promise<{ user: User; accessToken: string }> {
-    const { data } = await apiClient.post('/api/auth/login', credentials);
-    return data;
+    console.log('[AuthAPI] login called, sending POST to /api/auth/login');
+    try {
+      const { data } = await apiClient.post('/api/auth/login', credentials);
+      console.log('[AuthAPI] login response received:', { email: data.user?.email, hasToken: !!data.accessToken });
+      return data;
+    } catch (err: any) {
+      console.error('[AuthAPI] login HTTP error:', err.message, err.response?.status, err.response?.data);
+      throw err;
+    }
   }
 
   /**
