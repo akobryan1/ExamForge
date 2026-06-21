@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -11,6 +11,10 @@ export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, loginWithGoogle, error, clearError } = useAuth();
+
+  useEffect(() => {
+    console.log('[Login] Component mounted, rendering form');
+  }, []);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -53,9 +57,11 @@ export function Login() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    console.log('[Login] Input changed:', name, '->', value ? '(has value)' : '(empty)');
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value,
+      [name]: value,
     }));
   };
 
@@ -128,6 +134,7 @@ export function Login() {
               className="auth-submit"
               isLoading={isLoading}
               disabled={isLoading}
+              onClick={() => console.log('[Login] Sign In button clicked, email:', formData.email)}
             >
               Sign In
             </Button>
