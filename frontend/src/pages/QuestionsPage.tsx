@@ -123,13 +123,14 @@ export function QuestionsPage() {
       } else if (formData.type === 'true_false') {
         questionData.correctAnswer = formData.correctAnswer === 'true';
       } else if (formData.type === 'modified_true_false') {
-        // For modified true/false, store both T/F and the correction
         questionData.correctAnswer = formData.correctAnswer;
       } else if (formData.type === 'identification') {
         questionData.correctAnswer = formData.correctAnswer;
       } else if (formData.type === 'enumeration') {
         questionData.correctAnswer = formData.enumerationItems.filter(item => item.trim());
       }
+
+      console.log('[QuestionsPage] Submitting question:', JSON.stringify(questionData, null, 2));
 
       if (editingQuestion) {
         await ExamService.updateQuestion(editingQuestion.id, examId, questionData);
@@ -140,7 +141,8 @@ export function QuestionsPage() {
       setShowAddModal(false);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Failed to save question');
+      console.error('[QuestionsPage] Submit failed:', err.response?.data || err.message);
+      alert(err.response?.data?.error || err.message || 'Failed to save question');
     }
   };
 
