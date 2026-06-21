@@ -189,6 +189,58 @@ export function ExamPreviewPage() {
           </div>
         </div>
 
+        {/* Student Exam Link — shown when published or active */}
+        {(exam.status === 'published' || exam.status === 'active') && (
+          <motion.div
+            className="preview-section"
+            variants={fadeIn}
+            style={{
+              background: 'var(--color-primary-bg, #e8f0fe)',
+              border: '2px solid var(--color-primary, #1a73e8)',
+              borderRadius: 'var(--radius-lg)',
+              padding: 'var(--spacing-6)',
+              marginBottom: 'var(--spacing-4)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px 0' }}>📎 Student Exam Link</h3>
+            <p style={{ margin: '0 0 12px 0', color: 'var(--color-text-secondary)' }}>
+              Share this link with your students so they can take the exam:
+            </p>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                readOnly
+                value={`${window.location.origin}/exams/${examId}/take`}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: '14px',
+                  fontFamily: 'monospace',
+                  background: 'var(--color-surface)',
+                }}
+                onClick={(e) => (e.target as HTMLInputElement).select()}
+              />
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${window.location.origin}/exams/${examId}/take`);
+                  alert('Link copied to clipboard!');
+                }}
+              >
+                📋 Copy
+              </Button>
+            </div>
+            {exam.accessCode && (
+              <p style={{ margin: '12px 0 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+                🔑 Access code required: <strong>{exam.accessCode}</strong>
+              </p>
+            )}
+          </motion.div>
+        )}
+
         {/* Exam Details */}
         <motion.div className="preview-section" variants={fadeIn}>
           <h2>Exam Details</h2>
