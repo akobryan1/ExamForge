@@ -41,12 +41,30 @@ export function ExamPreviewPage() {
 
   const handlePublish = async () => {
     if (!examId) return;
+    
+    // Restriction: no questions
+    if (questions.length === 0) {
+      setError('Cannot publish — this exam has no questions. Add at least one question first.');
+      return;
+    }
+    
+    // Warning: no schedule
+    const hasSchedule = exam?.startDate || exam?.endDate;
+    if (!hasSchedule && !confirm('This exam has no schedule set. Students can take it at any time. Publish anyway?')) {
+      return;
+    }
+    
+    // Warning: no time limit
+    if (!exam?.timeLimit && !confirm('This exam has no time limit. Publish anyway?')) {
+      return;
+    }
+    
     try {
       await ExamService.publishExam(examId);
-      alert('Exam published successfully!');
+      setError(null);
       navigate('/exams');
     } catch (err: any) {
-      alert('Failed to publish exam: ' + err.message);
+      setError(err.response?.data?.error || err.message || 'Failed to publish exam');
     }
   };
 
@@ -82,11 +100,11 @@ export function ExamPreviewPage() {
     );
   }
 
-  if (error || !exam) {
+  if (!exam) {
     return (
       <MainLayout>
-        <div style={{ paddingTop: 'var(--spacing-12)' }}>
-          <div className="error-banner">{error || 'Exam not found'}</div>
+        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+          <p>Exam not found.</p>
           <Button onClick={() => navigate('/exams')}>Back to Exams</Button>
         </div>
       </MainLayout>
@@ -102,6 +120,34 @@ export function ExamPreviewPage() {
         animate="animate"
         exit="exit"
       >
+        {/* Error Banner */}
+        {error && (
+          <div className="error-banner" style={{ marginBottom: 'var(--spacing-4)' }}>
+            ⚠️ {error}
+          </div>
+        )}
+        
+        {/* Warnings for draft exams */}
+        {exam.status === 'draft' && (
+          <div style={{ marginBottom: 'var(--spacing-4)' }}>
+            {questions.length === 0 && (
+              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+                ⚠️ <strong>No questions added.</strong> You need at least one question before publishing.
+              </div>
+            )}
+            {!exam.startDate && !exam.endDate && (
+              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+                📅 <strong>No schedule set.</strong> Without dates, this exam will be available immediately upon publish.
+              </div>
+            )}
+            {!exam.timeLimit && (
+              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+                ⏱️ <strong>No time limit set.</strong> Students will have unlimited time to complete this exam.
+              </div>
+            )}
+          </div>
+        )}
+        
         {/* Header */}
         <div className="preview-header">
           <Link to="/exams" className="breadcrumb">← Back to Exams</Link>
