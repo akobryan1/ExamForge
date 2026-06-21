@@ -2,6 +2,13 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
+console.log('[API] Initializing with base URL:', API_BASE_URL);
+console.log('[API] Env vars:', {
+  VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
+  VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL ? 'set' : 'not set',
+  VITE_FIREBASE_API_KEY: import.meta.env.VITE_FIREBASE_API_KEY ? 'set' : 'not set',
+});
+
 /**
  * Create axios instance with default config
  */

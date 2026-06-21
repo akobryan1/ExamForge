@@ -22,27 +22,31 @@ export function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('[Login] handleSubmit called', formData.email);
     
     try {
       setIsLoading(true);
       clearError();
+      console.log('[Login] Calling login...');
       await login(formData);
+      console.log('[Login] Login succeeded, navigating to', from);
       navigate(from, { replace: true });
-    } catch (error) {
-      // Error is handled by AuthContext
+    } catch (error: any) {
+      console.error('[Login] Login failed:', error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    console.log('[Login] handleGoogleLogin called');
     try {
       setIsLoading(true);
       clearError();
       await loginWithGoogle();
       navigate(from, { replace: true });
-    } catch (error) {
-      // Error is handled by AuthContext
+    } catch (error: any) {
+      console.error('[Login] Google login failed:', error.message);
     } finally {
       setIsLoading(false);
     }
