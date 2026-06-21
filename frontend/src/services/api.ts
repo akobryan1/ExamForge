@@ -84,11 +84,11 @@ apiClient.interceptors.response.use(
         
         // Only redirect if not already on login/signup page
         const path = window.location.pathname;
-        if (path !== '/login' && path !== '/signup' && path !== '/register/student') {
+        if (path !== '/login' && path !== '/signup' && path !== '/register/student' && !path.startsWith('/exams/')) {
           console.log('[API] Redirecting to /');
           window.location.href = '/';
         } else {
-          console.log('[API] Already on auth page, not redirecting');
+          console.log('[API] Already on auth/exam page, not redirecting');
         }
         return Promise.reject(refreshError);
       }

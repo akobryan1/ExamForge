@@ -54,7 +54,7 @@ class ApiClient {
             // Refresh failed - logout user
             localStorage.removeItem('accessToken');
             const path = window.location.pathname;
-            if (path !== '/login' && path !== '/signup' && path !== '/register/student') {
+            if (path !== '/login' && path !== '/signup' && path !== '/register/student' && !path.startsWith('/exams/')) {
               window.location.href = '/';
             }
             return Promise.reject(refreshError);
