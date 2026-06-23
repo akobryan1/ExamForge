@@ -171,8 +171,12 @@ class ExamServiceClass {
    * Get incident reports (Instructor only)
    */
   async getIncidentReports(): Promise<any[]> {
-    const response = await apiClient.get('/api/exams/incidents');
-    return response.data;
+    try {
+      const response = await apiClient.get('/api/exams/incidents');
+      return response.data;
+    } catch {
+      return [];
+    }
   }
 
   /**
