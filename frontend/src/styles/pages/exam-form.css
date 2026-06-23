@@ -1,169 +1,657 @@
-/* Exam Form Styles */
+/* Exam Form Styles - ExamForge Design System */
+
+/* ============================================
+   PAGE LAYOUT
+   ============================================ */
 
 .exam-form-page {
   max-width: 900px;
   margin: 0 auto;
 }
 
+/* ============================================
+   PAGE HEADER
+   Spec: Space Grotesk 22px 700 Navy, subtitle 13px Gray 2
+   ============================================ */
+
 .form-header {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 2px solid var(--primary-color);
+  margin-bottom: 24px;
 }
 
 .form-header h1 {
-  margin-bottom: 0.5rem;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-primary-900);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 2px;
 }
 
 .form-subtitle {
-  font-size: 1rem;
-  color: var(--text-secondary);
+  font-size: 13px;
+  color: var(--color-gray-2);
+  margin: 0 0 24px;
   font-family: var(--font-body);
+  font-weight: var(--font-normal);
 }
+
+.form-step-indicator {
+  font-size: var(--text-sm);
+  color: var(--color-gray-2);
+  margin-bottom: 0;
+  font-weight: var(--font-medium);
+}
+
+/* ============================================
+   ERROR BANNER
+   Spec: Red 10% bg, red border, red text
+   ============================================ */
 
 .error-banner {
-  padding: 1rem 1.5rem;
-  background: #fee2e2;
-  border: 1px solid #f87171;
-  border-radius: var(--border-radius);
-  color: #dc2626;
-  margin-bottom: 1.5rem;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: rgba(220, 38, 38, 0.1);
+  border: 1px solid var(--color-error-600);
+  border-radius: var(--radius-md);
+  color: var(--color-error-700);
+  margin-bottom: var(--spacing-4);
+  font-size: var(--text-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-2);
 }
+
+.error-banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--color-error-700);
+  cursor: pointer;
+  font-size: var(--text-lg);
+  padding: 0;
+  line-height: 1;
+}
+
+/* ============================================
+   TAB SYSTEM - Horizontal Scroll Tabs
+   Spec: 13px 500, amber active underline
+   ============================================ */
+
+.tab-navigation {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tab-navigation::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: var(--font-medium);
+  color: var(--color-gray-3);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.tab-button:hover {
+  color: var(--color-text-primary);
+}
+
+.tab-button.active {
+  color: var(--color-accent-500);
+  border-bottom-color: var(--color-accent-500);
+}
+
+.tab-icon {
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.tab-label {
+  color: inherit;
+}
+
+/* ============================================
+   FORM CONTAINER
+   Spec: White bg, 1px Gray 1 border, 10px radius
+   ============================================ */
 
 .exam-form {
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-  padding: 2rem;
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 600px;
 }
+
+/* ============================================
+   FORM SECTIONS
+   ============================================ */
 
 .form-section {
-  margin-bottom: 2.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 24px;
 }
 
-.form-section:last-of-type {
-  border-bottom: none;
+.form-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.form-section h2 {
-  font-size: 1.25rem;
-  color: var(--text-primary);
-  margin-bottom: 1.5rem;
-  font-weight: 600;
+.form-section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: var(--font-semibold);
+  color: var(--color-primary-900);
+  margin: 0;
 }
+
+.form-section-chevron {
+  font-size: 12px;
+  color: var(--color-gray-2);
+  transition: transform var(--transition-fast);
+}
+
+.form-section-chevron.open {
+  transform: rotate(180deg);
+}
+
+.form-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-section-content.collapsed {
+  display: none;
+}
+
+/* ============================================
+   FORM FIELDS
+   Spec: 8px 12px padding, 1px Gray 1 border, 8px radius
+   ============================================ */
 
 .form-group {
-  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .form-group label {
-  display: block;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.5rem;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-primary-900);
+}
+
+.form-group label .required {
+  color: var(--color-error-600);
+  font-weight: var(--font-bold);
 }
 
 .form-group input[type="text"],
 .form-group input[type="number"],
 .form-group input[type="datetime-local"],
+.form-group input[type="password"],
 .form-group textarea,
 .form-group select {
   width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   font-family: var(--font-body);
-  font-size: 1rem;
-  transition: all 0.2s;
-  background: white;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  background: var(--color-surface-elevated);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  line-height: 1.5;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--color-accent-500);
+  box-shadow: 0 0 0 2px var(--color-accent-500);
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 100px;
-  line-height: 1.6;
+.form-group input.error,
+.form-group textarea.error,
+.form-group select.error {
+  border-color: var(--color-error-600);
+}
+
+.form-group input.error:focus,
+.form-group textarea.error:focus,
+.form-group select.error:focus {
+  border-color: var(--color-error-600);
+  box-shadow: 0 0 0 2px var(--color-error-600);
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-  color: #9ca3af;
+  color: var(--color-gray-3);
 }
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+  line-height: 1.6;
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.form-help {
+  font-size: 11px;
+  color: var(--color-gray-3);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.form-error {
+  font-size: 11px;
+  color: var(--color-error-600);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* ============================================
+   FORM ROW (side-by-side fields)
+   ============================================ */
 
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+  gap: 12px;
 }
+
+/* ============================================
+   TOGGLE SWITCH
+   ============================================ */
+
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.toggle-label {
+  flex: 1;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+
+.toggle-hint {
+  font-size: 11px;
+  color: var(--color-gray-3);
+  margin-top: 2px;
+}
+
+.toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--color-gray-1);
+  border-radius: 12px;
+  transition: background var(--transition-fast);
+  cursor: pointer;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 2px;
+  top: 2px;
+  background: white;
+  border-radius: 10px;
+  transition: transform var(--transition-fast);
+}
+
+.toggle input:checked + .toggle-slider {
+  background: var(--color-accent-500);
+}
+
+.toggle input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle input:focus-visible + .toggle-slider {
+  box-shadow: 0 0 0 2px var(--color-accent-500);
+}
+
+/* ============================================
+   CHECKBOX LABEL (card-style)
+   ============================================ */
 
 .checkbox-group {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 8px;
 }
 
 .checkbox-label {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: border-color var(--transition-fast);
 }
 
 .checkbox-label:hover {
-  border-color: var(--primary-color);
-  background: rgba(79, 70, 229, 0.02);
+  border-color: var(--color-gray-4);
 }
 
 .checkbox-label input[type="checkbox"] {
-  width: auto;
-  margin-right: 0.75rem;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent-500);
+  margin-top: 1px;
+  flex-shrink: 0;
   cursor: pointer;
 }
 
+.checkbox-label input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-accent-500);
+  outline-offset: 2px;
+}
+
+.checkbox-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
 .checkbox-label span {
-  font-weight: 600;
-  color: var(--text-primary);
-  display: inline;
+  font-size: var(--text-base);
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
 }
 
 .checkbox-label small {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  margin-left: 1.75rem;
+  font-size: 11px;
+  color: var(--color-gray-3);
+  line-height: 1.4;
 }
+
+/* ============================================
+   SECTION TAGS (Access Control)
+   ============================================ */
+
+.section-input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.section-input-group input {
+  flex: 1;
+}
+
+.btn-add {
+  padding: 8px 16px;
+  background: var(--color-accent-500);
+  color: var(--color-primary-900);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast);
+}
+
+.btn-add:hover {
+  background: var(--color-accent-600);
+}
+
+.section-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.section-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--color-primary-50);
+  color: var(--color-primary-700);
+  font-size: 11px;
+  font-weight: var(--font-medium);
+  border-radius: var(--radius-pill);
+}
+
+.section-tag button {
+  background: none;
+  border: none;
+  color: var(--color-primary-700);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity var(--transition-fast);
+}
+
+.section-tag button:hover {
+  opacity: 1;
+}
+
+/* ============================================
+   FORM SUB-SECTION (within tabs)
+   ============================================ */
+
+.form-subsection {
+  margin-top: 8px;
+  padding: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.form-subsection h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-primary-900);
+  margin: 0 0 12px;
+}
+
+.subsection-description {
+  font-size: var(--text-sm);
+  color: var(--color-gray-3);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+/* ============================================
+   NOTE BANNER (Questions tab)
+   ============================================ */
+
+.form-note {
+  padding: 12px;
+  background: var(--color-info-50);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-info-50);
+  font-size: var(--text-sm);
+  color: var(--color-info-500);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* ============================================
+   RADIO GROUP
+   ============================================ */
+
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.radio-label input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-accent-500);
+  cursor: pointer;
+}
+
+/* ============================================
+   FORM ACTIONS (sticky footer)
+   Spec: White bg, 1px top border, sticky bottom
+   ============================================ */
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-color);
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  margin: 0 -24px -24px;
+  background: var(--color-surface-elevated);
+  border-top: 1px solid var(--color-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }
 
-.form-actions .btn {
-  padding: 0.75rem 2rem;
-  min-width: 150px;
+/* ============================================
+   SUCCESS TOAST
+   ============================================ */
+
+.toast-success {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 12px;
+  background: rgba(22, 163, 74, 0.1);
+  color: var(--color-success-700);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  min-width: 300px;
+  max-width: 420px;
+  z-index: var(--z-tooltip);
+  animation: slideIn 0.2s ease-out;
 }
 
-/* Responsive Design */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================
+   CONDITIONAL FIELDS REVEAL
+   ============================================ */
+
+.conditional-reveal {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 250ms ease, opacity 200ms ease, margin 200ms ease;
+  margin-top: 0;
+}
+
+.conditional-reveal.open {
+  max-height: 2000px;
+  opacity: 1;
+  margin-top: 0;
+}
+
+.conditional-reveal > :first-child {
+  padding-top: 12px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .exam-form {
+    padding: 20px;
+  }
+
+  .form-actions {
+    padding: 14px 20px;
+    margin: 0 -20px -20px;
+  }
+}
+
 @media (max-width: 768px) {
   .exam-form {
-    padding: 1.5rem;
+    padding: 16px;
+    max-width: 100%;
+    border-radius: var(--radius-md);
   }
 
   .form-row {
@@ -172,9 +660,21 @@
 
   .form-actions {
     flex-direction: column-reverse;
+    padding: 12px 16px;
+    margin: 0 -16px -16px;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
   }
 
   .form-actions .btn {
     width: 100%;
+  }
+
+  .tab-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .tab-icon {
+    font-size: 13px;
   }
 }
