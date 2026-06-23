@@ -1,0 +1,66 @@
+/* Dashboard Page Styles - ExamForge Design System */
+
+.dashboard-page {
+  padding-bottom: var(--spacing-12);
+}
+
+/* Content Row (2-column on desktop) */
+
+.content-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
+}
+
+/* Exam Row (inside recent exams card) */
+
+.exam-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  gap: 10px;
+  transition: background var(--transition-fast);
+}
+
+.exam-row:last-child {
+  border-bottom: none;
+}
+
+.exam-row:hover {
+  background: var(--color-surface);
+}
+
+.exam-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.exam-name {
+  font-size: 13px;
+  font-weight: var(--font-medium);
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.exam-meta {
+  font-size: 11px;
+  color: var(--color-gray-2);
+  margin-top: 1px;
+}
+
+/* Responsive */
+
+@media (max-width: 1024px) {
+  .content-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

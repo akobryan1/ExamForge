@@ -4,8 +4,43 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
+import { Button } from '../components/Button';
 import type { Exam, ExamStatus } from '../types/exam';
 import '../styles/pages/exams.css';
+
+function getStatusBadgeClass(status: string): string {
+  switch (status) {
+    case 'draft': return 'badge-draft';
+    case 'published':
+    case 'scheduled': return 'badge-scheduled';
+    case 'active':
+    case 'live': return 'badge-live';
+    case 'completed':
+    case 'submitted': return 'badge-completed';
+    case 'grading': return 'badge-grading';
+    case 'archived':
+    case 'closed': return 'badge-closed';
+    default: return 'badge-draft';
+  }
+}
+
+function getStatusLabel(status: string): string {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'active':
+    case 'live': return '#F59E0B';
+    case 'draft': return '#A8A29E';
+    case 'grading': return '#D97706';
+    case 'completed':
+    case 'submitted': return '#16A34A';
+    case 'closed':
+    case 'archived': return '#78716C';
+    default: return '#A8A29E';
+  }
+}
 
 export function ExamsPage() {
   const { user } = useAuth();
@@ -37,18 +72,6 @@ export function ExamsPage() {
     ? exams
     : exams.filter(exam => exam.status === statusFilter);
 
-  const getStatusBadge = (status: ExamStatus) => {
-    const badges = {
-      draft: { label: 'Draft', className: 'status-draft' },
-      published: { label: 'Published', className: 'status-published' },
-      active: { label: 'Active', className: 'status-active' },
-      completed: { label: 'Completed', className: 'status-completed' },
-      archived: { label: 'Archived', className: 'status-archived' },
-    };
-    const badge = badges[status];
-    return <span className={`status-badge ${badge.className}`}>{badge.label}</span>;
-  };
-
   if (loading) {
     return (
       <MainLayout>
@@ -61,9 +84,9 @@ export function ExamsPage() {
     return (
       <MainLayout>
         <div className="error-message">
-          <h2>Error Loading Exams</h2>
+          <h2>Error loading exams</h2>
           <p>{error}</p>
-          <button onClick={loadExams}>Try Again</button>
+          <Button variant="primary" onClick={loadExams}>Try again</Button>
         </div>
       </MainLayout>
     );
@@ -75,11 +98,11 @@ export function ExamsPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        transition={{ duration: 0.3 }}
       >
         <div className="page-header">
           <div>
-            <h1>{isInstructor ? 'My Exams' : 'Available Exams'}</h1>
+            <h1>{isInstructor ? 'My exams' : 'Available exams'}</h1>
             <p className="page-subtitle">
               {isInstructor
                 ? 'Create and manage your exams'
@@ -88,8 +111,8 @@ export function ExamsPage() {
           </div>
           
           {isInstructor && (
-            <Link to="/exams/create" className="btn btn-primary">
-              + Create Exam
+            <Link to="/exams/create">
+              <Button variant="primary">Create exam</Button>
             </Link>
           )}
         </div>
@@ -97,12 +120,12 @@ export function ExamsPage() {
         {isInstructor && (
           <div className="filter-bar">
             <div className="filter-group">
-              <label>Filter by status:</label>
+              <label>Status:</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as ExamStatus | 'all')}
               >
-                <option value="all">All Exams</option>
+                <option value="all">All</option>
                 <option value="draft">Draft</option>
                 <option value="published">Published</option>
                 <option value="active">Active</option>
@@ -115,15 +138,15 @@ export function ExamsPage() {
 
         {filteredExams.length === 0 ? (
           <div className="empty-state">
-            <h2>No Exams Found</h2>
+            <h2>No exams found</h2>
             <p>
               {isInstructor
                 ? 'Create your first exam to get started'
                 : 'No exams are currently available'}
             </p>
             {isInstructor && (
-              <Link to="/exams/create" className="btn btn-primary">
-                Create Exam
+              <Link to="/exams/create">
+                <Button variant="primary">Create exam</Button>
               </Link>
             )}
           </div>
@@ -133,46 +156,36 @@ export function ExamsPage() {
               <motion.div
                 key={exam.id}
                 className="exam-card"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
+                transition={{ duration: 0.25, delay: index * 0.04 }}
               >
+                <div className="exam-indicator" style={{ background: getStatusColor(exam.status) }} />
                 <div className="exam-card-header">
                   <h3>{exam.title}</h3>
-                  {getStatusBadge(exam.status)}
+                  <span className={`badge ${getStatusBadgeClass(exam.status)}`}>{getStatusLabel(exam.status)}</span>
                 </div>
                 
-                <p className="exam-description">{exam.description}</p>
+                {exam.description && (
+                  <p className="exam-description">{exam.description}</p>
+                )}
 
                 <div className="exam-meta">
                   {exam.subject && (
-                    <span className="meta-item">
-                      <strong>Subject:</strong> {exam.subject}
-                    </span>
+                    <span className="meta-item">{exam.subject}</span>
                   )}
-                  {exam.grade && (
-                    <span className="meta-item">
-                      <strong>Grade:</strong> {exam.grade}
-                    </span>
-                  )}
-                  <span className="meta-item">
-                    <strong>Questions:</strong> {exam.questionCount}
-                  </span>
-                  <span className="meta-item">
-                    <strong>Points:</strong> {exam.totalPoints}
-                  </span>
+                  <span className="meta-item">{exam.questionCount || 0} questions</span>
+                  <span className="meta-item">{exam.totalPoints || 0} points</span>
                   {exam.timeLimit && (
-                    <span className="meta-item">
-                      <strong>Time:</strong> {exam.timeLimit} min
-                    </span>
+                    <span className="meta-item">{exam.timeLimit} min</span>
                   )}
                 </div>
 
                 {isInstructor && (
                   <div className="exam-stats">
-                    <span>Attempts: {exam.attemptCount}</span>
-                    {exam.averageScore && (
-                      <span>Avg Score: {exam.averageScore.toFixed(1)}%</span>
+                    <span>Attempts: {exam.attemptCount || 0}</span>
+                    {exam.averageScore != null && (
+                      <span>Avg score: {exam.averageScore.toFixed(1)}%</span>
                     )}
                   </div>
                 )}
@@ -180,20 +193,20 @@ export function ExamsPage() {
                 <div className="exam-card-actions">
                   {isInstructor ? (
                     <>
-                      <Link to={`/exams/${exam.id}`} className="btn btn-secondary">
-                        Manage
+                      <Link to={`/exams/${exam.id}`} style={{ flex: 1 }}>
+                        <Button variant="secondary" style={{ width: '100%' }}>Manage</Button>
                       </Link>
-                      <Link to={`/exams/${exam.id}/questions`} className="btn btn-outline">
-                        Questions
+                      <Link to={`/exams/${exam.id}/questions`} style={{ flex: 1 }}>
+                        <Button variant="outline" style={{ width: '100%' }}>Questions</Button>
                       </Link>
                     </>
                   ) : (
                     <>
-                      <Link to={`/exams/${exam.id}`} className="btn btn-secondary">
-                        View Details
+                      <Link to={`/exams/${exam.id}`} style={{ flex: 1 }}>
+                        <Button variant="secondary" style={{ width: '100%' }}>View details</Button>
                       </Link>
-                      <Link to={`/exams/${exam.id}/take`} className="btn btn-primary">
-                        Take Exam
+                      <Link to={`/exams/${exam.id}/take`} style={{ flex: 1 }}>
+                        <Button variant="primary" style={{ width: '100%' }}>Take exam</Button>
                       </Link>
                     </>
                   )}
