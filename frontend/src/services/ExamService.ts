@@ -138,7 +138,7 @@ class ExamServiceClass {
    * Get grading queue for essay questions (Instructor only)
    */
   async getGradingQueue(): Promise<any[]> {
-    const response = await apiClient.get('/api/grading/queue');
+    const response = await apiClient.get('/api/exams/grading/queue');
     return response.data;
   }
 
