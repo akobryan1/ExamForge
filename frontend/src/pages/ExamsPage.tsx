@@ -11,15 +11,10 @@ import '../styles/pages/exams.css';
 function getStatusBadgeClass(status: string): string {
   switch (status) {
     case 'draft': return 'badge-draft';
-    case 'published':
-    case 'scheduled': return 'badge-scheduled';
-    case 'active':
-    case 'live': return 'badge-live';
-    case 'completed':
-    case 'submitted': return 'badge-completed';
-    case 'grading': return 'badge-grading';
-    case 'archived':
-    case 'closed': return 'badge-closed';
+    case 'published': return 'badge-scheduled';
+    case 'active': return 'badge-live';
+    case 'completed': return 'badge-completed';
+    case 'archived': return 'badge-closed';
     default: return 'badge-draft';
   }
 }
@@ -30,13 +25,9 @@ function getStatusLabel(status: string): string {
 
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'active':
-    case 'live': return '#F59E0B';
+    case 'active': return '#F59E0B';
     case 'draft': return '#A8A29E';
-    case 'grading': return '#D97706';
-    case 'completed':
-    case 'submitted': return '#16A34A';
-    case 'closed':
+    case 'completed': return '#16A34A';
     case 'archived': return '#78716C';
     default: return '#A8A29E';
   }

@@ -17,14 +17,10 @@ function getDayGreeting(): string {
 
 function getStatusBadgeClass(status: string): string {
   switch (status) {
-    case 'live':
     case 'active':
     case 'published': return 'badge-live';
     case 'draft': return 'badge-draft';
-    case 'grading': return 'badge-grading';
-    case 'completed':
-    case 'submitted': return 'badge-completed';
-    case 'closed':
+    case 'completed': return 'badge-completed';
     case 'archived': return 'badge-closed';
     default: return 'badge-draft';
   }
@@ -32,13 +28,11 @@ function getStatusBadgeClass(status: string): string {
 
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'live':
-    case 'active': return '#F59E0B';
+    case 'active':
+    case 'published': return '#F59E0B';
     case 'draft': return '#A8A29E';
-    case 'grading': return '#D97706';
-    case 'completed':
-    case 'submitted': return '#16A34A';
-    case 'closed': return '#78716C';
+    case 'completed': return '#16A34A';
+    case 'archived': return '#78716C';
     default: return '#A8A29E';
   }
 }
@@ -67,9 +61,9 @@ export function Dashboard() {
     }
   };
 
-  const activeCount = exams.filter(e => e.status === 'active' || e.status === 'published' || e.status === 'live').length;
+  const activeCount = exams.filter(e => e.status === 'active' || e.status === 'published').length;
   const draftCount = exams.filter(e => e.status === 'draft').length;
-  const toGradeCount = exams.filter(e => e.status === 'grading').length;
+  const toGradeCount = exams.filter(e => e.status === 'completed').length;
   const recentExams = exams.slice(0, 5);
   const name = user?.displayName || user?.username || user?.email?.split('@')[0] || 'there';
 
