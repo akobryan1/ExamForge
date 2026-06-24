@@ -12,6 +12,7 @@ function App() {
   return (
     <Routes>
       {/* Public routes */}
+      <Route path="/register/exam" element={<ExamineeRegistrationPage />} />
       <Route path="/register/exam/:examId" element={<ExamineeRegistrationPage />} />
       <Route path="/exams/:examId" element={<ExamPreviewPage />} />
       <Route path="/exams/:examId/take" element={<TakeExamPage />} />
