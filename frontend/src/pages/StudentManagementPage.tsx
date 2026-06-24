@@ -50,7 +50,8 @@ export function StudentManagementPage() {
   };
 
   const generateLink = () => {
-    const link = `${STUDENT_PORTAL_URL}/register/exam/${examId || ''}?instructor=${instructorId}`;
+    const base = examId ? `/register/exam/${examId}` : '/register/exam';
+    const link = `${STUDENT_PORTAL_URL}${base}?instructor=${instructorId}`;
     setRegLink(link);
   };
 
