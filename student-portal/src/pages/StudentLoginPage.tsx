@@ -1,24 +1,28 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 
-function getFirebaseAuth() {
-  const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'examforge-201e8.firebaseapp.com',
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'examforge-201e8',
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'examforge-201e8.firebasestorage.app',
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  };
-  const app = initializeApp(firebaseConfig);
-  return getAuth(app);
+let authInstance: ReturnType<typeof getAuth> | null = null;
+function getAuthInstance() {
+  if (!authInstance) {
+    const firebaseConfig = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'examforge-201e8.firebaseapp.com',
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'examforge-201e8',
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'examforge-201e8.firebasestorage.app',
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+      appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    };
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+    authInstance = getAuth(app);
+  }
+  return authInstance;
 }
 
 export function StudentLoginPage() {
   const navigate = useNavigate();
-  const [auth] = useState(() => getFirebaseAuth());
+  const auth = getAuthInstance();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -35,11 +39,14 @@ export function StudentLoginPage() {
       const redirect = params.get('redirect') || '/';
       navigate(redirect, { replace: true });
     } catch (err: any) {
+      console.error('[Login] Firebase error:', err.code, err.message);
       const code = err.code;
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
         setError('Invalid email or password');
       } else if (code === 'auth/invalid-email') {
         setError('Invalid email format');
+      } else if (code === 'auth/invalid-api-key') {
+        setError('Configuration error. Please contact support.');
       } else {
         setError(err.message || 'Login failed');
       }
