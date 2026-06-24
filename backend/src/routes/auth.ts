@@ -33,8 +33,8 @@ router.post(
 
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: true,
+        sameSite: 'none',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -72,8 +72,8 @@ router.post(
 
       res.cookie('refreshToken', tokens.refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        secure: true,
+        sameSite: 'none',
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
@@ -152,8 +152,8 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
     // Update refresh token cookie
     res.cookie('refreshToken', tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: true,
+      sameSite: 'none',
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
