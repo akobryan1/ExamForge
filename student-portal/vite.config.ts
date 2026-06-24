@@ -18,4 +18,8 @@ export default defineConfig({
   server: {
     port: 3001,
   },
+  preview: {
+    host: '0.0.0.0',
+    port: parseInt(process.env.PORT || '4173'),
+  },
 })
