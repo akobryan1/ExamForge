@@ -8,8 +8,7 @@ import { Button } from '../components/Button';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/students.css';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
-const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+const STUDENT_PORTAL_URL = import.meta.env.VITE_STUDENT_PORTAL_URL || 'https://examforge-student-portal.onrender.com';
 
 export function StudentManagementPage() {
   const { user } = useAuth();
@@ -51,7 +50,7 @@ export function StudentManagementPage() {
   };
 
   const generateLink = () => {
-    const link = `${FRONTEND_URL}/register/exam/${examId || ''}?instructor=${instructorId}`;
+    const link = `${STUDENT_PORTAL_URL}/register/exam/${examId || ''}?instructor=${instructorId}`;
     setRegLink(link);
   };
 
