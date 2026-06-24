@@ -89,11 +89,7 @@ function App() {
             />
             <Route
               path="/exams/:examId"
-              element={
-                <ProtectedRoute>
-                  <ExamPreviewPage />
-                </ProtectedRoute>
-              }
+              element={<ExamPreviewPage />}
             />
             {/* Public route — guests allowed if exam has allowGuestAccess */}
             <Route
