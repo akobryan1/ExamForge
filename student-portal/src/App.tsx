@@ -5,7 +5,10 @@ import { TakeExamPage } from './pages/TakeExamPage'
 import { ExamResultsPage } from './pages/ExamResultsPage'
 import { StudentLoginPage } from './pages/StudentLoginPage'
 
+console.log('[App] Module loaded');
+
 function App() {
+  console.log('[App] Rendering App component');
   return (
     <Routes>
       {/* Public routes */}

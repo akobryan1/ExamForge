@@ -3,9 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { StudentService, RegistrationFields } from '../services/StudentService';
 
 export function ExamineeRegistrationPage() {
+  console.log('[RegisterPage] Component rendering');
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const instructorId = searchParams.get('instructor') || '';
+  console.log('[RegisterPage] instructorId:', instructorId);
 
   const [fields, setFields] = useState<RegistrationFields>({ sections: [], years: [], courses: [] });
   const [loading, setLoading] = useState(true);
