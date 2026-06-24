@@ -1,0 +1,137 @@
+/* Student Management Page Styles - ExamForge Design System */
+
+.students-page {
+  padding-bottom: var(--spacing-12);
+}
+
+.students-page .page-header {
+  margin-bottom: 24px;
+}
+
+.students-page .page-header h1 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: var(--font-bold);
+  color: var(--color-primary-900);
+  letter-spacing: var(--tracking-tight);
+  margin: 0 0 2px;
+}
+
+.students-page .page-subtitle {
+  font-size: 13px;
+  color: var(--color-gray-2);
+  margin: 0;
+}
+
+/* Registration Link */
+
+.reg-link-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--color-primary-50);
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-md);
+}
+
+.reg-link-code {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-primary-700);
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Field Tags */
+
+.field-empty {
+  font-size: var(--text-sm);
+  color: var(--color-gray-3);
+  font-style: italic;
+}
+
+/* Students Table */
+
+.students-table-wrapper {
+  overflow-x: auto;
+}
+
+.students-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.students-table thead {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.students-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-2);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+
+.students-table tbody tr {
+  border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
+}
+
+.students-table tbody tr:hover {
+  background: var(--color-surface);
+}
+
+.students-table td {
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+}
+
+.student-name-cell {
+  font-weight: var(--font-medium);
+}
+
+.student-id-code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  background: var(--color-surface);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.student-email-cell {
+  color: var(--color-gray-3);
+  font-size: var(--text-sm);
+}
+
+.student-date-cell {
+  color: var(--color-gray-3);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .students-page .page-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .reg-link-box {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .reg-link-code {
+    font-size: var(--text-xs);
+  }
+}

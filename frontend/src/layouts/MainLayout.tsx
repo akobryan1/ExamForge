@@ -26,6 +26,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { path: '/exams', label: 'Exams', icon: '📝' },
     ...(user?.role === 'instructor' ? [
       { path: '/exams/create', label: 'Create Exam', icon: '➕' },
+      { path: '/students', label: 'Students', icon: '👥' },
       { path: '/grading', label: 'Grading Queue', icon: '✓' },
       { path: '/analytics', label: 'Analytics', icon: '📈' },
       { path: '/incidents', label: 'Incident Reports', icon: '👁️' },

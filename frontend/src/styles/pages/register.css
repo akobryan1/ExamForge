@@ -1,0 +1,19 @@
+/* Examinee Registration Page Styles */
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.register-form .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 500px) {
+  .register-form .form-row {
+    grid-template-columns: 1fr;
+  }
+}

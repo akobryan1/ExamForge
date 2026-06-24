@@ -16,6 +16,8 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { IncidentReportsPage } from './pages/IncidentReportsPage'
 import { StudentRegistrationPage } from './pages/StudentRegistrationPage';
 import { AIQuestionGeneratorPage } from './pages/AIQuestionGeneratorPage';
+import { StudentManagementPage } from './pages/StudentManagementPage';
+import { ExamineeRegistrationPage } from './pages/ExamineeRegistrationPage';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -129,6 +131,28 @@ function App() {
                   <IncidentReportsPage />
                 </ProtectedRoute>
               }
+            />
+            
+            {/* Student management routes */}
+            <Route
+              path="/exams/:examId/students"
+              element={
+                <ProtectedRoute>
+                  <StudentManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/students"
+              element={
+                <ProtectedRoute>
+                  <StudentManagementPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/register/exam/:examId"
+              element={<ExamineeRegistrationPage />}
             />
             
             {/* Default redirect */}
