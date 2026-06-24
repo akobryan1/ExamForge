@@ -63,9 +63,16 @@ export function ExamineeRegistrationPage() {
   if (loading) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div></div>;
   if (!instructorId) return (
     <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}>
-      <h1 className="auth-title" style={{ marginBottom: 12 }}>Invalid link</h1>
-      <p style={{ color: 'var(--color-gray-3)', marginBottom: 24 }}>This registration link is missing required information.</p>
-      <button className="btn btn-primary" onClick={() => navigate('/')}>Go home</button>
+      <div className="auth-card" style={{ maxWidth: 420 }}>
+        <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+        <h1 className="auth-title" style={{ marginBottom: 8 }}>Student Registration</h1>
+        <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, lineHeight: 1.6 }}>
+          To register, please use the registration link provided by your instructor or school administrator.
+        </p>
+        <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, fontSize: 'var(--font-size-sm)' }}>
+          If you already have an account, <a href="/login" className="auth-link-bold">sign in here</a>.
+        </p>
+      </div>
     </div></div>
   );
   if (success) return (

@@ -17,9 +17,9 @@ function App() {
       {/* Student login */}
       <Route path="/login" element={<StudentLoginPage />} />
       
-      {/* Default redirect */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Default redirect - registration page */}
+      <Route path="/" element={<Navigate to="/register/exam" replace />} />
+      <Route path="*" element={<Navigate to="/register/exam" replace />} />
     </Routes>
   )
 }
