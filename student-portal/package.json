@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "start": "npx serve dist -l $PORT --cors"
+    "start": "node server.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -14,8 +14,7 @@
     "framer-motion": "^11.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.23.1",
-    "serve": "^14.2.6"
+    "react-router-dom": "^6.23.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
