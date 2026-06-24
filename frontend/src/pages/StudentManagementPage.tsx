@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
@@ -26,6 +26,34 @@ export function StudentManagementPage() {
   const [fields, setFields] = useState<RegistrationFields>({ sections: [], years: [], courses: [] });
   const [fieldInputs, setFieldInputs] = useState({ section: '', year: '', course: '' });
   const [savingFields, setSavingFields] = useState(false);
+
+  // Search with 1.2s debounce
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 1200);
+    return () => {
+      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    };
+  }, [searchQuery]);
+
+  const filteredStudents = useMemo(() => {
+    if (!debouncedSearch.trim()) return students;
+    const q = debouncedSearch.toLowerCase().trim();
+    return students.filter(s =>
+      (s.name?.toLowerCase() || '').includes(q) ||
+      (s.course?.toLowerCase() || '').includes(q) ||
+      (s.year?.toLowerCase() || '').includes(q) ||
+      (s.section?.toLowerCase() || '').includes(q) ||
+      (s.studentId?.toLowerCase() || '').includes(q) ||
+      (s.email?.toLowerCase() || '').includes(q)
+    );
+  }, [students, debouncedSearch]);
 
   useEffect(() => {
     if (instructorId) {
@@ -230,7 +258,32 @@ export function StudentManagementPage() {
               <div className="card-title">Registered students</div>
               <span className="count-badge">{students.length}</span>
             </div>
-            
+
+            {/* Search bar */}
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+              <input
+                type="text"
+                placeholder="Search by name, course, year, section, or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '14px',
+                  color: 'var(--color-text-primary)',
+                  background: 'var(--color-surface-elevated)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-md)',
+                  outline: 'none',
+                  transition: 'border-color 150ms',
+                  boxSizing: 'border-box',
+                }}
+                onFocus={(e) => e.target.style.borderColor = 'var(--color-accent-500)'}
+                onBlur={(e) => e.target.style.borderColor = 'var(--color-border)'}
+              />
+            </div>
+
             {loading ? (
               <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div>
             ) : students.length === 0 ? (
@@ -243,28 +296,34 @@ export function StudentManagementPage() {
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Student ID</th>
-                      <th>Section</th>
-                      <th>Year</th>
                       <th>Course</th>
+                      <th>Year</th>
+                      <th>Section</th>
+                      <th>Student ID</th>
                       <th>Email</th>
                       <th>Registered</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map(s => (
+                    {filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>
+                          No students match your search.
+                        </td>
+                      </tr>
+                    ) : (filteredStudents.map(s => (
                       <tr key={s.uid}>
                         <td className="student-name-cell">{s.name}</td>
-                        <td><code className="student-id-code">{s.studentId}</code></td>
-                        <td>{s.section}</td>
-                        <td>{s.year}</td>
                         <td>{s.course}</td>
+                        <td>{s.year}</td>
+                        <td>{s.section}</td>
+                        <td><code className="student-id-code">{s.studentId}</code></td>
                         <td className="student-email-cell">{s.email}</td>
                         <td className="student-date-cell">
                           {new Date(s.registeredAt).toLocaleDateString()}
                         </td>
                       </tr>
-                    ))}
+                    )))}
                   </tbody>
                 </table>
               </div>
