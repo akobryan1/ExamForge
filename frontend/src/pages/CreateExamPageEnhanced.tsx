@@ -224,6 +224,8 @@ export function CreateExamPageEnhanced() {
     const errors: Record<string, string> = {};
     if (!formData.title.trim()) errors.title = 'Enter an exam title';
     if (!formData.description.trim()) errors.description = 'Enter a description';
+    if (!formData.startDate) errors.startDate = 'Exam schedule is required';
+    if (!formData.endDate) errors.endDate = 'Exam schedule is required';
     if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
       errors.endDate = 'End date must be after start date';
     }
@@ -231,7 +233,7 @@ export function CreateExamPageEnhanced() {
     if (Object.keys(errors).length > 0) {
       // Switch to the tab containing the first error
       if (errors.title || errors.description) setActiveTab('basic');
-      else if (errors.endDate) setActiveTab('timing');
+      else if (errors.startDate || errors.endDate) setActiveTab('timing');
       return false;
     }
     return true;
@@ -449,8 +451,8 @@ export function CreateExamPageEnhanced() {
 
               <FormSection title="Exam schedule" defaultOpen={true}>
                 <div className="form-row">
-                  <Field label="Start date & time" help="When students can start taking the exam">
-                    <input type="datetime-local" name="startDate" value={formData.startDate} onChange={handleChange} />
+                  <Field label="Start date & time" help="When students can start taking the exam" error={fieldErrors.startDate}>
+                    <input type="datetime-local" name="startDate" value={formData.startDate} onChange={handleChange} className={fieldErrors.startDate ? 'error' : ''} />
                   </Field>
                   <Field label="End date & time" help="When the exam becomes unavailable" error={fieldErrors.endDate}>
                     <input type="datetime-local" name="endDate" value={formData.endDate} onChange={handleChange} className={fieldErrors.endDate ? 'error' : ''} />
@@ -498,34 +500,50 @@ export function CreateExamPageEnhanced() {
               <Reveal open={formData.proctorEnabled}>
                 <div className="form-subsection">
                   <h3>Behavioral monitoring</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className="toggle-wrapper">
-                      <Toggle name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} label="Detect tab switching" hint="Record when students switch browser tabs" />
-                    </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                      <input type="checkbox" name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>Detect tab switching</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Record when students switch browser tabs</div>
+                      </div>
+                    </label>
                     <Reveal open={formData.proctorDetectTabSwitch}>
                       <Field label="Points to deduct per tab switch">
                         <input type="number" name="proctorPointDeductionTabSwitch" value={formData.proctorPointDeductionTabSwitch} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <div className="toggle-wrapper">
-                      <Toggle name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} label="Detect copy/paste" hint="Record copy and paste attempts" />
-                    </div>
+                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                      <input type="checkbox" name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>Detect copy/paste</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Record copy and paste attempts</div>
+                      </div>
+                    </label>
                     <Reveal open={formData.proctorDetectCopyPaste}>
                       <Field label="Points to deduct per copy/paste">
                         <input type="number" name="proctorPointDeductionCopyPaste" value={formData.proctorPointDeductionCopyPaste} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <div className="toggle-wrapper">
-                      <Toggle name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} label="Disable right-click" hint="Prevent right-click context menu" />
-                    </div>
+                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                      <input type="checkbox" name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>Disable right-click</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Prevent right-click context menu</div>
+                      </div>
+                    </label>
                     <Reveal open={formData.proctorDisableRightClick}>
                       <Field label="Points to deduct per right-click">
                         <input type="number" name="proctorPointDeductionRightClick" value={formData.proctorPointDeductionRightClick} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <div className="toggle-wrapper">
-                      <Toggle name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} label="Enforce full-screen mode" hint="Students must stay in fullscreen mode" />
-                    </div>
+                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
+                      <input type="checkbox" name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                      <div>
+                        <div style={{ fontWeight: 500, fontSize: 14 }}>Enforce full-screen mode</div>
+                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Students must stay in fullscreen mode</div>
+                      </div>
+                    </label>
                     <Reveal open={formData.proctorEnforceFullscreen}>
                       <Field label="Points to deduct for exiting fullscreen">
                         <input type="number" name="proctorPointDeductionExitFullscreen" value={formData.proctorPointDeductionExitFullscreen} onChange={handleChange} min="0" placeholder="0" />
