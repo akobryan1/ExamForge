@@ -1,6 +1,6 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/Button';
 import { NotificationBell } from '../components/NotificationBell';
@@ -13,6 +13,21 @@ interface MainLayoutProps {
 export function MainLayout({ children }: MainLayoutProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on navigation (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Close sidebar on Escape key
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   const isActive = (path: string) => {
     if (path === '/dashboard') {
@@ -39,13 +54,28 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="main-layout">
+      {/* Mobile hamburger */}
+      <button className="sidebar-toggle" onClick={() => setSidebarOpen(prev => !prev)} aria-label="Toggle navigation menu">
+        <span className={`hamburger ${sidebarOpen ? 'open' : ''}`}>
+          <span /><span /><span />
+        </span>
+      </button>
+
+      {/* Mobile backdrop */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            className="sidebar-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
-      <motion.aside
-        className="sidebar"
-        initial={{ x: -280 }}
-        animate={{ x: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      >
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <h1 className="sidebar-logo">ExamForge</h1>
           <p className="sidebar-subtitle">Exam Management</p>
@@ -83,7 +113,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             Logout
           </Button>
         </div>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <main className="main-content">

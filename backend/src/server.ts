@@ -17,6 +17,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://examforge-frontend-vin7.onrender.com',
   'https://examfprge-student-portal.onrender.com',
+  'https://examforge-exam-portal.onrender.com',
 ];
 
 // Add CORS_ORIGIN from environment if set

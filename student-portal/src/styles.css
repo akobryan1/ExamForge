@@ -184,4 +184,16 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
   .auth-card { padding: var(--spacing-8); }
   .form-row { grid-template-columns: 1fr; }
   .auth-title { font-size: 20px; }
+  .auth-subtitle { font-size: 13px; }
+}
+
+@media (max-width: 480px) {
+  .auth-container { padding: var(--spacing-3); }
+  .auth-card { padding: var(--spacing-6); border-radius: 8px; }
+  .auth-title { font-size: 18px; }
+  .auth-form { gap: var(--spacing-3); }
+  .form-group label { font-size: 13px; }
+  .form-group input { font-size: 13px; padding: 8px 10px; }
+  .btn { font-size: 13px; padding: 8px 14px; }
+  .success-message { padding: 14px; font-size: 13px; }
 }

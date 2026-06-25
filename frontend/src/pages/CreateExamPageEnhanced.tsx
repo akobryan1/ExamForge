@@ -3,8 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
-import type { RetakeConfiguration, LateSubmissionConfiguration, ProctorConfiguration } from '../types/exam';
+import { Button } from '../components/Button';
+import type { RetakeConfiguration, LateSubmissionConfiguration, ProctorConfiguration, Question, QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/exam-form.css';
+import '../styles/pages/questions.css';
 
 type TabType = 'basic' | 'access' | 'timing' | 'questions' | 'proctoring' | 'advanced' | 'instructions';
 
@@ -136,10 +138,176 @@ export function CreateExamPageEnhanced() {
   });
 
   const [sectionInput, setSectionInput] = useState('');
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  // ── Inline question management ──
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [questionForm, setQuestionForm] = useState({
+    type: 'multiple_choice' as QuestionType | string,
+    text: '',
+    description: '',
+    points: 1,
+    difficulty: 'medium' as DifficultyLevel | string,
+    choices: [{ text: '', isCorrect: false }],
+    correctAnswer: '',
+    enumerationItems: [''],
+    imageUrl: '',
+    timeLimit: 0,
+  });
 
-  const toggleSection = (key: string) => {
-    setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  // Load existing questions when editing
+  useEffect(() => {
+    if (examId) {
+      ExamService.getExamQuestions(examId)
+        .then(setQuestions)
+        .catch(() => {});
+    }
+  }, [examId]);
+
+  const openAddQuestion = () => {
+    setEditingQuestion(null);
+    setQuestionForm({
+      type: 'multiple_choice',
+      text: '',
+      description: '',
+      points: 1,
+      difficulty: 'medium',
+      choices: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
+      correctAnswer: '',
+      enumerationItems: [''],
+      imageUrl: '',
+      timeLimit: 0,
+    });
+    setShowAddModal(true);
+  };
+
+  const openEditQuestion = (question: Question) => {
+    setEditingQuestion(question);
+    setQuestionForm({
+      type: question.type,
+      text: question.text,
+      description: question.description || '',
+      points: question.points,
+      difficulty: question.difficulty || 'medium',
+      choices: question.choices || [{ text: '', isCorrect: false }],
+      correctAnswer: typeof question.correctAnswer === 'string' ? question.correctAnswer : '',
+      enumerationItems: Array.isArray(question.correctAnswer) ? question.correctAnswer as string[] : [''],
+      imageUrl: question.imageUrl || '',
+      timeLimit: question.timeLimit || 0,
+    });
+    setShowAddModal(true);
+  };
+
+  const deleteQuestion = async (questionId: string) => {
+    if (!examId) {
+      // Not yet saved — remove from local state
+      setQuestions(prev => prev.filter(q => q.id !== questionId));
+      return;
+    }
+    if (!confirm('Are you sure you want to delete this question?')) return;
+    try {
+      await ExamService.deleteQuestion(questionId, examId);
+      setQuestions(prev => prev.filter(q => q.id !== questionId));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete question';
+      alert(msg);
+    }
+  };
+
+  const addChoice = () => {
+    setQuestionForm(prev => ({
+      ...prev,
+      choices: [...prev.choices, { text: '', isCorrect: false }],
+    }));
+  };
+
+  const updateChoice = (index: number, text: string) => {
+    setQuestionForm(prev => ({
+      ...prev,
+      choices: prev.choices.map((c, i) => i === index ? { ...c, text } : c),
+    }));
+  };
+
+  const toggleCorrectChoice = (index: number) => {
+    setQuestionForm(prev => ({
+      ...prev,
+      choices: prev.choices.map((c, i) => ({ ...c, isCorrect: i === index })),
+    }));
+  };
+
+  const removeChoice = (index: number) => {
+    setQuestionForm(prev => ({
+      ...prev,
+      choices: prev.choices.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addEnumerationItem = () => {
+    setQuestionForm(prev => ({
+      ...prev,
+      enumerationItems: [...prev.enumerationItems, ''],
+    }));
+  };
+
+  const updateEnumerationItem = (index: number, value: string) => {
+    setQuestionForm(prev => ({
+      ...prev,
+      enumerationItems: prev.enumerationItems.map((item, i) => i === index ? value : item),
+    }));
+  };
+
+  const removeEnumerationItem = (index: number) => {
+    setQuestionForm(prev => ({
+      ...prev,
+      enumerationItems: prev.enumerationItems.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleSaveQuestion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const questionData: Record<string, unknown> = {
+        type: questionForm.type,
+        text: questionForm.text,
+        description: questionForm.description || undefined,
+        points: questionForm.points,
+        difficulty: questionForm.difficulty,
+        imageUrl: questionForm.imageUrl || undefined,
+        timeLimit: questionForm.timeLimit || undefined,
+      };
+
+      if (questionForm.type === 'multiple_choice') {
+        questionData.choices = questionForm.choices.filter(c => c.text.trim());
+        questionData.correctAnswer = questionForm.choices.findIndex(c => c.isCorrect);
+      } else if (questionForm.type === 'true_false') {
+        questionData.correctAnswer = questionForm.correctAnswer === 'true';
+      } else if (questionForm.type === 'modified_true_false') {
+        questionData.correctAnswer = questionForm.correctAnswer;
+      } else if (questionForm.type === 'identification') {
+        questionData.correctAnswer = questionForm.correctAnswer;
+      } else if (questionForm.type === 'enumeration') {
+        questionData.correctAnswer = questionForm.enumerationItems.filter(item => item.trim());
+      }
+
+      if (editingQuestion && examId) {
+        const updated = await ExamService.updateQuestion(editingQuestion.id, examId, questionData);
+        setQuestions(prev => prev.map(q => q.id === editingQuestion.id ? { ...q, ...updated } : q));
+      } else if (editingQuestion) {
+        setQuestions(prev => prev.map(q => q.id === editingQuestion.id ? { ...q, ...questionData, id: q.id } : q));
+      } else if (examId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const created = await ExamService.createQuestion(examId, questionData as any);
+        setQuestions(prev => [...prev, created]);
+      } else {
+        const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        setQuestions(prev => [...prev, { ...questionData, id: tempId, examId: '', createdAt: new Date(), order: prev.length + 1 } as unknown as Question]);
+      }
+      setShowAddModal(false);
+    } catch (err) {
+      const resp = (err as { response?: { data?: { error?: string } }; message?: string });
+      console.error('[CreateExam] Question save failed:', resp?.response?.data || resp?.message || err);
+      alert(resp?.response?.data?.error || resp?.message || 'Failed to save question');
+    }
   };
 
   // Load existing exam data for editing
@@ -278,7 +446,7 @@ export function CreateExamPageEnhanced() {
         customRules: formData.proctorCustomRules || undefined,
       } : undefined;
       
-      const examData: any = {
+      const examData = {
         title: formData.title,
         description: formData.description,
         subject: formData.subject || undefined,
@@ -301,14 +469,49 @@ export function CreateExamPageEnhanced() {
       };
       
       const exam = isEditing
-        ? await ExamService.updateExam(examId!, examData)
-        : await ExamService.createExam(examData);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ? await ExamService.updateExam(examId!, examData as any)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        : await ExamService.createExam(examData as any);
+      
+      const savedExamId = exam.id || examId!;
+      
+      // Save any unsaved (temp) questions
+      const unsavedQuestions = questions.filter(q => q.id.startsWith('temp_'));
+      if (unsavedQuestions.length > 0) {
+        await Promise.all(
+          unsavedQuestions.map(q => {
+            const qData: Record<string, unknown> = {
+              type: q.type,
+              text: q.text,
+              description: q.description,
+              points: q.points || 1,
+              difficulty: q.difficulty || 'medium',
+              imageUrl: q.imageUrl || undefined,
+              timeLimit: q.timeLimit || undefined,
+            };
+            if (q.type === 'multiple_choice' && q.choices) {
+              qData.choices = q.choices.filter(c => c.text.trim());
+              qData.correctAnswer = q.choices.findIndex(c => c.isCorrect);
+            } else if (q.type === 'true_false') {
+              qData.correctAnswer = q.correctAnswer === 'true';
+            } else if (q.type === 'identification' || q.type === 'modified_true_false') {
+              qData.correctAnswer = q.correctAnswer;
+            } else if (q.type === 'enumeration') {
+              qData.correctAnswer = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer];
+            }
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            return ExamService.createQuestion(savedExamId, qData as any);
+          })
+        );
+      }
       
       setSuccessToast(isEditing ? 'Exam updated successfully' : 'Exam created successfully');
-      setTimeout(() => navigate(`/exams/${exam.id}/questions`), 600);
-    } catch (err: any) {
-      const serverError = err.response?.data?.error;
-      const errorMsg = serverError || err.message || (isEditing ? 'Failed to update exam' : 'Failed to create exam');
+      setTimeout(() => navigate(`/exams/${savedExamId}`), 600);
+    } catch (err) {
+      const errWithResp = err as { response?: { data?: { error?: string } }; message?: string };
+      const serverError = errWithResp.response?.data?.error;
+      const errorMsg = serverError || errWithResp.message || (isEditing ? 'Failed to update exam' : 'Failed to create exam');
       console.error('[ExamForm] Error:', errorMsg, '| Server:', serverError, '| Full:', err);
       setError(errorMsg);
     } finally {
@@ -328,7 +531,7 @@ export function CreateExamPageEnhanced() {
       >
         <div className="form-header">
           <h1>{isEditing ? 'Edit exam' : 'Create new exam'}</h1>
-          <p className="form-subtitle">Set up exam details, access control, and proctoring rules</p>
+          <p className="form-subtitle">Set up exam details, questions, access control, and proctoring rules — all in one place</p>
           <p className="form-step-indicator">Step {tabIndex} of 7: {TAB_LABELS[activeTab]}</p>
         </div>
 
@@ -472,8 +675,6 @@ export function CreateExamPageEnhanced() {
             <AnimatePresence mode="wait">
             <motion.div key="questions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
 
-              <div className="form-note">Add and manage questions from the next screen after creating the exam.</div>
-
               <FormSection title="Question display" defaultOpen={true}>
                 <Toggle name="shuffleQuestions" checked={formData.shuffleQuestions} onChange={handleChange} label="Shuffle question order" hint="Randomize question order for each student" />
                 <Toggle name="shuffleAnswers" checked={formData.shuffleAnswers} onChange={handleChange} label="Shuffle answer options" hint="Randomize answer order for multiple choice questions" />
@@ -482,6 +683,54 @@ export function CreateExamPageEnhanced() {
               <FormSection title="Review settings" defaultOpen={true}>
                 <Toggle name="showResults" checked={formData.showResults} onChange={handleChange} label="Show results to students" hint="Allow students to see their answers after submission" />
                 <Toggle name="allowReview" checked={formData.allowReview} onChange={handleChange} label="Allow review" hint="Students can retake after first submission if retakes are enabled" />
+              </FormSection>
+
+              <FormSection title={`Questions (${questions.length})`} defaultOpen={true}>
+                {questions.length === 0 ? (
+                  <div className="empty-state" style={{ marginTop: 8 }}>
+                    <h3>No questions yet</h3>
+                    <p>Add your first question to get started.</p>
+                    <Button onClick={openAddQuestion}>Add Question</Button>
+                  </div>
+                ) : (
+                  <div className="questions-list" style={{ marginTop: 8 }}>
+                    {questions.map((question, index) => (
+                      <div key={question.id} className="question-card" style={{ padding: 'var(--spacing-4)', marginBottom: 0 }}>
+                        <div className="question-header">
+                          <span className="question-number">Q{index + 1}</span>
+                          <div className="question-meta">
+                            <span className={`question-type type-${question.type}`}>
+                              {question.type.replace('_', ' ')}
+                            </span>
+                            <span className={`difficulty-badge difficulty-${question.difficulty || 'medium'}`}>
+                              {question.difficulty || 'medium'}
+                            </span>
+                            <span className="points-badge">{question.points || 1} pts</span>
+                          </div>
+                        </div>
+                        <div className="question-text">{question.text}</div>
+                        {question.description && (
+                          <div className="question-description">{question.description}</div>
+                        )}
+                        {question.type === 'multiple_choice' && question.choices && (
+                          <div className="choices-preview">
+                            {question.choices.map((choice, i) => (
+                              <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
+                                {String.fromCharCode(65 + i)}. {choice.text}
+                                {choice.isCorrect && <span className="correct-indicator">✓</span>}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="question-actions">
+                          <Button variant="outline" size="sm" onClick={() => openEditQuestion(question)}>Edit</Button>
+                          <Button variant="outline" size="sm" onClick={() => deleteQuestion(question.id)}>Delete</Button>
+                        </div>
+                      </div>
+                    ))}
+                    <Button onClick={openAddQuestion} style={{ alignSelf: 'flex-start', marginTop: 8 }}>Add Question</Button>
+                  </div>
+                )}
               </FormSection>
 
             </motion.div>
@@ -662,6 +911,162 @@ export function CreateExamPageEnhanced() {
       </motion.div>
     </div>
     {successToast && <div className="toast-success">{successToast}</div>}
+
+    {/* Question Add/Edit Modal */}
+    <AnimatePresence>
+      {showAddModal && (
+        <motion.div
+          className="modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowAddModal(false)}
+        >
+          <motion.div
+            className="modal-content"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2>{editingQuestion ? 'Edit Question' : 'Add Question'}</h2>
+              <button className="close-btn" onClick={() => setShowAddModal(false)}>×</button>
+            </div>
+
+            <form onSubmit={handleSaveQuestion} className="question-form" style={{ padding: 'var(--spacing-6)' }}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Question Type *</label>
+                  <select
+                    value={questionForm.type}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, type: e.target.value }))}
+                    required
+                  >
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="true_false">True/False</option>
+                    <option value="modified_true_false">Modified True/False</option>
+                    <option value="essay">Essay</option>
+                    <option value="identification">Identification</option>
+                    <option value="enumeration">Enumeration</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Points *</label>
+                  <input
+                    type="number" min="1"
+                    value={questionForm.points}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, points: parseInt(e.target.value) || 1 }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Difficulty</label>
+                  <select
+                    value={questionForm.difficulty}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, difficulty: e.target.value }))}
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Question Text *</label>
+                <textarea
+                  value={questionForm.text}
+                  onChange={(e) => setQuestionForm(prev => ({ ...prev, text: e.target.value }))}
+                  placeholder="Enter your question..." required rows={3}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Description (optional)</label>
+                <textarea
+                  value={questionForm.description}
+                  onChange={(e) => setQuestionForm(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Additional context or instructions..." rows={2}
+                />
+              </div>
+
+              {/* Multiple Choice */}
+              {questionForm.type === 'multiple_choice' && (
+                <div className="form-group">
+                  <label>Answer Choices</label>
+                  {questionForm.choices.map((choice, index) => (
+                    <div key={index} className="choice-input-group" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                      <input type="radio" name="correctChoice" checked={choice.isCorrect} onChange={() => toggleCorrectChoice(index)} />
+                      <input type="text" value={choice.text} onChange={(e) => updateChoice(index, e.target.value)}
+                        placeholder={`Choice ${String.fromCharCode(65 + index)}`} required style={{ flex: 1 }} />
+                      {questionForm.choices.length > 2 && (
+                        <button type="button" onClick={() => removeChoice(index)} className="remove-btn" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-error-600)' }}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={addChoice}>Add Choice</Button>
+                </div>
+              )}
+
+              {/* True/False */}
+              {questionForm.type === 'true_false' && (
+                <div className="form-group">
+                  <label>Correct Answer</label>
+                  <select value={questionForm.correctAnswer} onChange={(e) => setQuestionForm(prev => ({ ...prev, correctAnswer: e.target.value }))} required>
+                    <option value="">Select answer...</option>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Modified True/False */}
+              {questionForm.type === 'modified_true_false' && (
+                <div className="form-group">
+                  <label>Correct Answer</label>
+                  <textarea value={questionForm.correctAnswer} onChange={(e) => setQuestionForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                    placeholder="Enter 'True' or 'False'. If false, provide the correct answer." rows={2} required />
+                  <small style={{ fontSize: 11, color: 'var(--color-gray-3)' }}>Format: "False. The correct answer is..." or "True"</small>
+                </div>
+              )}
+
+              {/* Identification */}
+              {questionForm.type === 'identification' && (
+                <div className="form-group">
+                  <label>Correct Answer</label>
+                  <input type="text" value={questionForm.correctAnswer} onChange={(e) => setQuestionForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
+                    placeholder="Expected answer..." required />
+                </div>
+              )}
+
+              {/* Enumeration */}
+              {questionForm.type === 'enumeration' && (
+                <div className="form-group">
+                  <label>Expected Items (in order)</label>
+                  {questionForm.enumerationItems.map((item, index) => (
+                    <div key={index} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{index + 1}.</span>
+                      <input type="text" value={item} onChange={(e) => updateEnumerationItem(index, e.target.value)}
+                        placeholder={`Item ${index + 1}`} required style={{ flex: 1 }} />
+                      {questionForm.enumerationItems.length > 1 && (
+                        <button type="button" onClick={() => removeEnumerationItem(index)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-error-600)' }}>×</button>
+                      )}
+                    </div>
+                  ))}
+                  <Button type="button" variant="outline" size="sm" onClick={addEnumerationItem}>Add Item</Button>
+                </div>
+              )}
+
+              <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+                <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
+                <Button type="submit">{editingQuestion ? 'Update Question' : 'Add Question'}</Button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </MainLayout>
   );
 }
