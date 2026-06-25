@@ -580,7 +580,7 @@ export class ExamService {
   /**
    * Find the session doc for a given attemptId across all users
    */
-  private static async findSessionByAttemptId(attemptId: string): Promise<{ studentId: string; doc: FirebaseFirestore.DocumentSnapshot } | null> {
+  private static async findSessionByAttemptId(attemptId: string): Promise<{ studentId: string; doc: any } | null> {
     const db = getFirestore();
     const groupsSnapshot = await db
       .collectionGroup('exam_sessions')
