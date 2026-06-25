@@ -107,7 +107,7 @@ export interface Exam {
   endDate?: Date;
   accessCode?: string;
   allowedStudentIds?: string[];
-  allowGuestAccess?: boolean;
+  accessMethod?: 'guest' | 'student_login';
   sections?: string[];
   retakeConfig?: RetakeConfiguration;
   lateSubmissionConfig?: LateSubmissionConfiguration;

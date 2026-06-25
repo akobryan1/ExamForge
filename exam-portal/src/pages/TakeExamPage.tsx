@@ -109,7 +109,7 @@ export function TakeExamPage() {
         try { await document.documentElement.requestFullscreen(); } catch {}
       }
     } catch (err: any) {
-      if (err.response?.status === 403) setNeedsAccessCode(true);
+      if (err.response?.status === 403) setError('Access denied. Please check your credentials.');
       setError(err.message || 'Failed to start exam');
     } finally { setStarting(false); }
   };
