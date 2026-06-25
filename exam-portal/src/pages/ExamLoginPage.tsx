@@ -29,6 +29,7 @@ export function ExamLoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,8 +37,15 @@ export function ExamLoginPage() {
     try {
       setLoading(true);
       setError('');
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate(redirect, { replace: true });
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Get Firebase ID token and store it for API requests
+      const idToken = await userCredential.user.getIdToken();
+      localStorage.setItem('accessToken', idToken);
+      
+      console.log('[ExamLogin] Login successful, token stored. Redirecting to:', redirect);
+      setSuccess(true);
+      setTimeout(() => navigate(redirect, { replace: true }), 500);
     } catch (err: any) {
       console.error('[ExamLogin] Error:', err.code);
       const code = err.code;
@@ -64,15 +72,21 @@ export function ExamLoginPage() {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" className="input" />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" className="input" disabled={loading || success} />
             </div>
             <div className="form-group">
               <label>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="input" />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="input" disabled={loading || success} />
             </div>
-            <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
+            {success ? (
+              <div className="auth-success" style={{ padding: 'var(--spacing-3)', background: 'rgba(22, 163, 74, 0.1)', color: 'var(--color-success-700)', borderRadius: 'var(--radius-md)', textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
+                ✓ Login successful! Redirecting...
+              </div>
+            ) : (
+              <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
+            )}
           </form>
         </div>
       </div>
