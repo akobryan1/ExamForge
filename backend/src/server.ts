@@ -20,9 +20,13 @@ const allowedOrigins = [
   'https://examforge-exam-portal.onrender.com',
 ];
 
+console.log('[CORS] Allowed origins:', allowedOrigins);
+
 // Add CORS_ORIGIN from environment if set
 if (process.env.CORS_ORIGIN) {
-  allowedOrigins.push(process.env.CORS_ORIGIN);
+  const envOrigin = process.env.CORS_ORIGIN;
+  console.log('[CORS] Adding CORS_ORIGIN from env:', envOrigin);
+  allowedOrigins.push(envOrigin);
 }
 
 // Middleware
@@ -30,12 +34,19 @@ app.use(helmet()); // Security headers
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin) {
+      console.log('[CORS] No origin — allowing');
+      return callback(null, true);
+    }
     
-    if (allowedOrigins.includes(origin)) {
+    const allowed = allowedOrigins.includes(origin);
+    console.log(`[CORS] origin=${origin} | allowed=${allowed} | match=${allowedOrigins.findIndex(o => o === origin)}`);
+    
+    if (allowed) {
       callback(null, true);
     } else {
-      console.warn(`CORS blocked origin: ${origin}`);
+      console.warn(`[CORS] BLOCKED origin: ${origin}`);
+      console.warn(`[CORS] Allowed list:`, JSON.stringify(allowedOrigins));
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -43,10 +54,12 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-app.use(morgan('dev')); // Request logging
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
-app.use(cookieParser()); // Parse cookies
+
+// Debug: log each incoming request's origin
+app.use((req, _res, next) => {
+  console.log(`[REQUEST] ${req.method} ${req.path} | origin=${req.headers.origin || 'none'} | referer=${req.headers.referer || 'none'}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {
