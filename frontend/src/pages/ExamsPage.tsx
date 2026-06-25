@@ -196,9 +196,9 @@ export function ExamsPage() {
                       <Link to={`/exams/${exam.id}`} style={{ flex: 1 }}>
                         <Button variant="secondary" style={{ width: '100%' }}>View details</Button>
                       </Link>
-                      <Link to={`/exams/${exam.id}/take`} style={{ flex: 1 }}>
+                      <a href={`${import.meta.env.VITE_EXAM_PORTAL_URL || ''}/exams/${exam.id}/take`} target="_blank" rel="noopener noreferrer" style={{ flex: 1, textDecoration: 'none' }}>
                         <Button variant="primary" style={{ width: '100%' }}>Take exam</Button>
-                      </Link>
+                      </a>
                     </>
                   )}
                 </div>

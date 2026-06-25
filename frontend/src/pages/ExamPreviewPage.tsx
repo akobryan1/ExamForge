@@ -210,7 +210,7 @@ export function ExamPreviewPage() {
               <input
                 type="text"
                 readOnly
-                value={`${window.location.origin}/exams/${examId}/take`}
+                value={`${import.meta.env.VITE_EXAM_PORTAL_URL || window.location.origin}/exams/${examId}/take`}
                 style={{
                   flex: 1,
                   padding: '10px 14px',
@@ -226,7 +226,7 @@ export function ExamPreviewPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(`${window.location.origin}/exams/${examId}/take`);
+                  navigator.clipboard.writeText(`${import.meta.env.VITE_EXAM_PORTAL_URL || window.location.origin}/exams/${examId}/take`);
                   alert('Link copied to clipboard!');
                 }}
               >
