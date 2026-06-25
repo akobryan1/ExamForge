@@ -289,6 +289,12 @@ export interface SubmitAnswerDto {
 export interface StartExamDto {
   examId: string;
   accessCode?: string;
+  guestInfo?: {
+    name: string;
+    studentId: string;
+    course?: string;
+    year?: string;
+  };
 }
 
 export interface SubmitExamDto {

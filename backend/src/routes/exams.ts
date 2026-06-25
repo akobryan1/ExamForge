@@ -235,6 +235,7 @@ router.post(
         {
           examId: req.params.id,
           accessCode: req.body.accessCode,
+          guestInfo: req.body.guestInfo,
         }
       );
       return res.status(201).json(attempt);
@@ -245,19 +246,20 @@ router.post(
 );
 
 /**
- * POST /api/attempts/:id/answers - Submit an answer (Student)
+ * POST /api/attempts/:id/answers - Submit an answer (Student or Guest)
  */
 router.post(
   '/attempts/:id/answers',
-  authorize('student'),
+  optionalAuth,
   [
     body('questionId').notEmpty().withMessage('Question ID is required'),
     body('answer').notEmpty().withMessage('Answer is required'),
   ],
   async (req: Request, res: Response) => {
     try {
+      const userId = req.user?.userId || `guest_${req.params.id}`;
       const answer = await ExamService.submitAnswer(
-        req.user!.userId,
+        userId,
         {
           attemptId: req.params.id,
           questionId: req.body.questionId,
@@ -273,15 +275,16 @@ router.post(
 );
 
 /**
- * POST /api/attempts/:id/submit - Submit exam attempt (Student)
+ * POST /api/attempts/:id/submit - Submit exam attempt (Student or Guest)
  */
 router.post(
   '/attempts/:id/submit',
-  authorize('student'),
+  optionalAuth,
   async (req: Request, res: Response) => {
     try {
+      const userId = req.user?.userId || `guest_${req.params.id}`;
       const attempt = await ExamService.submitExam(
-        req.user!.userId,
+        userId,
         { attemptId: req.params.id }
       );
       return res.json(attempt);
@@ -294,11 +297,12 @@ router.post(
 /**
  * GET /api/attempts/:id - Get exam attempt with answers
  */
-router.get('/attempts/:id', async (req: Request, res: Response) => {
+router.get('/attempts/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
+    const userId = req.user?.userId || `guest_${req.params.id}`;
     const attempt = await ExamService.getExamAttempt(
       req.params.id,
-      req.user!.userId
+      userId
     );
     return res.json(attempt);
   } catch (error: any) {
@@ -307,19 +311,20 @@ router.get('/attempts/:id', async (req: Request, res: Response) => {
 });
 
 /**
- * POST /api/attempts/:id/violations - Record a proctoring violation (Student)
+ * POST /api/attempts/:id/violations - Record a proctoring violation (Student or Guest)
  */
 router.post(
   '/attempts/:id/violations',
-  authorize('student'),
+  optionalAuth,
   [
     body('type').trim().notEmpty().withMessage('Violation type is required'),
     body('timestamp').isNumeric().withMessage('Timestamp is required'),
   ],
   async (req: Request, res: Response) => {
     try {
+      const userId = req.user?.userId || `guest_${req.params.id}`;
       await ExamService.recordViolation(
-        req.user!.userId,
+        userId,
         req.params.id,
         req.body.type,
         req.body.timestamp

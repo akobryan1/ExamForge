@@ -28,6 +28,15 @@ export function TakeExamPage() {
   }, [examId]);
 
   useEffect(() => {
+    if (exam && (exam.accessMethod === 'student_login' || exam.allowGuestAccess === false)) {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        navigate(`/login?redirect=/exams/${examId}/take`);
+      }
+    }
+  }, [exam, examId, navigate]);
+
+  useEffect(() => {
     if (attemptId && exam?.proctorConfig?.enforceFullscreen) {
       const handleFs = () => {
         if (!document.fullscreenElement && attemptId) {

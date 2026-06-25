@@ -12,10 +12,20 @@ export function ExamPreviewPage() {
   useEffect(() => {
     if (!examId) return;
     ExamService.getExamById(examId)
-      .then(data => setExam(data))
+      .then(data => {
+        setExam(data);
+        // If exam requires student login, redirect to login page
+        if (data.accessMethod === 'student_login' || data.allowGuestAccess === false) {
+          // Check if user is already authenticated (has token)
+          const token = localStorage.getItem('accessToken');
+          if (!token) {
+            navigate(`/login?redirect=/exams/${examId}/take`);
+          }
+        }
+      })
       .catch(err => setError(err.message || 'Exam not found'))
       .finally(() => setLoading(false));
-  }, [examId]);
+  }, [examId, navigate]);
 
   if (loading) return <div className="loading-container"><div className="spinner" /> <span>Loading exam...</span></div>;
   if (error) return (

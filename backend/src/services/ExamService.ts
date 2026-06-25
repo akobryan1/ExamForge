@@ -39,7 +39,8 @@ export class ExamService {
       showResults: data.showResults ?? true,
       allowReview: data.allowReview ?? true,
       accessCode: data.accessCode || null,
-      allowGuestAccess: data.allowGuestAccess ?? false,
+      allowGuestAccess: data.allowGuestAccess ?? (data.accessMethod === 'guest'),
+      accessMethod: data.accessMethod || 'student_login',
       sections: data.sections || [],
       tags: data.tags || [],
       retakeConfig: data.retakeConfig || null,
@@ -476,15 +477,31 @@ export class ExamService {
       throw new Error('Exam is not available');
     }
 
+    // Check access method
+    const isGuest = studentId === 'guest' || !studentId || studentId === 'guest@anonymous.com';
+    const allowGuest = examData.allowGuestAccess === true || examData.accessMethod === 'guest';
+
+    if (isGuest && !allowGuest) {
+      throw new Error('This exam requires student login. Please sign in first.');
+    }
+
     // Verify access code if required
     if (examData.accessCode && examData.accessCode !== data.accessCode) {
       throw new Error('Invalid access code');
     }
 
+    // Use proper student ID for guests (create a unique guest session ID)
+    const effectiveStudentId = (isGuest && data.guestInfo?.studentId)
+      ? `guest_${data.guestInfo.studentId}_${data.examId}`
+      : studentId;
+    const effectiveStudentName = isGuest && data.guestInfo?.name
+      ? data.guestInfo.name
+      : studentName;
+
     // Check if student already has an active attempt
     const existingSessionsSnapshot = await db
       .collection('examforge_users')
-      .doc(studentId)
+      .doc(effectiveStudentId)
       .collection('exam_sessions')
       .where('examId', '==', data.examId)
       .where('status', '==', 'in_progress')
@@ -496,12 +513,13 @@ export class ExamService {
       return this.mapAttemptFromDb(existingSession.id, existingSession.data());
     }
 
-    // Create new session
-    const sessionData = {
+    // Build session data
+    const sessionData: Record<string, unknown> = {
       examId: data.examId,
       instructorId,
-      studentId,
-      studentName,
+      studentId: effectiveStudentId,
+      originalStudentId: isGuest ? null : studentId,
+      studentName: effectiveStudentName,
       examTitle: examData.title,
       status: 'in_progress',
       score: 0,
@@ -516,9 +534,22 @@ export class ExamService {
       updatedAt: FieldValue.serverTimestamp(),
     };
 
+    // Store guest info if applicable
+    if (isGuest && data.guestInfo) {
+      sessionData.guestInfo = {
+        name: data.guestInfo.name,
+        studentId: data.guestInfo.studentId,
+        course: data.guestInfo.course || '',
+        year: data.guestInfo.year || '',
+      };
+      sessionData.accessMethod = 'guest';
+    } else {
+      sessionData.accessMethod = 'student_login';
+    }
+
     const sessionRef = await db
       .collection('examforge_users')
-      .doc(studentId)
+      .doc(effectiveStudentId)
       .collection('exam_sessions')
       .add(sessionData);
 
@@ -537,25 +568,52 @@ export class ExamService {
     return this.mapAttemptFromDb(sessionRef.id, sessionDoc.data()!);
   }
 
+    // Increment exam attempt count
+    await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(data.examId)
+      .update({
+        attemptCount: FieldValue.increment(1),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+
+    const sessionDoc = await sessionRef.get();
+    return this.mapAttemptFromDb(sessionRef.id, sessionDoc.data()!);
+  }
+
+  /**
+   * Find the session doc for a given attemptId across all users
+   */
+  private static async findSessionByAttemptId(attemptId: string): Promise<{ studentId: string; doc: FirebaseFirestore.DocumentSnapshot } | null> {
+    const db = getFirestore();
+    const groupsSnapshot = await db
+      .collectionGroup('exam_sessions')
+      .where('__name__', '==', attemptId)
+      .limit(1)
+      .get();
+    if (groupsSnapshot.empty) return null;
+    const doc = groupsSnapshot.docs[0];
+    const pathParts = doc.ref.path.split('/');
+    const studentId = pathParts[1]; // examforge_users/{studentId}/exam_sessions/{id}
+    return { studentId, doc };
+  }
+
   /**
    * Submit an answer for a question (stores in student's examinee_data)
    */
   static async submitAnswer(studentId: string, data: SubmitAnswerDto): Promise<ExamAnswer> {
     const db = getFirestore();
 
-    // Verify session exists and is in progress
-    const sessionDoc = await db
-      .collection('examforge_users')
-      .doc(studentId)
-      .collection('exam_sessions')
-      .doc(data.attemptId)
-      .get();
-
-    if (!sessionDoc.exists) {
+    // Resolve the session by attemptId to get the real studentId
+    const sessionLookup = await this.findSessionByAttemptId(data.attemptId);
+    if (!sessionLookup) {
       throw new Error('Session not found');
     }
+    const effectiveStudentId = sessionLookup.studentId;
+    const sessionData = sessionLookup.doc.data()!;
 
-    const sessionData = sessionDoc.data()!;
     if (sessionData.status !== 'in_progress') {
       throw new Error('Cannot submit answer for completed session');
     }
@@ -606,7 +664,7 @@ export class ExamService {
     // Check if answer already exists
     const existingAnswersSnapshot = await db
       .collection('examforge_users')
-      .doc(studentId)
+      .doc(effectiveStudentId)
       .collection('examinee_data')
       .where('attemptId', '==', data.attemptId)
       .where('questionId', '==', data.questionId)
@@ -625,7 +683,7 @@ export class ExamService {
       // Create new answer
       answerRef = await db
         .collection('examforge_users')
-        .doc(studentId)
+        .doc(effectiveStudentId)
         .collection('examinee_data')
         .add(answerData);
     }
@@ -640,17 +698,13 @@ export class ExamService {
   static async submitExam(studentId: string, data: SubmitExamDto): Promise<ExamAttempt> {
     const db = getFirestore();
 
-    // Get session
-    const sessionRef = db
-      .collection('examforge_users')
-      .doc(studentId)
-      .collection('exam_sessions')
-      .doc(data.attemptId);
-
-    const sessionDoc = await sessionRef.get();
-    if (!sessionDoc.exists) {
+    // Resolve session by attemptId
+    const sessionLookup = await this.findSessionByAttemptId(data.attemptId);
+    if (!sessionLookup) {
       throw new Error('Session not found');
     }
+    const effectiveStudentId = sessionLookup.studentId;
+    const sessionRef = sessionLookup.doc.ref;
 
     const sessionData = sessionDoc.data()!;
     if (sessionData.status !== 'in_progress') {
@@ -660,7 +714,7 @@ export class ExamService {
     // Get all answers for this attempt
     const answersSnapshot = await db
       .collection('examforge_users')
-      .doc(studentId)
+      .doc(effectiveStudentId)
       .collection('examinee_data')
       .where('attemptId', '==', data.attemptId)
       .get();
@@ -720,24 +774,18 @@ export class ExamService {
   static async getExamAttempt(attemptId: string, userId: string): Promise<ExamAttempt & { answers: ExamAnswer[] }> {
     const db = getFirestore();
 
-    // Try to find the session in the user's collection
-    const sessionDoc = await db
-      .collection('examforge_users')
-      .doc(userId)
-      .collection('exam_sessions')
-      .doc(attemptId)
-      .get();
-
-    if (!sessionDoc.exists) {
+    // Resolve session by attemptId
+    const sessionLookup = await this.findSessionByAttemptId(attemptId);
+    if (!sessionLookup) {
       throw new Error('Attempt not found');
     }
-
-    const sessionData = sessionDoc.data()!;
+    const effectiveStudentId = sessionLookup.studentId;
+    const sessionData = sessionLookup.doc.data()!;
 
     // Get answers
     const answersSnapshot = await db
       .collection('examforge_users')
-      .doc(userId)
+      .doc(effectiveStudentId)
       .collection('examinee_data')
       .where('attemptId', '==', attemptId)
       .get();
@@ -1266,7 +1314,7 @@ export class ExamService {
     const db = getFirestore();
 
     try {
-      // Get the attempt to find exam details
+      // Get the attempt to find exam details and student
       const attemptSnapshot = await db.collectionGroup('exam_sessions')
         .where('__name__', '==', attemptId)
         .get();
@@ -1278,6 +1326,7 @@ export class ExamService {
       const attemptDoc = attemptSnapshot.docs[0];
       const attemptData = attemptDoc.data();
       const examId = attemptData.examId;
+      const effectiveUserId = attemptData.studentId || userId;
 
       // Get exam to determine point deduction
       const examSnapshot = await db.collectionGroup('published_exams')
@@ -1314,7 +1363,7 @@ export class ExamService {
       }
 
       // Create violation event in user's session_events collection
-      const eventRef = db.collection(`examforge_users/${userId}/session_events`).doc();
+      const eventRef = db.collection(`examforge_users/${effectiveUserId}/session_events`).doc();
       await eventRef.set({
         attemptId,
         examId,
