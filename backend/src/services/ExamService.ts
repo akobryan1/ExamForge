@@ -685,7 +685,7 @@ export class ExamService {
     const effectiveStudentId = sessionLookup.studentId;
     const sessionRef = sessionLookup.doc.ref;
 
-    const sessionData = sessionDoc.data()!;
+    const sessionData = sessionLookup.doc.data()!;
     if (sessionData.status !== 'in_progress') {
       throw new Error('Session already submitted');
     }

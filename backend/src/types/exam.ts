@@ -250,6 +250,7 @@ export interface CreateExamDto {
   endDate?: Date;
   accessCode?: string;
   allowGuestAccess?: boolean;
+  accessMethod?: 'guest' | 'student_login';
   sections?: string[];
   tags?: string[];
   retakeConfig?: RetakeConfiguration;
