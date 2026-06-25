@@ -532,20 +532,14 @@ export class ExamService {
       userAgent: null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
-    };
-
-    // Store guest info if applicable
-    if (isGuest && data.guestInfo) {
-      sessionData.guestInfo = {
+      guestInfo: (isGuest && data.guestInfo) ? {
         name: data.guestInfo.name,
         studentId: data.guestInfo.studentId,
         course: data.guestInfo.course || '',
         year: data.guestInfo.year || '',
-      };
-      sessionData.accessMethod = 'guest';
-    } else {
-      sessionData.accessMethod = 'student_login';
-    }
+      } : null,
+      accessMethod: (isGuest && data.guestInfo) ? 'guest' : 'student_login',
+    };
 
     const sessionRef = await db
       .collection('examforge_users')
