@@ -116,6 +116,7 @@ app.listen(PORT, () => {
   console.log(`🚀 ExamForge Backend API running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+  console.log(`📋 Allowed origins list:`, JSON.stringify(allowedOrigins, null, 2));
 });
 
 export default app;
