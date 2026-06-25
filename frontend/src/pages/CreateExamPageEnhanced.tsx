@@ -463,11 +463,6 @@ export function CreateExamPageEnhanced() {
                 </Field>
               </FormSection>
 
-              <FormSection title="Question display" defaultOpen={false}>
-                <Toggle name="shuffleQuestions" checked={formData.shuffleQuestions} onChange={handleChange} label="Shuffle question order" hint="Randomize question order for each student" />
-                <Toggle name="shuffleAnswers" checked={formData.shuffleAnswers} onChange={handleChange} label="Shuffle answer options" hint="Randomize answer order for multiple choice questions" />
-              </FormSection>
-
             </motion.div>
             </AnimatePresence>
           )}
@@ -479,7 +474,12 @@ export function CreateExamPageEnhanced() {
 
               <div className="form-note">Add and manage questions from the next screen after creating the exam.</div>
 
-              <FormSection title="Display settings" defaultOpen={true}>
+              <FormSection title="Question display" defaultOpen={true}>
+                <Toggle name="shuffleQuestions" checked={formData.shuffleQuestions} onChange={handleChange} label="Shuffle question order" hint="Randomize question order for each student" />
+                <Toggle name="shuffleAnswers" checked={formData.shuffleAnswers} onChange={handleChange} label="Shuffle answer options" hint="Randomize answer order for multiple choice questions" />
+              </FormSection>
+
+              <FormSection title="Review settings" defaultOpen={true}>
                 <Toggle name="showResults" checked={formData.showResults} onChange={handleChange} label="Show results to students" hint="Allow students to see their answers after submission" />
                 <Toggle name="allowReview" checked={formData.allowReview} onChange={handleChange} label="Allow review" hint="Students can retake after first submission if retakes are enabled" />
               </FormSection>
