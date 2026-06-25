@@ -367,25 +367,7 @@ export function CreateExamPageEnhanced() {
                 </Field>
                 <div className="form-row">
                   <Field label="Subject" help="Course or subject area">
-                    <select name="subject" value={formData.subject} onChange={handleChange}>
-                      <option value="">Select subject</option>
-                      <option value="mathematics">Mathematics</option>
-                      <option value="science">Science</option>
-                      <option value="english">English</option>
-                      <option value="history">History</option>
-                      <option value="computer-science">Computer Science</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </Field>
-                  <Field label="Grade level" help="Target education level">
-                    <select name="grade" value={formData.grade} onChange={handleChange}>
-                      <option value="">Select grade</option>
-                      <option value="elementary">Elementary</option>
-                      <option value="middle">Middle School</option>
-                      <option value="high">High School</option>
-                      <option value="college">College</option>
-                      <option value="graduate">Graduate</option>
-                    </select>
+                    <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="e.g., Biology, World History, Calculus" />
                   </Field>
                 </div>
               </FormSection>
@@ -570,7 +552,7 @@ export function CreateExamPageEnhanced() {
             <AnimatePresence mode="wait">
             <motion.div key="advanced" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
 
-              <FormSection title="Exam retakes" defaultOpen={false}>
+              <FormSection title="Exam retakes" defaultOpen={true}>
                 <Toggle name="retakeEnabled" checked={formData.retakeEnabled} onChange={handleChange} label="Allow students to retake this exam" />
                 <Reveal open={formData.retakeEnabled}>
                   <Field label="Maximum retakes" help="0 = no retakes, leave blank for unlimited">
