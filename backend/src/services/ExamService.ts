@@ -562,21 +562,6 @@ export class ExamService {
     return this.mapAttemptFromDb(sessionRef.id, sessionDoc.data()!);
   }
 
-    // Increment exam attempt count
-    await db
-      .collection('examforge_users')
-      .doc(instructorId)
-      .collection('published_exams')
-      .doc(data.examId)
-      .update({
-        attemptCount: FieldValue.increment(1),
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-
-    const sessionDoc = await sessionRef.get();
-    return this.mapAttemptFromDb(sessionRef.id, sessionDoc.data()!);
-  }
-
   /**
    * Find the session doc for a given attemptId across all users
    */
