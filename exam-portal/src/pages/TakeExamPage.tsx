@@ -15,11 +15,11 @@ export function TakeExamPage() {
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showRules, setShowRules] = useState(false);
-  const [accessCode, setAccessCode] = useState('');
-  const [needsAccessCode, setNeedsAccessCode] = useState(false);
   const [error, setError] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<Date>(new Date());
+  // Guest info
+  const [guestInfo, setGuestInfo] = useState({ name: '', studentId: '', course: '', year: '' });
 
   useEffect(() => {
     if (!examId) return;
@@ -91,7 +91,17 @@ export function TakeExamPage() {
     try {
       setStarting(true);
       setError('');
-      const attempt = await ExamService.startExam(examId!, accessCode || undefined);
+      const payload: any = {};
+      // If guest access, include guest info
+      if (exam?.accessMethod === 'guest') {
+        if (!guestInfo.name.trim() || !guestInfo.studentId.trim()) {
+          setError('Name and Student ID are required for guest access');
+          setStarting(false);
+          return;
+        }
+        payload.guestInfo = guestInfo;
+      }
+      const attempt = await ExamService.startExam(examId!, payload);
       setAttemptId(attempt.id);
       startTimeRef.current = new Date();
       if (exam?.timeLimit) setTimeLeft(exam.timeLimit * 60);
@@ -240,14 +250,33 @@ export function TakeExamPage() {
             ) : (
               <>
                 <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, fontSize: 14 }}>
-                  {exam?.description || 'Review the details below before starting.'}
+                  {exam?.description || ''}
                 </p>
-                {needsAccessCode && (
-                  <div style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Access code</label>
-                    <input className="input" type="text" value={accessCode} onChange={e => setAccessCode(e.target.value)} placeholder="Enter access code" />
+
+                {/* Guest info form */}
+                {exam?.accessMethod === 'guest' && (
+                  <div style={{ marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Full name *</label>
+                      <input className="input" type="text" value={guestInfo.name} onChange={e => setGuestInfo(prev => ({ ...prev, name: e.target.value }))} placeholder="Enter your full name" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Student ID *</label>
+                      <input className="input" type="text" value={guestInfo.studentId} onChange={e => setGuestInfo(prev => ({ ...prev, studentId: e.target.value }))} placeholder="Your student ID" />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Course</label>
+                        <input className="input" type="text" value={guestInfo.course} onChange={e => setGuestInfo(prev => ({ ...prev, course: e.target.value }))} placeholder="e.g. BS CS" />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Year</label>
+                        <input className="input" type="text" value={guestInfo.year} onChange={e => setGuestInfo(prev => ({ ...prev, year: e.target.value }))} placeholder="e.g. 2nd Year" />
+                      </div>
+                    </div>
                   </div>
                 )}
+
                 {error && <div className="error-banner">{error}</div>}
                 <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={startExam} disabled={starting}>
                   {starting ? 'Starting...' : showRules ? 'I understand, start exam' : 'Start exam'}

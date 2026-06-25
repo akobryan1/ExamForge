@@ -11,8 +11,8 @@ export class ExamService {
     return response.data;
   }
 
-  static async startExam(examId: string, accessCode?: string): Promise<any> {
-    const response = await apiClient.post(`/api/exams/${examId}/start`, { accessCode });
+  static async startExam(examId: string, data?: { accessCode?: string; guestInfo?: { name: string; studentId: string; course?: string; year?: string } }): Promise<any> {
+    const response = await apiClient.post(`/api/exams/${examId}/start`, data || {});
     return response.data;
   }
 

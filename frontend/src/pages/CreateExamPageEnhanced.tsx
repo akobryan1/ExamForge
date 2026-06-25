@@ -108,8 +108,7 @@ export function CreateExamPageEnhanced() {
     shuffleAnswers: false,
     showResults: true,
     allowReview: true,
-    accessCode: '',
-    allowGuestAccess: false,
+    accessMethod: 'student_login' as 'guest' | 'student_login',
     sections: [] as string[],
     startDate: '' as string,
     endDate: '' as string,
@@ -160,8 +159,7 @@ export function CreateExamPageEnhanced() {
             shuffleAnswers: exam.shuffleAnswers ?? false,
             showResults: exam.showResults ?? true,
             allowReview: exam.allowReview ?? true,
-            accessCode: exam.accessCode || '',
-            allowGuestAccess: exam.allowGuestAccess ?? false,
+            accessMethod: exam.accessMethod || 'student_login',
             sections: exam.sections || [],
             startDate: exam.startDate ? new Date(exam.startDate).toISOString().slice(0, 16) : '',
             endDate: exam.endDate ? new Date(exam.endDate).toISOString().slice(0, 16) : '',
@@ -289,8 +287,7 @@ export function CreateExamPageEnhanced() {
         shuffleAnswers: formData.shuffleAnswers,
         showResults: formData.showResults,
         allowReview: formData.allowReview,
-        accessCode: formData.accessCode || undefined,
-        allowGuestAccess: formData.allowGuestAccess,
+        accessMethod: formData.accessMethod,
         sections: formData.sections.length > 0 ? formData.sections : undefined,
         startDate: formData.startDate,
         endDate: formData.endDate,
@@ -409,7 +406,42 @@ export function CreateExamPageEnhanced() {
             <motion.div key="access" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
 
               <FormSection title="Who can take this exam" defaultOpen={true}>
-                <Field label="Allowed sections or classes" help="Leave empty to allow all students">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                  <label className="option-label" style={{ cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="accessMethod"
+                      value="student_login"
+                      checked={formData.accessMethod === 'student_login'}
+                      onChange={handleChange}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Student login</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>
+                        Only registered students can log in and take the exam using their student portal credentials
+                      </div>
+                    </div>
+                  </label>
+                  <label className="option-label" style={{ cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="accessMethod"
+                      value="guest"
+                      checked={formData.accessMethod === 'guest'}
+                      onChange={handleChange}
+                    />
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>Guest access</div>
+                      <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>
+                        Anyone with the link can take the exam — they just provide their name, student ID, course, and year
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </FormSection>
+
+              <FormSection title="Restrict to sections or classes" defaultOpen={false}>
+                <Field label="Allowed sections" help="Leave empty to allow all students">
                   <div className="section-input-group">
                     <input type="text" value={sectionInput} onChange={(e) => setSectionInput(e.target.value)} placeholder="e.g., Section A, Class 10-B" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSection())} />
                     <button type="button" onClick={addSection} className="btn-add">Add</button>
@@ -422,13 +454,6 @@ export function CreateExamPageEnhanced() {
                     </div>
                   )}
                 </Field>
-                <Field label="Access code" help="Students will need this code to start the exam">
-                  <input type="text" name="accessCode" value={formData.accessCode} onChange={handleChange} placeholder="e.g., EXAM2024" />
-                </Field>
-              </FormSection>
-
-              <FormSection title="Guest access" defaultOpen={false}>
-                <Toggle name="allowGuestAccess" checked={formData.allowGuestAccess} onChange={handleChange} label="Allow anonymous submissions" hint="Non-registered students can take the exam without an account" />
               </FormSection>
 
             </motion.div>
