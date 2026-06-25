@@ -5,7 +5,7 @@ import { join, extname } from 'path';
 const PORT = process.env.PORT || 4173;
 const DIST = join(process.cwd(), 'dist');
 
-const MIME_TYPES: Record<string, string> = {
+const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
