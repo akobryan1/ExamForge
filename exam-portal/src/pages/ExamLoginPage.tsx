@@ -57,6 +57,11 @@ export function ExamLoginPage() {
       setTimeout(() => navigate(redirect, { replace: true }), 500);
     } catch (err: any) {
       console.error('[ExamLogin] Error:', err.code || err.message);
+      console.error('[ExamLogin] Full error:', err);
+      if (err.response) {
+        console.error('[ExamLogin] Response data:', err.response.data);
+        console.error('[ExamLogin] Response status:', err.response.status);
+      }
       // Firebase auth errors
       const code = err.code;
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {

@@ -229,6 +229,7 @@ router.post(
   optionalAuth,
   async (req: Request, res: Response) => {
     try {
+      console.log(`[StartExam] userId=${req.user?.userId || 'guest'}, email=${req.user?.email || 'guest@anonymous.com'}, role=${req.user?.role || 'none'}, examId=${req.params.id}`);
       const attempt = await ExamService.startExamAttempt(
         req.user?.userId || 'guest',
         req.user?.email || 'guest@anonymous.com',
@@ -240,6 +241,7 @@ router.post(
       );
       return res.status(201).json(attempt);
     } catch (error: any) {
+      console.error(`[StartExam] Error for exam ${req.params.id}:`, error.message);
       return res.status(400).json({ error: error.message });
     }
   }
