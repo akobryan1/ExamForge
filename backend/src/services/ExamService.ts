@@ -1408,51 +1408,54 @@ export class ExamService {
 
     try {
       // Get the attempt to find exam details and student
-      const attemptSnapshot = await db.collectionGroup('exam_sessions')
-        .where('__name__', '==', attemptId)
-        .get();
-
-      if (attemptSnapshot.empty) {
+      const sessionLookup = await this.findSessionByAttemptId(attemptId, userId !== 'guest' ? userId : undefined);
+      if (!sessionLookup) {
         throw new Error('Exam attempt not found');
       }
 
-      const attemptDoc = attemptSnapshot.docs[0];
-      const attemptData = attemptDoc.data();
+      const attemptData = sessionLookup.doc.data();
       const examId = attemptData.examId;
       const effectiveUserId = attemptData.studentId || userId;
 
-      // Get exam to determine point deduction
-      const examSnapshot = await db.collectionGroup('published_exams')
-        .where('__name__', '==', examId)
-        .get();
-
+      // Get exam to determine point deduction (use flat index, avoid collectionGroup)
+      const indexDoc = await db.collection('exams').doc(examId).get();
       let pointsDeducted = 0;
       let severity: 'low' | 'medium' | 'high' = 'low';
 
-      if (!examSnapshot.empty) {
-        const examData = examSnapshot.docs[0].data();
-        const proctorConfig = examData.proctorConfig;
+      if (indexDoc.exists) {
+        const indexData = indexDoc.data()!;
+        const instructorId = indexData.instructorId;
+        const examDoc = await db
+          .collection('examforge_users')
+          .doc(instructorId)
+          .collection('published_exams')
+          .doc(examId)
+          .get();
 
-        if (proctorConfig?.pointDeductions) {
-          // Map violation type to deduction field
-          const deductionMap: Record<string, string> = {
-            'tab_switch': 'tabSwitch',
-            'copy_attempt': 'copyPaste',
-            'paste_attempt': 'copyPaste',
-            'right_click_attempt': 'rightClick',
-            'exit_fullscreen': 'exitFullscreen',
-          };
+        if (examDoc.exists) {
+          const examData = examDoc.data();
+          const proctorConfig = examData?.proctorConfig;
 
-          const deductionField = deductionMap[violationType];
-          if (deductionField && proctorConfig.pointDeductions[deductionField]) {
-            pointsDeducted = proctorConfig.pointDeductions[deductionField];
+          if (proctorConfig?.pointDeductions) {
+            const deductionMap: Record<string, string> = {
+              'tab_switch': 'tabSwitch',
+              'copy_attempt': 'copyPaste',
+              'paste_attempt': 'copyPaste',
+              'right_click_attempt': 'rightClick',
+              'exit_fullscreen': 'exitFullscreen',
+            };
+
+            const deductionField = deductionMap[violationType];
+            if (deductionField && proctorConfig.pointDeductions[deductionField]) {
+              pointsDeducted = proctorConfig.pointDeductions[deductionField];
+            }
           }
-        }
 
-        // Determine severity based on points deducted
-        if (pointsDeducted >= 10) severity = 'high';
-        else if (pointsDeducted >= 5) severity = 'medium';
-        else severity = 'low';
+          // Determine severity based on points deducted
+          if (pointsDeducted >= 10) severity = 'high';
+          else if (pointsDeducted >= 5) severity = 'medium';
+          else severity = 'low';
+        }
       }
 
       // Create violation event in user's session_events collection
