@@ -475,14 +475,37 @@ export class ExamService {
     const db = getFirestore();
 
     // First, we need to find the exam across all users using collection group
-    const examsSnapshot = await db
-      .collectionGroup('published_exams')
-      .where('__name__', '==', data.examId)
-      .limit(1)
-      .get();
+    let examsSnapshot;
+    try {
+      examsSnapshot = await db
+        .collectionGroup('published_exams')
+        .where('__name__', '==', data.examId)
+        .limit(1)
+        .get();
+    } catch (err) {
+      console.error(`[startExamAttempt] Collection group query failed for exam ${data.examId}:`, err);
+      throw new Error(`Failed to find exam: ${err instanceof Error ? err.message : err}`);
+    }
 
     if (examsSnapshot.empty) {
-      throw new Error('Exam not found');
+      // Fallback: try the flat exams index
+      console.warn(`[startExamAttempt] Collection group found no exam ${data.examId}, trying index...`);
+      const indexDoc = await db.collection('exams').doc(data.examId).get();
+      if (!indexDoc.exists) {
+        throw new Error('Exam not found');
+      }
+      const indexData = indexDoc.data()!;
+      const instructorId = indexData.instructorId;
+      const examDoc = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(data.examId)
+        .get();
+      if (!examDoc.exists) {
+        throw new Error('Exam not found');
+      }
+      examsSnapshot = { docs: [examDoc], empty: false } as any;
     }
 
     const examDoc = examsSnapshot.docs[0];
