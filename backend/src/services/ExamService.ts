@@ -1033,21 +1033,49 @@ export class ExamService {
           .where('type', 'in', ['essay', 'short_answer'])
           .get();
 
-        // Get attempts for this exam
-        const attemptsSnapshot = await db
+        // Get session IDs for this exam from the flat index, then look up directly
+        // Use the exams flat index to find attempts
+        const sessionsSnapshot = await db
           .collectionGroup('exam_sessions')
           .where('examId', '==', examDoc.id)
           .where('status', '==', 'completed')
-          .get();
+          .get()
+          .catch(() => null);
 
-        // For each attempt, check for essay answers
-        for (const attemptDoc of attemptsSnapshot.docs) {
-          const attemptData = attemptDoc.data();
-          
+        let sessions: { doc: any; data: any; studentId: string }[] = [];
+
+        if (!sessionsSnapshot || sessionsSnapshot.empty) {
+          // Fallback: find attempts via the exam's attempt count and session events
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const userSessions = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('exam_sessions')
+              .where('examId', '==', examDoc.id)
+              .where('status', '==', 'completed')
+              .get();
+            userSessions.docs.forEach(doc => {
+              sessions.push({ doc, data: doc.data(), studentId: userDoc.id });
+            });
+          }
+        } else {
+          sessionsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const pathParts = doc.ref.path.split('/');
+            sessions.push({ doc, data, studentId: pathParts[1] });
+          });
+        }
+
+        // For each session, check for essay answers
+        for (const { doc: attemptDoc, data: attemptData, studentId } of sessions) {
           // Get answers for this attempt
           const answersSnapshot = await db
             .collection('examforge_users')
-            .doc(attemptData.studentId)
+            .doc(studentId)
             .collection('examinee_data')
             .where('attemptId', '==', attemptDoc.id)
             .get();
@@ -1064,7 +1092,7 @@ export class ExamService {
                 questionId: question.id,
                 examId: examDoc.id,
                 examTitle: examData.title,
-                studentId: attemptData.studentId,
+                studentId,
                 studentName: attemptData.studentName || 'Unknown',
                 studentEmail: attemptData.studentEmail || '',
                 question: {
@@ -1103,18 +1131,13 @@ export class ExamService {
     const db = getFirestore();
 
     try {
-      // Find the attempt
-      const attemptsSnapshot = await db
-        .collectionGroup('exam_sessions')
-        .where('__name__', '==', attemptId)
-        .get();
-
-      if (attemptsSnapshot.empty) {
+      // Find the attempt using findSessionByAttemptId
+      const sessionLookup = await this.findSessionByAttemptId(attemptId);
+      if (!sessionLookup) {
         throw new Error('Attempt not found');
       }
 
-      const attemptDoc = attemptsSnapshot.docs[0];
-      const attemptData = attemptDoc.data();
+      const attemptData = sessionLookup.doc.data();
       const studentId = attemptData.studentId;
 
       // Find and update the answer
@@ -1134,7 +1157,7 @@ export class ExamService {
       await answerDoc.ref.update({
         pointsEarned: earnedPoints,
         feedback: feedback || null,
-        gradedBy: 'instructor', // TODO: Use actual instructor ID
+        gradedBy: 'instructor',
         gradedAt: FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -1154,7 +1177,7 @@ export class ExamService {
       });
 
       // Update attempt with new total score
-      await attemptDoc.ref.update({
+      await sessionLookup.doc.ref.update({
         score: totalScore,
         updatedAt: FieldValue.serverTimestamp(),
       });
@@ -1185,15 +1208,48 @@ export class ExamService {
 
       const examData = examDoc.data()!;
 
-      // Get all attempts for this exam
+      // Get all attempts for this exam — try collectionGroup first, fallback to user scan
+      let attemptsData: any[] = [];
+      
       const attemptsSnapshot = await db
         .collectionGroup('exam_sessions')
         .where('examId', '==', examId)
         .where('status', '==', 'completed')
-        .get();
+        .get()
+        .catch(() => null);
 
-      const attempts = attemptsSnapshot.docs.map(doc => doc.data());
-      const totalAttempts = attempts.length;
+      if (attemptsSnapshot && !attemptsSnapshot.empty) {
+        attemptsData = attemptsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const pathParts = doc.ref.path.split('/');
+          data._studentId = pathParts[1];
+          data._sessionId = doc.id;
+          return data;
+        });
+      } else {
+        // Fallback: scan users
+        const userDocs = await db.collection('examforge_users')
+          .orderBy('createdAt', 'desc')
+          .limit(50)
+          .get();
+        for (const userDoc of userDocs.docs) {
+          const userSessions = await db
+            .collection('examforge_users')
+            .doc(userDoc.id)
+            .collection('exam_sessions')
+            .where('examId', '==', examId)
+            .where('status', '==', 'completed')
+            .get();
+          userSessions.docs.forEach(doc => {
+            const data = doc.data();
+            data._studentId = userDoc.id;
+            data._sessionId = doc.id;
+            attemptsData.push(data);
+          });
+        }
+      }
+
+      const totalAttempts = attemptsData.length;
 
       if (totalAttempts === 0) {
         return {
@@ -1208,16 +1264,16 @@ export class ExamService {
       }
 
       // Calculate statistics
-      const totalScore = attempts.reduce((sum, a) => sum + (a.score || 0), 0);
+      const totalScore = attemptsData.reduce((sum, a) => sum + (a.score || 0), 0);
       const averageScore = (totalScore / totalAttempts / (examData.totalPoints || 100)) * 100;
 
-      const passedCount = attempts.filter(a => a.passed).length;
+      const passedCount = attemptsData.filter(a => a.passed).length;
       const passRate = (passedCount / totalAttempts) * 100;
 
-      const totalTime = attempts.reduce((sum, a) => sum + (a.timeSpent || 0), 0);
+      const totalTime = attemptsData.reduce((sum, a) => sum + (a.timeSpent || 0), 0);
       const averageTime = totalTime / totalAttempts;
 
-      // Get question statistics
+      // Get questions for this exam
       const questionsSnapshot = await db
         .collection('examforge_users')
         .doc(instructorId)
@@ -1231,23 +1287,25 @@ export class ExamService {
       for (const questionDoc of questionsSnapshot.docs) {
         const questionData = questionDoc.data();
         let correctCount = 0;
-        let totalPoints = 0;
+        let totalEarned = 0;
         let answerCount = 0;
 
         // Get all answers for this question across all attempts
-        for (const attempt of attempts) {
+        for (const attempt of attemptsData) {
+          const sid = attempt._studentId;
+          if (!sid) continue;
           const answersSnapshot = await db
             .collection('examforge_users')
-            .doc(attempt.studentId)
+            .doc(sid)
             .collection('examinee_data')
-            .where('attemptId', '==', attempt.attemptId)
+            .where('attemptId', '==', attempt._sessionId)
             .where('questionId', '==', questionDoc.id)
             .get();
 
           answersSnapshot.docs.forEach(answerDoc => {
             const answerData = answerDoc.data();
             if (answerData.isCorrect) correctCount++;
-            totalPoints += answerData.pointsEarned || 0;
+            totalEarned += answerData.pointsEarned || 0;
             answerCount++;
           });
         }
@@ -1256,7 +1314,7 @@ export class ExamService {
           questionId: questionDoc.id,
           questionText: questionData.text,
           correctRate: answerCount > 0 ? (correctCount / answerCount) * 100 : 0,
-          averagePoints: answerCount > 0 ? totalPoints / answerCount : 0,
+          averagePoints: answerCount > 0 ? totalEarned / answerCount : 0,
           maxPoints: questionData.points,
         });
       }
@@ -1295,29 +1353,56 @@ export class ExamService {
       for (const examDoc of examsSnapshot.docs) {
         const examData = examDoc.data();
 
-        // Get all sessions for this exam
+        // Get all sessions for this exam — with fallback
+        let sessionsDocs: { doc: any; data: any; studentId: string }[] = [];
+
         const sessionsSnapshot = await db
           .collectionGroup('exam_sessions')
           .where('examId', '==', examDoc.id)
-          .get();
+          .get()
+          .catch(() => null);
 
-        for (const sessionDoc of sessionsSnapshot.docs) {
-          const sessionData = sessionDoc.data();
+        if (sessionsSnapshot && !sessionsSnapshot.empty) {
+          sessionsSnapshot.docs.forEach(doc => {
+            const pathParts = doc.ref.path.split('/');
+            sessionsDocs.push({ doc, data: doc.data(), studentId: pathParts[1] });
+          });
+        } else {
+          // Fallback: scan recent users
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const userSessions = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('exam_sessions')
+              .where('examId', '==', examDoc.id)
+              .get();
+            userSessions.docs.forEach(doc => {
+              sessionsDocs.push({ doc, data: doc.data(), studentId: userDoc.id });
+            });
+          }
+        }
 
+        for (const { data: sessionData, studentId } of sessionsDocs) {
+          const sid = sessionData.studentId || studentId;
+          
           // Get session events (incidents)
           const eventsSnapshot = await db
             .collection('examforge_users')
-            .doc(sessionData.studentId)
+            .doc(sid)
             .collection('session_events')
-            .where('attemptId', '==', sessionData.attemptId)
+            .where('attemptId', '==', (sessionData as any)._sessionId || sessionData.attemptId)
             .get();
 
           eventsSnapshot.docs.forEach(eventDoc => {
             const eventData = eventDoc.data();
             incidents.push({
               id: eventDoc.id,
-              studentId: sessionData.studentId,
-              studentName: sessionData.studentName,
+              studentId: sid,
+              studentName: sessionData.studentName || 'Unknown',
               examId: examDoc.id,
               examTitle: examData.title,
               eventType: eventData.eventType,
@@ -1331,7 +1416,11 @@ export class ExamService {
       }
 
       // Sort by timestamp descending (most recent first)
-      incidents.sort((a, b) => b.timestamp - a.timestamp);
+      incidents.sort((a, b) => {
+        const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.timestamp || 0);
+        const tB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.timestamp || 0);
+        return tB - tA;
+      });
 
       return incidents;
     } catch (error) {
