@@ -83,9 +83,14 @@ export class ExamService {
 
     // Use flat exams index collection (no composite index needed)
     const indexDoc = await db.collection('exams').doc(examId).get();
-    if (!indexDoc.exists) return null;
+    if (!indexDoc.exists) {
+      console.warn(`[findExamById] No index doc found for exam ${examId}`);
+      return null;
+    }
 
-    const { instructorId } = indexDoc.data()!;
+    const indexData = indexDoc.data()!;
+    console.log(`[findExamById] Found index for exam ${examId}, instructor=${indexData.instructorId}, status=${indexData.status}`);
+    const instructorId = indexData.instructorId;
     
     // Get actual exam from instructor's subcollection
     const examDoc = await db
@@ -95,10 +100,16 @@ export class ExamService {
       .doc(examId)
       .get();
 
-    if (!examDoc.exists) return null;
+    if (!examDoc.exists) {
+      console.warn(`[findExamById] Exam doc not found at path: examforge_users/${instructorId}/published_exams/${examId}`);
+      return null;
+    }
+
+    const examData = examDoc.data();
+    console.log(`[findExamById] Exam doc found, has title:`, examData?.title ? 'yes' : 'NO - missing title!');
 
     return {
-      exam: this.mapExamFromDb(examDoc.id, examDoc.data()!, instructorId),
+      exam: this.mapExamFromDb(examDoc.id, examData, instructorId),
       instructorId,
     };
   }
@@ -782,6 +793,10 @@ export class ExamService {
 
   // Helper mapping functions for Firestore documents
   private static mapExamFromDb(id: string, data: any, instructorId: string): Exam {
+    if (!data) {
+      console.error(`[mapExamFromDb] FATAL: data is undefined for exam ${id}, instructor ${instructorId}`);
+      throw new Error(`Exam data not found for ${id}`);
+    }
     return {
       id,
       title: data.title,
