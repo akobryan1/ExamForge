@@ -123,6 +123,7 @@ export interface Exam {
   accessCode?: string;
   allowedStudentIds?: string[];
   allowGuestAccess?: boolean; // Allow non-registered students
+  accessMethod?: 'guest' | 'student_login'; // Access control method
   sections?: string[]; // Class/section filtering
   
   // Retake configuration

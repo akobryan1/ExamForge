@@ -255,7 +255,13 @@ export class ExamService {
     }
 
     const updatedDoc = await examRef.get();
-    return this.mapExamFromDb(updatedDoc.id, updatedDoc.data()!, instructorId);
+    const updatedData = updatedDoc.data();
+    if (!updatedData) {
+      console.error(`[updateExam] Exam ${examId} data() is null after update!`);
+      // Return the original exam data as fallback
+      return this.mapExamFromDb(examDoc.id, examDoc.data()!, instructorId);
+    }
+    return this.mapExamFromDb(updatedDoc.id, updatedData, instructorId);
   }
 
   /**
@@ -823,6 +829,7 @@ export class ExamService {
       proctorConfig: data.proctorConfig || undefined,
       customInstructions: data.customInstructions || undefined,
       showRulesBeforeExam: data.showRulesBeforeExam ?? false,
+      accessMethod: data.accessMethod || 'student_login',
       subject: data.subject || '',
       grade: data.grade || '',
       questionCount: data.questionCount || 0,
