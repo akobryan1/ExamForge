@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
-import { pageTransition, fadeIn, staggerContainer, staggerItem } from '../utils/animations';
+import { pageTransition, fadeIn, staggerContainer } from '../utils/animations';
 import type { Exam } from '../types/exam';
 import '../styles/pages/analytics.css';
 
@@ -29,6 +29,7 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     loadExams();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -41,14 +42,13 @@ export function AnalyticsPage() {
     try {
       setLoading(true);
       const examsData = await ExamService.getExams();
-      // Filter to only show exams with attempts
-      const examsWithAttempts = examsData.filter(
-        (exam) => (exam.attemptCount || 0) > 0
-      );
-      setExams(examsWithAttempts);
+      // Show ALL exams, even those without attempts
+      setExams(examsData);
 
-      if (examsWithAttempts.length > 0 && !selectedExam) {
-        setSelectedExam(examsWithAttempts[0].id);
+      if (examsData.length > 0 && !selectedExam) {
+        // Select first exam that has attempts, or just the first exam
+        const examWithData = examsData.find(exam => (exam.attemptCount || 0) > 0) || examsData[0];
+        setSelectedExam(examWithData.id);
       }
     } catch (error) {
       console.error('Failed to load exams:', error);
@@ -76,7 +76,7 @@ export function AnalyticsPage() {
     );
   }
 
-  if (exams.length === 0) {
+  if (exams.length === 0 && !loading) {
     return (
       <MainLayout>
         <div className="empty-state">
@@ -104,9 +104,10 @@ export function AnalyticsPage() {
           <div className="header-actions">
             <select
               value={selectedExam || ''}
-              onChange={(e) => setSelectedExam(e.target.value)}
+              onChange={(e) => setSelectedExam(e.target.value || null)}
               className="exam-select"
             >
+              <option value="">— Select an exam —</option>
               {exams.map((exam) => (
                 <option key={exam.id} value={exam.id}>
                   {exam.title} ({exam.attemptCount || 0} attempts)
@@ -115,6 +116,20 @@ export function AnalyticsPage() {
             </select>
           </div>
         </div>
+
+        {!selectedExam && (
+          <div className="empty-state">
+            <h2>Select an Exam</h2>
+            <p>Choose an exam from the dropdown above to view its analytics.</p>
+          </div>
+        )}
+
+        {selectedExam && !analytics && (
+          <div className="empty-state">
+            <h2>No Data Available</h2>
+            <p>No attempt data found for this exam yet. Analytics will appear once students take the exam.</p>
+          </div>
+        )}
 
         {analytics && (
           <motion.div variants={staggerContainer}>

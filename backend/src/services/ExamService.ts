@@ -1386,15 +1386,16 @@ export class ExamService {
           }
         }
 
-        for (const { data: sessionData, studentId } of sessionsDocs) {
+        for (const { doc: sessionDoc, data: sessionData, studentId } of sessionsDocs) {
           const sid = sessionData.studentId || studentId;
+          const attemptId = sessionDoc.id;
           
           // Get session events (incidents)
           const eventsSnapshot = await db
             .collection('examforge_users')
             .doc(sid)
             .collection('session_events')
-            .where('attemptId', '==', (sessionData as any)._sessionId || sessionData.attemptId)
+            .where('attemptId', '==', attemptId)
             .get();
 
           eventsSnapshot.docs.forEach(eventDoc => {
