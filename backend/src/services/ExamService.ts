@@ -72,7 +72,13 @@ export class ExamService {
     });
 
     const examDoc = await examRef.get();
-    return this.mapExamFromDb(examRef.id, examDoc.data()!, instructorId);
+    const savedData = examDoc.data();
+    if (!savedData) {
+      // Firestore eventual consistency: use the data we already constructed
+      console.warn(`[createExam] Re-fetch returned empty for ${examRef.id}, using local data`);
+      return this.mapExamFromDb(examRef.id, { ...examData, createdAt: new Date(), updatedAt: new Date() }, instructorId);
+    }
+    return this.mapExamFromDb(examRef.id, savedData, instructorId);
   }
 
   /**
@@ -136,7 +142,11 @@ export class ExamService {
 
     if (!examDoc.exists) return null;
 
-    const examData = examDoc.data()!;
+    const examData = examDoc.data();
+    if (!examData) {
+      console.warn(`[getExamById] Exam ${examId} doc exists but data() is null`);
+      return null;
+    }
     
     // Check access: instructor owns it OR exam is published/active
     if (userId && examData.instructorId !== userId && !['published', 'active'].includes(examData.status)) {
@@ -270,7 +280,7 @@ export class ExamService {
     if (!updatedData) {
       console.error(`[updateExam] Exam ${examId} data() is null after update!`);
       // Return the original exam data as fallback
-      return this.mapExamFromDb(examDoc.id, examDoc.data()!, instructorId);
+      return currentData ? this.mapExamFromDb(examDoc.id, currentData, instructorId) : null as any;
     }
     return this.mapExamFromDb(updatedDoc.id, updatedData, instructorId);
   }
