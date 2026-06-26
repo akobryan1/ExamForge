@@ -512,7 +512,6 @@ export class ExamService {
       // Fallback: try the flat exams index
       console.warn(`[startExamAttempt] Collection group found no exam ${data.examId}, trying index...`);
       const indexDoc = await db.collection('exams').doc(data.examId).get();
-      const indexDoc = await db.collection('exams').doc(data.examId).get();
       if (!indexDoc.exists) {
         throw new Error('Exam not found');
       }
