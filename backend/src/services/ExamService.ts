@@ -531,7 +531,15 @@ export class ExamService {
 
     const examDoc = examsSnapshot.docs[0];
     const examData = examDoc.data();
+    if (!examData) {
+      console.error(`[startExamAttempt] Exam ${data.examId} data() is null`);
+      throw new Error('Exam data not found');
+    }
     const instructorId = examData.instructorId;
+    if (!instructorId) {
+      console.error(`[startExamAttempt] Exam ${data.examId} has no instructorId`);
+      throw new Error('Exam configuration error');
+    }
 
     // Verify exam status
     if (!['published', 'active'].includes(examData.status)) {
