@@ -102,6 +102,7 @@ router.put(
       );
       return res.json(exam);
     } catch (error: any) {
+      console.error('[Exams] PUT /:id error:', error.message, error.stack);
       return res.status(400).json({ error: error.message });
     }
   }

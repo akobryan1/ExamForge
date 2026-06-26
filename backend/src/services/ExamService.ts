@@ -209,6 +209,8 @@ export class ExamService {
   static async updateExam(examId: string, instructorId: string, data: UpdateExamDto): Promise<Exam> {
     const db = getFirestore();
 
+    console.log(`[updateExam] Called for exam ${examId}, instructor ${instructorId}`);
+
     const examRef = db
       .collection('examforge_users')
       .doc(instructorId)
@@ -217,7 +219,16 @@ export class ExamService {
 
     const examDoc = await examRef.get();
     if (!examDoc.exists) {
+      console.error(`[updateExam] Exam ${examId} not found at path: examforge_users/${instructorId}/published_exams/${examId}`);
       throw new Error('Exam not found');
+    }
+
+    const currentData = examDoc.data();
+    console.log(`[updateExam] Found exam, title=${currentData?.title}, exists=${!!currentData}`);
+
+    if (!currentData) {
+      console.error(`[updateExam] Exam ${examId} doc exists but data() is null!`);
+      throw new Error(`Exam data not found for ${examId}`);
     }
 
     const updateData: any = {
