@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
+import apiClient from '../apiClient';
 
 let authInstance: ReturnType<typeof getAuth> | null = null;
 function getAuthInstance() {
@@ -37,22 +38,35 @@ export function ExamLoginPage() {
     try {
       setLoading(true);
       setError('');
+
+      // 1. Sign in with Firebase
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Get Firebase ID token and store it for API requests
+
+      // 2. Get Firebase ID token
       const idToken = await userCredential.user.getIdToken();
-      localStorage.setItem('accessToken', idToken);
+
+      // 3. Exchange Firebase ID token for backend JWT via /api/auth/login
+      console.log('[ExamLogin] Exchanging Firebase token for backend JWT...');
+      const { data } = await apiClient.post('/api/auth/login', { idToken });
+
+      // 4. Store backend-issued accessToken
+      localStorage.setItem('accessToken', data.accessToken);
       
-      console.log('[ExamLogin] Login successful, token stored. Redirecting to:', redirect);
+      console.log('[ExamLogin] Login successful. Redirecting to:', redirect);
       setSuccess(true);
       setTimeout(() => navigate(redirect, { replace: true }), 500);
     } catch (err: any) {
-      console.error('[ExamLogin] Error:', err.code);
+      console.error('[ExamLogin] Error:', err.code || err.message);
+      // Firebase auth errors
       const code = err.code;
       if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
         setError('Invalid email or password');
       } else if (code === 'auth/invalid-email') {
         setError('Invalid email format');
+      } else if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else if (err.response?.data?.message) {
+        setError(err.response.data.message);
       } else {
         setError(err.message || 'Login failed');
       }
