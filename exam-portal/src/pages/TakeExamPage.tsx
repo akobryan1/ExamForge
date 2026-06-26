@@ -118,8 +118,10 @@ export function TakeExamPage() {
         try { await document.documentElement.requestFullscreen(); } catch {}
       }
     } catch (err: any) {
+      console.error('[TakeExam] startExam error:', err.response?.data || err.message);
       if (err.response?.status === 403) setError('Access denied. Please check your credentials.');
-      setError(err.message || 'Failed to start exam');
+      else if (err.response?.data?.error) setError(err.response.data.error);
+      else setError(err.message || 'Failed to start exam');
     } finally { setStarting(false); }
   };
 
