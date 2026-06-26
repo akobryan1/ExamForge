@@ -730,7 +730,21 @@ export class ExamService {
     let pointsEarned: number | null = null;
 
     if (['multiple_choice', 'true_false'].includes(questionData.type)) {
-      isCorrect = JSON.stringify(data.answer) === JSON.stringify(questionData.correctAnswer);
+      // Multiple choice: correctAnswer is stored as the index (number), answer is the choice text
+      if (questionData.type === 'multiple_choice' && questionData.choices) {
+        const correctIndex = questionData.correctAnswer;
+        const correctChoice = questionData.choices[correctIndex];
+        if (correctChoice) {
+          isCorrect = data.answer === correctChoice.text;
+        } else {
+          isCorrect = false;
+        }
+      } else if (questionData.type === 'true_false') {
+        // True/False: correctAnswer is stored as boolean, answer comes as string
+        isCorrect = String(data.answer).toLowerCase() === String(questionData.correctAnswer).toLowerCase();
+      } else {
+        isCorrect = JSON.stringify(data.answer) === JSON.stringify(questionData.correctAnswer);
+      }
       pointsEarned = isCorrect ? questionData.points : 0;
     }
 
