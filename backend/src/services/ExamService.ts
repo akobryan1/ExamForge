@@ -634,17 +634,57 @@ export class ExamService {
   /**
    * Find the session doc for a given attemptId across all users
    */
-  private static async findSessionByAttemptId(attemptId: string): Promise<{ studentId: string; doc: any } | null> {
+  private static async findSessionByAttemptId(attemptId: string, knownUserId?: string): Promise<{ studentId: string; doc: any } | null> {
     const db = getFirestore();
-    const groupsSnapshot = await db
-      .collectionGroup('exam_sessions')
-      .where('__name__', '==', attemptId)
-      .limit(1)
-      .get();
-    if (groupsSnapshot.empty) return null;
+
+    // If we know the user ID, try direct path first (fast)
+    if (knownUserId) {
+      const sessionDoc = await db
+        .collection('examforge_users')
+        .doc(knownUserId)
+        .collection('exam_sessions')
+        .doc(attemptId)
+        .get();
+      if (sessionDoc.exists) {
+        return { studentId: knownUserId, doc: sessionDoc };
+      }
+    }
+
+    // Try collection group query (may fail on some Firestore configs)
+    let groupsSnapshot;
+    try {
+      groupsSnapshot = await db
+        .collectionGroup('exam_sessions')
+        .where('__name__', '==', attemptId)
+        .limit(1)
+        .get();
+    } catch (err) {
+      console.warn(`[findSessionByAttemptId] Collection group query failed:`, err instanceof Error ? err.message : err);
+      groupsSnapshot = { empty: true, docs: [] } as any;
+    }
+
+    if (!groupsSnapshot || groupsSnapshot.empty) {
+      // Fallback: search recent users' sessions (limited scan)
+      const userDocs = await db.collection('examforge_users')
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+      for (const userDoc of userDocs.docs) {
+        const sessionDoc = await db
+          .collection('examforge_users')
+          .doc(userDoc.id)
+          .collection('exam_sessions')
+          .doc(attemptId)
+          .get();
+        if (sessionDoc.exists) {
+          return { studentId: userDoc.id, doc: sessionDoc };
+        }
+      }
+      return null;
+    }
     const doc = groupsSnapshot.docs[0];
     const pathParts = doc.ref.path.split('/');
-    const studentId = pathParts[1]; // examforge_users/{studentId}/exam_sessions/{id}
+    const studentId = pathParts[1];
     return { studentId, doc };
   }
 
@@ -655,7 +695,7 @@ export class ExamService {
     const db = getFirestore();
 
     // Resolve the session by attemptId to get the real studentId
-    const sessionLookup = await this.findSessionByAttemptId(data.attemptId);
+    const sessionLookup = await this.findSessionByAttemptId(data.attemptId, studentId !== 'guest' ? studentId : undefined);
     if (!sessionLookup) {
       throw new Error('Session not found');
     }
@@ -747,7 +787,7 @@ export class ExamService {
     const db = getFirestore();
 
     // Resolve session by attemptId
-    const sessionLookup = await this.findSessionByAttemptId(data.attemptId);
+    const sessionLookup = await this.findSessionByAttemptId(data.attemptId, studentId !== 'guest' ? studentId : undefined);
     if (!sessionLookup) {
       throw new Error('Session not found');
     }
@@ -823,7 +863,7 @@ export class ExamService {
     const db = getFirestore();
 
     // Resolve session by attemptId
-    const sessionLookup = await this.findSessionByAttemptId(attemptId);
+    const sessionLookup = await this.findSessionByAttemptId(attemptId, userId !== 'guest' ? userId : undefined);
     if (!sessionLookup) {
       throw new Error('Attempt not found');
     }
