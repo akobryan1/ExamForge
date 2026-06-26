@@ -1472,7 +1472,7 @@ export class ExamService {
       });
 
       // Update attempt with violation
-      await attemptDoc.ref.update({
+      await sessionLookup.doc.ref.update({
         violations: FieldValue.arrayUnion({
           id: eventRef.id,
           type: violationType,
