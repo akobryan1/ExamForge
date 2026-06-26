@@ -61,6 +61,11 @@ app.use((req, _res, next) => {
   next();
 });
 
+app.use(morgan('dev')); // Request logging
+app.use(express.json()); // Parse JSON bodies
+app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(cookieParser()); // Parse cookies
+
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {
   res.json({
