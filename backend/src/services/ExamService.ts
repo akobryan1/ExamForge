@@ -504,13 +504,14 @@ export class ExamService {
         .limit(1)
         .get();
     } catch (err) {
-      console.error(`[startExamAttempt] Collection group query failed for exam ${data.examId}:`, err);
-      throw new Error(`Failed to find exam: ${err instanceof Error ? err.message : err}`);
+      console.warn(`[startExamAttempt] Collection group query failed (known Firestore limitation), trying flat index:`, err instanceof Error ? err.message : err);
+      examsSnapshot = { empty: true, docs: [] } as any;
     }
 
-    if (examsSnapshot.empty) {
+    if (!examsSnapshot || examsSnapshot.empty) {
       // Fallback: try the flat exams index
       console.warn(`[startExamAttempt] Collection group found no exam ${data.examId}, trying index...`);
+      const indexDoc = await db.collection('exams').doc(data.examId).get();
       const indexDoc = await db.collection('exams').doc(data.examId).get();
       if (!indexDoc.exists) {
         throw new Error('Exam not found');
