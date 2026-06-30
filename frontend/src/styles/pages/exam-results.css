@@ -189,6 +189,11 @@
   color: #991b1b;
 }
 
+.review-result.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .review-points {
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;

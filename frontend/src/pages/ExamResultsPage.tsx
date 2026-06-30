@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
+import { useAuth } from '../contexts/AuthContext';
 import { pageTransition, fadeIn } from '../utils/animations';
 import type { ExamAttempt, Exam, Question } from '../types/exam';
 import '../styles/pages/exam-results.css';
 
 export function ExamResultsPage() {
   const { attemptId } = useParams<{ attemptId: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
+  const viewingStudentId = searchParams.get('studentId');
   
   const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
   const [exam, setExam] = useState<Exam | null>(null);
@@ -85,11 +90,13 @@ export function ExamResultsPage() {
           <div className="results-icon">
             {passed ? '🎉' : '📝'}
           </div>
-          <h1>{passed ? 'Congratulations!' : 'Exam Completed'}</h1>
+          <h1>{isInstructor ? `Paper: ${attempt.studentName || 'Student'}` : (passed ? 'Congratulations!' : 'Exam Completed')}</h1>
           <p className="results-message">
-            {passed 
-              ? 'You have successfully passed the exam!' 
-              : 'Keep practicing! You can do better next time.'}
+            {isInstructor
+              ? `Reviewing ${attempt.studentName || 'student'}'s submission for "${exam.title}"`
+              : (passed
+                ? 'You have successfully passed the exam!'
+                : 'Keep practicing! You can do better next time.')}
           </p>
         </div>
 
@@ -106,6 +113,10 @@ export function ExamResultsPage() {
             <div className="breakdown-item">
               <span className="breakdown-label">Exam:</span>
               <span className="breakdown-value">{exam.title}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Student:</span>
+              <span className="breakdown-value">{attempt.studentName || 'Unknown'}</span>
             </div>
             <div className="breakdown-item">
               <span className="breakdown-label">Submitted:</span>
@@ -139,21 +150,25 @@ export function ExamResultsPage() {
             <div className="questions-review">
               {questions.map((question, index) => {
                 const studentAnswer: any = Array.isArray(attempt.answers)
-                  ? attempt.answers.find(a => a.questionId === question.id)
+                  ? attempt.answers.find((a: any) => a.questionId === question.id)
                   : Object.values(attempt.answers || {}).find((a: any) => a.questionId === question.id);
                 const isCorrect = studentAnswer?.isCorrect;
-                const earnedPoints = studentAnswer?.earnedPoints || 0;
+                const earnedPoints = studentAnswer?.pointsEarned ?? null;
+                const notAnswered = !studentAnswer;
+                const isUngraded = studentAnswer && earnedPoints === null && studentAnswer?.gradedBy === null;
+                const resultLabel = notAnswered ? '❌ Not Answered' : (isUngraded ? '⏳ Pending' : (isCorrect ? '✓ Correct' : '✗ Incorrect'));
+                const resultClass = notAnswered ? 'incorrect' : (isUngraded ? 'pending' : (isCorrect ? 'correct' : 'incorrect'));
 
                 return (
                   <div key={question.id} className="review-question-card">
                     <div className="review-question-header">
                       <span className="review-question-number">Question {index + 1}</span>
                       <div className="review-question-meta">
-                        <span className={`review-result ${isCorrect ? 'correct' : 'incorrect'}`}>
-                          {isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                        <span className={`review-result ${resultClass}`}>
+                          {resultLabel}
                         </span>
                         <span className="review-points">
-                          {earnedPoints} / {question.points} pts
+                          {isUngraded ? 'Pending' : `${earnedPoints ?? 0} / ${question.points} pts`}
                         </span>
                       </div>
                     </div>
@@ -165,7 +180,7 @@ export function ExamResultsPage() {
                         <strong>Your Answer:</strong>
                         <span>{studentAnswer?.answer || 'Not answered'}</span>
                       </div>
-                      {!isCorrect && question.correctAnswer && (
+                      {!isCorrect && !isUngraded && question.correctAnswer && (
                         <div className="review-correct-answer">
                           <strong>Correct Answer:</strong>
                           <span>{question.correctAnswer}</span>

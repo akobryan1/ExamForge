@@ -547,13 +547,16 @@ router.post(
 
 /**
  * GET /api/attempts/:id - Get exam attempt with answers
+ * Optional query param: ?studentId=xxx for direct path lookup (instructor reviewing a student's paper)
  */
 router.get('/attempts/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId || `guest_${req.params.id}`;
+    const studentId = req.query.studentId as string | undefined;
     const attempt = await ExamService.getExamAttempt(
       req.params.id,
-      userId
+      userId,
+      studentId
     );
     return res.json(attempt);
   } catch (error: any) {

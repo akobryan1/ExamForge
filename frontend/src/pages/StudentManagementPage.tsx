@@ -449,8 +449,7 @@ export function StudentManagementPage() {
                             <button
                               className="btn-view-paper"
                               onClick={() => {
-                                // Navigate to the attempt detail — could open a modal or navigate
-                                navigate(`/exam-results/${p.examId}?attemptId=${p.attemptId}&studentId=${p.studentId}`);
+                                navigate(`/attempts/${p.attemptId}/results?studentId=${p.studentId}`);
                               }}
                               style={{
                                 padding: '5px 12px',

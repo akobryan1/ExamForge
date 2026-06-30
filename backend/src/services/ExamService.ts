@@ -664,10 +664,10 @@ export class ExamService {
     }
 
     if (!groupsSnapshot || groupsSnapshot.empty) {
-      // Fallback: search recent users' sessions (limited scan)
+      // Fallback: search recent users' sessions (wider scan — 100 users)
       const userDocs = await db.collection('examforge_users')
         .orderBy('createdAt', 'desc')
-        .limit(20)
+        .limit(100)
         .get();
       for (const userDoc of userDocs.docs) {
         const sessionDoc = await db
@@ -873,11 +873,12 @@ export class ExamService {
   /**
    * Get exam attempt with answers
    */
-  static async getExamAttempt(attemptId: string, userId: string): Promise<ExamAttempt & { answers: ExamAnswer[] }> {
+  static async getExamAttempt(attemptId: string, userId: string, studentId?: string): Promise<ExamAttempt & { answers: ExamAnswer[] }> {
     const db = getFirestore();
 
-    // Resolve session by attemptId
-    const sessionLookup = await this.findSessionByAttemptId(attemptId, userId !== 'guest' ? userId : undefined);
+    // Resolve session by attemptId — prefer studentId if provided (direct path, fastest)
+    const lookupUserId = studentId || userId;
+    const sessionLookup = await this.findSessionByAttemptId(attemptId, lookupUserId !== 'guest' ? lookupUserId : undefined);
     if (!sessionLookup) {
       throw new Error('Attempt not found');
     }
