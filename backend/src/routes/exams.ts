@@ -152,7 +152,7 @@ Be fair and consistent. Score must be between 0 and ${maxPoints}.`,
         return res.status(502).json({ error: `AI API error: ${response.statusText}` });
       }
 
-      const data = await response.json();
+      const data = await response.json() as { choices?: { message?: { content?: string } }[] };
       const content = data.choices?.[0]?.message?.content || '{}';
       
       let result: { score: number; feedback: string };
