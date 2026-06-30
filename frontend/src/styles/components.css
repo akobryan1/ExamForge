@@ -330,3 +330,73 @@ textarea.input {
   height: 40px;
   border-width: 4px;
 }
+
+/* ============================================
+   RESPONSIVE COMPONENT ADJUSTMENTS
+   ============================================ */
+
+@media (max-width: 768px) {
+  .btn {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--text-sm);
+    white-space: normal;
+    width: auto;
+  }
+
+  .btn-group {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .btn-group > .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card {
+    padding: var(--spacing-4);
+  }
+
+  .card-header {
+    flex-direction: column;
+    gap: var(--spacing-2);
+    align-items: flex-start;
+  }
+
+  .card-title {
+    font-size: var(--text-base);
+  }
+
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+
+  .toast-success {
+    left: var(--spacing-3);
+    right: var(--spacing-3);
+    bottom: var(--spacing-3);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+  }
+
+  .error-banner {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--text-sm);
+    flex-wrap: wrap;
+  }
+
+  .count-badge {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: var(--spacing-3);
+    border-radius: var(--radius-sm);
+  }
+
+  .card-header {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+}

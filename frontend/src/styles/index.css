@@ -111,6 +111,69 @@
    RESPONSIVE UTILITIES
    ============================================ */
 
+/* Responsive table wrapper — makes any table scrollable on small screens */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0 calc(-1 * var(--spacing-4));
+  padding: 0 var(--spacing-4);
+}
+
+.table-responsive table {
+  min-width: 600px;
+}
+
+/* Responsive card grid */
+.card-grid {
+  display: grid;
+  gap: var(--spacing-4);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.card-grid.compact {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+/* Responsive inline filter bar — stacks on mobile */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.filter-bar > * {
+  flex: 0 0 auto;
+}
+
+/* Responsive two-column layout */
+.form-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-6);
+}
+
+/* Hide on mobile */
+.hide-mobile {
+  display: revert;
+}
+
+/* Show only on mobile */
+.show-mobile {
+  display: none;
+}
+
+/* Responsive page section */
+.section-responsive {
+  padding: var(--spacing-6);
+}
+
+@media (max-width: 1024px) {
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
 @media (max-width: 768px) {
   .grid-cols-2,
   .grid-cols-3,
@@ -120,6 +183,41 @@
   
   .container {
     padding: 0 var(--spacing-4);
+  }
+
+  .form-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-bar > * {
+    width: 100%;
+  }
+
+  .hide-mobile {
+    display: none;
+  }
+
+  .show-mobile {
+    display: revert;
+  }
+
+  .section-responsive {
+    padding: var(--spacing-4);
+  }
+
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .section-responsive {
+    padding: var(--spacing-3);
   }
 }
 
