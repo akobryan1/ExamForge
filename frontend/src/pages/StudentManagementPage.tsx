@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { useStudents, useRegistrationFields, useSaveRegistrationFields } from '../hooks/useStudentQueries';
+import { useSubmittedPapers } from '../hooks/useExamQueries';
 import { Button } from '../components/Button';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/students.css';
@@ -25,6 +26,9 @@ export function StudentManagementPage() {
   const [regLink, setRegLink] = useState<string>('');
   const [fieldInputs, setFieldInputs] = useState({ section: '', year: '', course: '' });
   const [savingFields, setSavingFields] = useState(false);
+  const [activeTab, setActiveTab] = useState<'registered' | 'papers'>('registered');
+
+  const { data: papers = [], isLoading: papersLoading } = useSubmittedPapers();
 
   // Local copy of fields for editing
   const [localFields, setLocalFields] = useState<{ sections: string[]; years: string[]; courses: string[] }>({ sections: [], years: [], courses: [] });
@@ -130,8 +134,50 @@ export function StudentManagementPage() {
           <div className="page-header">
             <div>
               <h1>Student registration</h1>
-              <p className="page-subtitle">Configure registration fields and manage your examinees</p>
+              <p className="page-subtitle">Manage your examinees and review submitted papers</p>
             </div>
+          </div>
+
+          {/* Subtab Navigation */}
+          <div className="subtab-nav" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--color-border)', paddingBottom: 0 }}>
+            <button
+              className={`subtab-btn ${activeTab === 'registered' ? 'active' : ''}`}
+              onClick={() => setActiveTab('registered')}
+              style={{
+                padding: '8px 18px',
+                fontSize: 'var(--text-sm)',
+                fontWeight: activeTab === 'registered' ? 600 : 400,
+                color: activeTab === 'registered' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === 'registered' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
+                marginBottom: -2,
+                cursor: 'pointer',
+                transition: 'all 150ms',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              👥 Registered Students
+            </button>
+            <button
+              className={`subtab-btn ${activeTab === 'papers' ? 'active' : ''}`}
+              onClick={() => setActiveTab('papers')}
+              style={{
+                padding: '8px 18px',
+                fontSize: 'var(--text-sm)',
+                fontWeight: activeTab === 'papers' ? 600 : 400,
+                color: activeTab === 'papers' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
+                background: 'none',
+                border: 'none',
+                borderBottom: activeTab === 'papers' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
+                marginBottom: -2,
+                cursor: 'pointer',
+                transition: 'all 150ms',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              📝 Submitted Papers
+            </button>
           </div>
 
           {error && (
@@ -140,6 +186,9 @@ export function StudentManagementPage() {
               <button className="error-banner-dismiss" onClick={() => setError(null)} aria-label="Dismiss">×</button>
             </div>
           )}
+
+          {activeTab === 'registered' && (
+            <>
 
           {/* Registration Link Generator */}
           <div className="card" style={{ marginBottom: 24 }}>
@@ -315,6 +364,118 @@ export function StudentManagementPage() {
               </div>
             )}
           </div>
+
+            </>
+          )}
+
+          {activeTab === 'papers' && (
+            <div className="card">
+              <div className="card-header">
+                <div className="card-title">Submitted exam papers</div>
+                <span className="count-badge">{papers.length}</span>
+              </div>
+
+              {papersLoading ? (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div>
+              ) : papers.length === 0 ? (
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>
+                  No submitted exam papers yet.
+                </div>
+              ) : (
+                <div className="students-table-wrapper">
+                  <table className="students-table papers-table">
+                    <thead>
+                      <tr>
+                        <th>Exam</th>
+                        <th>Examinee</th>
+                        <th>Score</th>
+                        <th>Incidents</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th style={{ textAlign: 'center' }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {papers.map((p: any) => (
+                        <tr key={p.attemptId}>
+                          <td className="student-name-cell" title={p.examTitle}>
+                            {p.examTitle?.length > 25 ? p.examTitle.substring(0, 25) + '…' : p.examTitle}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 500, fontSize: 'var(--text-sm)' }}>{p.studentName}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-gray-3)' }}>{p.studentEmail}</div>
+                          </td>
+                          <td className="score-cell">
+                            {p.score !== null && p.score !== undefined ? (
+                              <span className={`score-badge ${p.passed ? 'passed' : 'failed'}`}>
+                                {p.score}/{p.totalPoints}
+                                {p.percentage !== null && (
+                                  <span className="score-pct"> ({Math.round(p.percentage)}%)</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>—</span>
+                            )}
+                          </td>
+                          <td>
+                            {p.hasIncidents ? (
+                              <span className="incident-badge has-incidents" title={p.incidents.map((i: any) => i.eventDetail || i.eventType).join(', ')}>
+                                ⚠ {p.incidents.length}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>None</span>
+                            )}
+                          </td>
+                          <td>
+                            <span className={`status-badge status-${p.status}`}>
+                              {p.status === 'completed' && '✅ Completed'}
+                              {p.status === 'pending' && '⏳ Pending Review'}
+                              {p.status === 'incomplete' && (
+                                <span title={p.statusDetail || ''}>❓ Incomplete</span>
+                              )}
+                              {p.status === 'submitted' && '📥 Submitted'}
+                              {p.status !== 'completed' && p.status !== 'pending' && p.status !== 'incomplete' && p.status !== 'submitted' && p.status}
+                            </span>
+                            {p.statusDetail && (
+                              <div className="status-detail" title={p.statusDetail}>
+                                {p.statusDetail.length > 30 ? p.statusDetail.substring(0, 30) + '…' : p.statusDetail}
+                              </div>
+                            )}
+                          </td>
+                          <td className="student-date-cell">
+                            {p.submittedAt ? new Date(p.submittedAt).toLocaleDateString() + ' ' + new Date(p.submittedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <button
+                              className="btn-view-paper"
+                              onClick={() => {
+                                // Navigate to the attempt detail — could open a modal or navigate
+                                navigate(`/exam-results/${p.examId}?attemptId=${p.attemptId}&studentId=${p.studentId}`);
+                              }}
+                              style={{
+                                padding: '5px 12px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: 'var(--color-accent-500)',
+                                background: 'var(--color-accent-50)',
+                                border: '1px solid var(--color-accent-200)',
+                                borderRadius: 'var(--radius-sm)',
+                                cursor: 'pointer',
+                                transition: 'all 150ms',
+                                fontFamily: 'var(--font-body)',
+                              }}
+                            >
+                              Review
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
         </motion.div>
       </div>

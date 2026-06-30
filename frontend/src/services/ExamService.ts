@@ -201,6 +201,14 @@ class ExamServiceClass {
   }
 
   /**
+   * Get all submitted exam papers (Instructor only)
+   */
+  async getSubmittedPapers(): Promise<any[]> {
+    const response = await apiClient.get('/api/exams/submitted-papers');
+    return response.data;
+  }
+
+  /**
    * Record a proctoring violation (Student)
    */
   async recordViolation(attemptId: string, violationType: string): Promise<void> {

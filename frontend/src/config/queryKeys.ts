@@ -28,3 +28,8 @@ export const studentKeys = {
   all: ['students'] as const,
   list: () => [...studentKeys.all, 'list'] as const,
 };
+
+export const submittedPapersKeys = {
+  all: ['submittedPapers'] as const,
+  list: () => [...submittedPapersKeys.all, 'list'] as const,
+};

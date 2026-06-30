@@ -282,6 +282,24 @@ router.post(
 );
 
 /**
+ * GET /api/exams/submitted-papers - Get all submitted exam papers (Instructor only)
+ */
+router.get(
+  '/submitted-papers',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const cacheKey = `submitted_papers_${req.user!.userId}`;
+      const papers = await getOrSet(cacheKey, 120, () => ExamService.getSubmittedPapers(req.user!.userId));
+      return res.json(papers);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/exams/:id - Get exam by ID
  */
 router.get('/:id', optionalAuth, async (req: Request, res: Response) => {

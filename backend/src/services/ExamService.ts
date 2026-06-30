@@ -1590,4 +1590,173 @@ export class ExamService {
       throw new Error(`Failed to record violation: ${error}`);
     }
   }
+
+  /**
+   * Get all submitted exam papers for an instructor — used in the Students → Submitted Papers tab.
+   * Returns one row per exam attempt with exam title, student name, score, incidents, status, etc.
+   */
+  static async getSubmittedPapers(instructorId: string): Promise<any[]> {
+    const db = getFirestore();
+    const papers: any[] = [];
+
+    try {
+      // Get all instructor's exams
+      const examsSnapshot = await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .get();
+
+      for (const examDoc of examsSnapshot.docs) {
+        const examData = examDoc.data();
+        const examTitle = examData.title;
+        const examTotalPoints = examData.totalPoints || 0;
+
+        // Get all sessions for this exam
+        let sessionsDocs: { doc: any; data: any; studentId: string }[] = [];
+
+        const sessionsSnapshot = await db
+          .collectionGroup('exam_sessions')
+          .where('examId', '==', examDoc.id)
+          .get()
+          .catch(() => null);
+
+        if (sessionsSnapshot && !sessionsSnapshot.empty) {
+          sessionsSnapshot.docs.forEach(doc => {
+            const pathParts = doc.ref.path.split('/');
+            sessionsDocs.push({ doc, data: doc.data(), studentId: pathParts[1] });
+          });
+        } else {
+          // Fallback: scan recent users
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(50)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const userSessions = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('exam_sessions')
+              .where('examId', '==', examDoc.id)
+              .get();
+            userSessions.docs.forEach(doc => {
+              sessionsDocs.push({ doc, data: doc.data(), studentId: userDoc.id });
+            });
+          }
+        }
+
+        // Get all questions for this exam
+        const questionsSnapshot = await db
+          .collection('examforge_users')
+          .doc(instructorId)
+          .collection('published_exams')
+          .doc(examDoc.id)
+          .collection('questions')
+          .get();
+        const allQuestions = questionsSnapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
+        const essayQuestionIds = new Set(
+          allQuestions.filter(q => q.type === 'essay' || q.type === 'identification' || q.type === 'enumeration').map(q => q.id)
+        );
+
+        for (const { doc: sessionDoc, data: sessionData, studentId } of sessionsDocs) {
+          if (sessionData.status === 'in_progress') continue;
+
+          const sid = sessionData.studentId || studentId;
+          const attemptId = sessionDoc.id;
+
+          // Get answers for this attempt
+          const answersSnapshot = await db
+            .collection('examforge_users')
+            .doc(sid)
+            .collection('examinee_data')
+            .where('attemptId', '==', attemptId)
+            .get();
+
+          const answers = answersSnapshot.docs.map(a => ({
+            id: a.id,
+            questionId: a.data().questionId,
+            answer: a.data().answer,
+            isCorrect: a.data().isCorrect,
+            pointsEarned: a.data().pointsEarned,
+            gradedBy: a.data().gradedBy,
+          }));
+
+          // Determine status
+          const answeredQuestionIds = new Set(answers.map(a => a.questionId));
+          const unansweredQuestions = allQuestions.filter(q => !answeredQuestionIds.has(q.id));
+          const pendingEssayCount = answers.filter(a =>
+            essayQuestionIds.has(a.questionId) && a.pointsEarned === null && !a.gradedBy
+          ).length;
+
+          let status: string;
+          let statusDetail: string | null = null;
+
+          if (unansweredQuestions.length > 0) {
+            status = 'incomplete';
+            statusDetail = `Unanswered: ${unansweredQuestions.slice(0, 3).map(q => (q.text || '').substring(0, 40)).join(', ')}${unansweredQuestions.length > 3 ? '...' : ''}`;
+          } else if (pendingEssayCount > 0) {
+            status = 'pending';
+            statusDetail = `${pendingEssayCount} essay/ID question(s) awaiting grading`;
+          } else if (sessionData.status === 'graded' || (sessionData.score !== undefined && sessionData.score !== null)) {
+            status = 'completed';
+          } else {
+            status = sessionData.status || 'submitted';
+          }
+
+          // Get incidents
+          let incidents: any[] = [];
+          try {
+            const eventsSnapshot = await db
+              .collection('examforge_users')
+              .doc(sid)
+              .collection('session_events')
+              .where('attemptId', '==', attemptId)
+              .get();
+            incidents = eventsSnapshot.docs.map(e => ({
+              id: e.id,
+              eventType: e.data().eventType,
+              eventDetail: e.data().eventDetail,
+              severity: e.data().severity || 'medium',
+              timestamp: e.data().timestamp,
+            }));
+          } catch { /* ignore */ }
+
+          papers.push({
+            attemptId,
+            examId: examDoc.id,
+            examTitle,
+            studentId: sid,
+            studentName: sessionData.studentName || 'Unknown',
+            studentEmail: sessionData.studentEmail || '',
+            score: sessionData.score ?? null,
+            percentage: sessionData.percentage ?? null,
+            passed: sessionData.passed ?? null,
+            totalPoints: examTotalPoints,
+            totalQuestions: allQuestions.length,
+            answeredCount: answers.length,
+            unansweredCount: unansweredQuestions.length,
+            status,
+            statusDetail,
+            pendingEssayCount,
+            hasIncidents: incidents.length > 0,
+            incidents,
+            submittedAt: sessionData.submittedAt?.toDate?.() || sessionData.submittedAt || null,
+            startedAt: sessionData.startedAt?.toDate?.() || sessionData.startedAt || null,
+            timeSpent: sessionData.timeSpent || null,
+          });
+        }
+      }
+
+      // Sort by submittedAt descending
+      papers.sort((a, b) => {
+        const tA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+        const tB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+        return tB - tA;
+      });
+
+      return papers;
+    } catch (error) {
+      throw new Error(`Failed to get submitted papers: ${error}`);
+    }
+  }
 }

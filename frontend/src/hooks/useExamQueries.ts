@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExamService } from '../services/ExamService';
-import { examKeys, gradingKeys, analyticsKeys, incidentKeys } from '../config/queryKeys';
+import { examKeys, gradingKeys, analyticsKeys, incidentKeys, submittedPapersKeys } from '../config/queryKeys';
 import type { CreateExamFormData, CreateQuestionFormData } from '../types/exam';
 
 // ── Queries (reads) ──
@@ -47,6 +47,14 @@ export function useIncidentReports() {
   return useQuery({
     queryKey: incidentKeys.list(),
     queryFn: () => ExamService.getIncidentReports(),
+  });
+}
+
+export function useSubmittedPapers() {
+  return useQuery({
+    queryKey: submittedPapersKeys.list(),
+    queryFn: () => ExamService.getSubmittedPapers(),
+    refetchInterval: 30_000, // refresh every 30s as papers may be submitted
   });
 }
 
