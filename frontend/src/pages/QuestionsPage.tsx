@@ -11,10 +11,11 @@ import '../styles/pages/questions.css';
 export function QuestionsPage() {
   const { examId } = useParams<{ examId: string }>();
   const navigate = useNavigate();
-  const [exam, setExam] = useState<Exam | null>(null);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: exam, isLoading: examLoading, error: examErr } = useExamDetail(examId);
+  const { data: questions = [], isLoading: questionsLoading } = useExamQuestions(examId);
+  const createMutation = useCreateQuestion();
+  const updateMutation = useUpdateQuestion();
+  const deleteMutation = useDeleteQuestion();
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
@@ -27,13 +28,13 @@ export function QuestionsPage() {
     difficulty: 'medium' as DifficultyLevel,
     choices: [{ text: '', isCorrect: false }],
     correctAnswer: '',
-    enumerationItems: [''], // For enumeration type
+    enumerationItems: [''],
     imageUrl: '',
     timeLimit: 0,
   });
 
   const loading = examLoading || questionsLoading;
-  const error = examError ? (examError instanceof Error ? examError.message : 'Failed to load exam') : '';
+  const error = examErr ? (examErr instanceof Error ? examErr.message : 'Failed to load exam') : '';
 
   const handleAddQuestion = () => {
     setEditingQuestion(null);

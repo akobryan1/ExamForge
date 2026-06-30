@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
-import { StudentData } from '../services/StudentService';
 import { useStudents, useRegistrationFields, useSaveRegistrationFields } from '../hooks/useStudentQueries';
 import { Button } from '../components/Button';
 import '../styles/pages/exam-form.css';
@@ -90,7 +89,8 @@ export function StudentManagementPage() {
   const addFieldOption = (type: 'section' | 'year' | 'course') => {
     const value = fieldInputs[type].trim();
     if (!value) return;
-    if (fields[`${type}s` as keyof RegistrationFields].includes(value)) return;
+    const arr = type === 'section' ? localFields.sections : type === 'year' ? localFields.years : localFields.courses;
+    if (arr.includes(value)) return;
 
     const updated = { ...localFields };
     if (type === 'section') updated.sections = [...updated.sections, value];

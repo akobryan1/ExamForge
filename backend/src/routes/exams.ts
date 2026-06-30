@@ -51,8 +51,6 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
         ? ExamService.getInstructorExams(req.user!.userId)
         : ExamService.getAvailableExams(req.user!.userId)
     );
-      ? await ExamService.getInstructorExams(req.user.userId)
-      : await ExamService.getAvailableExams(req.user.userId);
     
     return res.json(exams);
   } catch (error: any) {
