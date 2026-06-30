@@ -1214,7 +1214,7 @@ export class ExamService {
       const attemptsSnapshot = await db
         .collectionGroup('exam_sessions')
         .where('examId', '==', examId)
-        .where('status', '==', 'completed')
+        .where('status', 'in', ['submitted', 'graded', 'completed'])
         .get()
         .catch(() => null);
 
@@ -1238,7 +1238,7 @@ export class ExamService {
             .doc(userDoc.id)
             .collection('exam_sessions')
             .where('examId', '==', examId)
-            .where('status', '==', 'completed')
+            .where('status', 'in', ['submitted', 'graded', 'completed'])
             .get();
           userSessions.docs.forEach(doc => {
             const data = doc.data();

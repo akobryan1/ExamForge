@@ -158,6 +158,17 @@
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.sidebar-footer .btn-outline {
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.sidebar-footer .btn-outline:hover:not(:disabled) {
+  border-color: white;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
 .user-info {
   display: flex;
   align-items: center;
