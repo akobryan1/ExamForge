@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { MainLayout } from '../layouts/MainLayout';
-import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
+import { useExamList } from '../hooks/useExamQueries';
 import type { Exam, ExamStatus } from '../types/exam';
 import '../styles/pages/exams.css';
 
@@ -35,35 +35,16 @@ function getStatusColor(status: string): string {
 
 export function ExamsPage() {
   const { user } = useAuth();
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: exams = [], isLoading, error, refetch } = useExamList();
   const [statusFilter, setStatusFilter] = useState<ExamStatus | 'all'>('all');
 
   const isInstructor = user?.role === 'instructor' || user?.role === 'admin';
 
-  useEffect(() => {
-    loadExams();
-  }, []);
-
-  async function loadExams() {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await ExamService.getExams();
-      setExams(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load exams');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const filteredExams = statusFilter === 'all'
     ? exams
-    : exams.filter(exam => exam.status === statusFilter);
+    : exams.filter((exam: Exam) => exam.status === statusFilter);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div className="loading-spinner">Loading exams...</div>
@@ -76,8 +57,8 @@ export function ExamsPage() {
       <MainLayout>
         <div className="error-message">
           <h2>Error loading exams</h2>
-          <p>{error}</p>
-          <Button variant="primary" onClick={loadExams}>Try again</Button>
+          <p>{error instanceof Error ? error.message : 'Failed to load exams'}</p>
+          <Button variant="primary" onClick={() => refetch()}>Try again</Button>
         </div>
       </MainLayout>
     );

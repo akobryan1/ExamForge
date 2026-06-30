@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
-import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
+import { ExamService } from '../services/ExamService';
+import { useCreateExam, useUpdateExam } from '../hooks/useExamQueries';
 import type { RetakeConfiguration, LateSubmissionConfiguration, ProctorConfiguration, Question, QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/questions.css';
@@ -359,6 +360,9 @@ export function CreateExamPageEnhanced() {
     }
   }, [examId]);
 
+  const createMutation = useCreateExam();
+  const updateMutation = useUpdateExam();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     // Clear field error on change
@@ -470,9 +474,9 @@ export function CreateExamPageEnhanced() {
       
       const exam = isEditing
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? await ExamService.updateExam(examId!, examData as any)
+        ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        : await ExamService.createExam(examData as any);
+        : await createMutation.mutateAsync(examData as any);
       
       const savedExamId = exam.id || examId!;
       

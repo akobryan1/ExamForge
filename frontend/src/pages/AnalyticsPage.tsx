@@ -1,72 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
-import { ExamService } from '../services/ExamService';
+import { useExamList, useExamAnalytics } from '../hooks/useExamQueries';
 import { pageTransition, fadeIn, staggerContainer } from '../utils/animations';
-import type { Exam } from '../types/exam';
 import '../styles/pages/analytics.css';
 
-interface ExamAnalytics {
-  examId: string;
-  examTitle: string;
+interface QuestionStat {
+  questionId: string;
+  questionText: string;
+  correctRate: number;
+  averagePoints: number;
+}
+
+interface AnalyticsData {
   totalAttempts: number;
   averageScore: number;
   passRate: number;
   averageTime: number;
-  questionStats: {
-    questionId: string;
-    questionText: string;
-    correctRate: number;
-    averagePoints: number;
-  }[];
+  questionStats: QuestionStat[];
 }
 
 export function AnalyticsPage() {
-  const [exams, setExams] = useState<Exam[]>([]);
+  const { data: exams = [], isLoading } = useExamList();
   const [selectedExam, setSelectedExam] = useState<string | null>(null);
-  const [analytics, setAnalytics] = useState<ExamAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: analytics } = useExamAnalytics(selectedExam || undefined);
+  const a = analytics as AnalyticsData | undefined;
 
-  useEffect(() => {
-    loadExams();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (selectedExam) {
-      loadAnalytics(selectedExam);
-    }
-  }, [selectedExam]);
-
-  const loadExams = async () => {
-    try {
-      setLoading(true);
-      const examsData = await ExamService.getExams();
-      // Show ALL exams, even those without attempts
-      setExams(examsData);
-
-      if (examsData.length > 0 && !selectedExam) {
-        // Select first exam that has attempts, or just the first exam
-        const examWithData = examsData.find(exam => (exam.attemptCount || 0) > 0) || examsData[0];
-        setSelectedExam(examWithData.id);
-      }
-    } catch (error) {
-      console.error('Failed to load exams:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadAnalytics = async (examId: string) => {
-    try {
-      const analyticsData = await ExamService.getExamAnalytics(examId);
-      setAnalytics(analyticsData);
-    } catch (error) {
-      console.error('Failed to load analytics:', error);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <MainLayout>
         <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
@@ -76,7 +36,7 @@ export function AnalyticsPage() {
     );
   }
 
-  if (exams.length === 0 && !loading) {
+  if (exams.length === 0 && !isLoading) {
     return (
       <MainLayout>
         <div className="empty-state">
@@ -124,14 +84,14 @@ export function AnalyticsPage() {
           </div>
         )}
 
-        {selectedExam && !analytics && (
+        {selectedExam && !a && (
           <div className="empty-state">
             <h2>No Data Available</h2>
             <p>No attempt data found for this exam yet. Analytics will appear once students take the exam.</p>
           </div>
         )}
 
-        {analytics && (
+        {a && (
           <motion.div variants={staggerContainer}>
             {/* Overview Cards */}
             <div className="stats-grid">
@@ -139,7 +99,7 @@ export function AnalyticsPage() {
                 <div className="stat-icon">📊</div>
                 <div className="stat-content">
                   <div className="stat-label">Total Attempts</div>
-                  <div className="stat-value">{analytics.totalAttempts}</div>
+                  <div className="stat-value">{a!.totalAttempts}</div>
                 </div>
               </motion.div>
 
@@ -147,7 +107,7 @@ export function AnalyticsPage() {
                 <div className="stat-icon">📈</div>
                 <div className="stat-content">
                   <div className="stat-label">Average Score</div>
-                  <div className="stat-value">{analytics.averageScore.toFixed(1)}%</div>
+                  <div className="stat-value">{a!.averageScore.toFixed(1)}%</div>
                 </div>
               </motion.div>
 
@@ -155,7 +115,7 @@ export function AnalyticsPage() {
                 <div className="stat-icon">✅</div>
                 <div className="stat-content">
                   <div className="stat-label">Pass Rate</div>
-                  <div className="stat-value">{analytics.passRate.toFixed(1)}%</div>
+                  <div className="stat-value">{a!.passRate.toFixed(1)}%</div>
                 </div>
               </motion.div>
 
@@ -164,18 +124,18 @@ export function AnalyticsPage() {
                 <div className="stat-content">
                   <div className="stat-label">Avg. Time</div>
                   <div className="stat-value">
-                    {Math.floor(analytics.averageTime / 60)}m
+                    {Math.floor(a!.averageTime / 60)}m
                   </div>
                 </div>
               </motion.div>
             </div>
 
             {/* Question Performance */}
-            {analytics.questionStats.length > 0 && (
+            {a!.questionStats.length > 0 && (
               <motion.div className="analytics-section" variants={fadeIn}>
                 <h2>Question Performance</h2>
                 <div className="question-stats-list">
-                  {analytics.questionStats.map((stat, index) => (
+                  {a!.questionStats.map((stat, index) => (
                     <div key={stat.questionId} className="question-stat-card">
                       <div className="question-stat-header">
                         <span className="question-number">Q{index + 1}</span>

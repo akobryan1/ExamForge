@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
-import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
 import { pageTransition, staggerContainer, staggerItem, fadeIn } from '../utils/animations';
 import type { Exam, Question } from '../types/exam';
@@ -33,28 +32,8 @@ export function QuestionsPage() {
     timeLimit: 0,
   });
 
-  useEffect(() => {
-    loadData();
-  }, [examId]);
-
-  const loadData = async () => {
-    if (!examId) return;
-    
-    setLoading(true);
-    setError('');
-    try {
-      const [examData, questionsData] = await Promise.all([
-        ExamService.getExamById(examId),
-        ExamService.getExamQuestions(examId),
-      ]);
-      setExam(examData);
-      setQuestions(questionsData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load exam data');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const loading = examLoading || questionsLoading;
+  const error = examError ? (examError instanceof Error ? examError.message : 'Failed to load exam') : '';
 
   const handleAddQuestion = () => {
     setEditingQuestion(null);
@@ -92,12 +71,10 @@ export function QuestionsPage() {
 
   const handleDeleteQuestion = async (questionId: string) => {
     if (!examId || !confirm('Are you sure you want to delete this question?')) return;
-
     try {
-      await ExamService.deleteQuestion(questionId, examId);
-      await loadData();
-    } catch (err: any) {
-      alert(err.message || 'Failed to delete question');
+      await deleteMutation.mutateAsync({ questionId, examId });
+    } catch {
+      alert('Failed to delete question');
     }
   };
 
@@ -116,7 +93,6 @@ export function QuestionsPage() {
         timeLimit: formData.timeLimit || undefined,
       };
 
-      // Add type-specific data
       if (formData.type === 'multiple_choice') {
         questionData.choices = formData.choices.filter(c => c.text.trim());
         questionData.correctAnswer = formData.choices.findIndex(c => c.isCorrect);
@@ -130,16 +106,13 @@ export function QuestionsPage() {
         questionData.correctAnswer = formData.enumerationItems.filter(item => item.trim());
       }
 
-      console.log('[QuestionsPage] Submitting question:', JSON.stringify(questionData, null, 2));
-
       if (editingQuestion) {
-        await ExamService.updateQuestion(editingQuestion.id, examId, questionData);
+        await updateMutation.mutateAsync({ questionId: editingQuestion.id, examId, data: questionData });
       } else {
-        await ExamService.createQuestion(examId, questionData);
+        await createMutation.mutateAsync({ examId, data: questionData });
       }
 
       setShowAddModal(false);
-      await loadData();
     } catch (err: any) {
       console.error('[QuestionsPage] Submit failed:', err.response?.data || err.message);
       alert(err.response?.data?.error || err.message || 'Failed to save question');

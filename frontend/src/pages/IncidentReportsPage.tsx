@@ -1,52 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
-import { ExamService } from '../services/ExamService';
 import { Button } from '../components/Button';
+import { useIncidentReports, useArchiveIncidents, useUnarchiveIncidents, useDeleteIncidents } from '../hooks/useExamQueries';
 import { pageTransition } from '../utils/animations';
 import '../styles/pages/incident-reports.css';
 
-interface IncidentReport {
-  id: string;
-  studentId: string;
-  studentName: string;
-  examId: string;
-  examTitle: string;
-  eventType: string;
-  eventDetail: string;
-  timestamp: Date;
-  severity: 'low' | 'medium' | 'high';
-  archived: boolean;
-}
-
 export function IncidentReportsPage() {
-  const [incidents, setIncidents] = useState<IncidentReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: incidents = [], isLoading: loading, refetch } = useIncidentReports();
+  const archiveMutation = useArchiveIncidents();
+  const unarchiveMutation = useUnarchiveIncidents();
+  const deleteMutation = useDeleteIncidents();
   
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'archived'>('active');
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
   const [selectedIncidents, setSelectedIncidents] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    loadIncidents();
-  }, []);
-
-  const loadIncidents = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      const data = await ExamService.getIncidentReports();
-      setIncidents(data);
-    } catch (err: any) {
-      // Incidents endpoint may not be available yet
-      setIncidents([]);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredIncidents = incidents.filter(incident => {
     // Status filter
@@ -92,41 +62,32 @@ export function IncidentReportsPage() {
 
   const handleArchiveSelected = async () => {
     if (selectedIncidents.size === 0) return;
-    
     try {
-      await ExamService.archiveIncidents(Array.from(selectedIncidents));
+      await archiveMutation.mutateAsync(Array.from(selectedIncidents));
       setSelectedIncidents(new Set());
-      await loadIncidents();
-    } catch (err: any) {
-      alert('Failed to archive incidents: ' + err.message);
+    } catch {
+      alert('Failed to archive incidents');
     }
   };
 
   const handleUnarchiveSelected = async () => {
     if (selectedIncidents.size === 0) return;
-    
     try {
-      await ExamService.unarchiveIncidents(Array.from(selectedIncidents));
+      await unarchiveMutation.mutateAsync(Array.from(selectedIncidents));
       setSelectedIncidents(new Set());
-      await loadIncidents();
-    } catch (err: any) {
-      alert('Failed to unarchive incidents: ' + err.message);
+    } catch {
+      alert('Failed to unarchive incidents');
     }
   };
 
   const handleDeleteSelected = async () => {
     if (selectedIncidents.size === 0) return;
-    
-    if (!confirm(`Are you sure you want to delete ${selectedIncidents.size} incident(s)? This cannot be undone.`)) {
-      return;
-    }
-    
+    if (!confirm(`Are you sure you want to delete ${selectedIncidents.size} incident(s)? This cannot be undone.`)) return;
     try {
-      await ExamService.deleteIncidents(Array.from(selectedIncidents));
+      await deleteMutation.mutateAsync(Array.from(selectedIncidents));
       setSelectedIncidents(new Set());
-      await loadIncidents();
-    } catch (err: any) {
-      alert('Failed to delete incidents: ' + err.message);
+    } catch {
+      alert('Failed to delete incidents');
     }
   };
 
@@ -166,10 +127,6 @@ export function IncidentReportsPage() {
             </p>
           </div>
         </div>
-
-        {error && (
-          <div className="error-banner">{error}</div>
-        )}
 
         {/* Filters and Actions */}
         <div className="filters-section">

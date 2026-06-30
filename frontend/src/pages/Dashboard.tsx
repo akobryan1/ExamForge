@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '../components/Button';
 import { MainLayout } from '../layouts/MainLayout';
-import { useEffect, useState } from 'react';
-import { ExamService } from '../services/ExamService';
+import { useExamList } from '../hooks/useExamQueries';
 import { Exam } from '../types/exam';
 import '../styles/pages/dashboard.css';
 
@@ -42,24 +41,7 @@ const dateStr = today.toLocaleDateString('en-US', { weekday: 'long', month: 'lon
 
 export function Dashboard() {
   const { user } = useAuth();
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
-
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true);
-      const examsData = await ExamService.getExams();
-      setExams(examsData);
-    } catch (error) {
-      console.error('Failed to load dashboard data:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: exams = [], isLoading: loading } = useExamList();
 
   const activeCount = exams.filter(e => e.status === 'active' || e.status === 'published').length;
   const draftCount = exams.filter(e => e.status === 'draft').length;

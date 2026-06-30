@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
-import { ExamService } from '../services/ExamService';
+import { useGradingQueue, useGradeQuestion } from '../hooks/useExamQueries';
 import { pageTransition, fadeIn } from '../utils/animations';
 import type { Question } from '../types/exam';
 import '../styles/pages/grading-queue.css';
@@ -21,55 +21,34 @@ interface GradingItem {
 }
 
 export function GradingQueuePage() {
-  const [items, setItems] = useState<GradingItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: items = [], isLoading: loading } = useGradingQueue();
+  const gradeMutation = useGradeQuestion();
   const [filter, setFilter] = useState<'pending' | 'graded' | 'all'>('pending');
-  const [selectedItem, setSelectedItem] = useState<GradingItem | null>(null);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [gradeValue, setGradeValue] = useState('');
   const [feedbackText, setFeedbackText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    loadGradingQueue();
-  }, []);
-
-  const loadGradingQueue = async () => {
-    try {
-      setLoading(true);
-      const queueData = await ExamService.getGradingQueue();
-      setItems(queueData);
-    } catch (error) {
-      console.error('Failed to load grading queue:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleGradeSubmit = async () => {
     if (!selectedItem || !gradeValue) return;
 
     try {
-      setSubmitting(true);
-      await ExamService.gradeQuestion(
-        selectedItem.attemptId,
-        selectedItem.question.id,
-        parseFloat(gradeValue),
-        feedbackText || undefined
-      );
+      await gradeMutation.mutateAsync({
+        attemptId: selectedItem.attemptId,
+        questionId: selectedItem.question.id,
+        earnedPoints: parseFloat(gradeValue),
+        feedback: feedbackText || undefined,
+      });
       
       alert('Grade submitted successfully!');
       setSelectedItem(null);
       setGradeValue('');
       setFeedbackText('');
-      loadGradingQueue();
     } catch (error: any) {
       alert('Failed to submit grade: ' + error.message);
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  const filteredItems = items.filter(item => {
+  const filteredItems = items.filter((item: any) => {
     if (filter === 'pending') return !item.currentGrade;
     if (filter === 'graded') return item.currentGrade !== undefined;
     return true;
@@ -245,16 +224,16 @@ export function GradingQueuePage() {
                         <Button
                           variant="outline"
                           onClick={() => setSelectedItem(null)}
-                          disabled={submitting}
+                          disabled={gradeMutation.isPending}
                         >
                           Cancel
                         </Button>
                         <Button
                           variant="primary"
                           onClick={handleGradeSubmit}
-                          disabled={submitting || !gradeValue}
+                          disabled={gradeMutation.isPending || !gradeValue}
                         >
-                          {submitting ? 'Submitting...' : 'Submit Grade'}
+                          {gradeMutation.isPending ? 'Submitting...' : 'Submit Grade'}
                         </Button>
                       </div>
                     </div>
