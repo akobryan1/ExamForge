@@ -567,6 +567,32 @@ export class ExamService {
       ? data.guestInfo.name
       : studentName;
 
+    // Look up the actual student ID number from registration data (not Firebase UID)
+    let studentNumber: string | null = null;
+    let studentSection: string | null = null;
+    let studentCourse: string | null = null;
+    let studentYear: string | null = null;
+
+    if (!isGuest && studentId) {
+      // Try the student's profile doc
+      try {
+        const profileDoc = await db.collection('examforge_users').doc(studentId).get();
+        if (profileDoc.exists) {
+          const profile = profileDoc.data()!;
+          studentNumber = profile.studentId || null;
+          studentSection = profile.section || null;
+          studentCourse = profile.course || null;
+          studentYear = profile.year || null;
+        }
+      } catch {
+        // Silently fail — studentNumber will remain null
+      }
+    } else if (isGuest && data.guestInfo?.studentId) {
+      studentNumber = data.guestInfo.studentId;
+      studentCourse = data.guestInfo.course || null;
+      studentYear = data.guestInfo.year || null;
+    }
+
     // Check if student already has an active attempt
     const existingSessionsSnapshot = await db
       .collection('examforge_users')
@@ -589,6 +615,10 @@ export class ExamService {
       studentId: effectiveStudentId,
       originalStudentId: isGuest ? null : studentId,
       studentName: effectiveStudentName,
+      studentNumber, // Actual student ID number (e.g., "2021-00123")
+      studentSection,
+      studentCourse,
+      studentYear,
       examTitle: examData.title,
       status: 'in_progress',
       score: 0,
@@ -1405,6 +1435,7 @@ export class ExamService {
               id: eventDoc.id,
               studentId: sid,
               studentName: sessionData.studentName || 'Unknown',
+              studentNumber: sessionData.studentNumber || null,
               examId: examDoc.id,
               examTitle: examData.title,
               eventType: eventData.eventType,
@@ -1438,17 +1469,48 @@ export class ExamService {
 
     try {
       const batch = db.batch();
+      let foundCount = 0;
 
       for (const incidentId of incidentIds) {
-        // Find the incident across all users' session_events
-        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+        // Try collectionGroup first
+        let found = false;
+        try {
+          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+          if (!eventsSnapshot.empty) {
+            eventsSnapshot.docs.forEach(doc => {
+              batch.update(doc.ref, { archived: true });
+            });
+            found = true;
+            foundCount++;
+          }
+        } catch {
+          // collectionGroup failed — fallback to user scan
+        }
 
-        eventsSnapshot.docs.forEach(doc => {
-          batch.update(doc.ref, { archived: true });
-        });
+        if (!found) {
+          // Fallback: scan recent users
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const eventDoc = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('session_events')
+              .doc(incidentId)
+              .get();
+            if (eventDoc.exists) {
+              batch.update(eventDoc.ref, { archived: true });
+              foundCount++;
+              break;
+            }
+          }
+        }
       }
 
       await batch.commit();
+      console.log(`[archiveIncidents] Archived ${foundCount} of ${incidentIds.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to archive incidents: ${error}`);
     }
@@ -1462,16 +1524,46 @@ export class ExamService {
 
     try {
       const batch = db.batch();
+      let foundCount = 0;
 
       for (const incidentId of incidentIds) {
-        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+        let found = false;
+        try {
+          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+          if (!eventsSnapshot.empty) {
+            eventsSnapshot.docs.forEach(doc => {
+              batch.update(doc.ref, { archived: false });
+            });
+            found = true;
+            foundCount++;
+          }
+        } catch {
+          // fallback
+        }
 
-        eventsSnapshot.docs.forEach(doc => {
-          batch.update(doc.ref, { archived: false });
-        });
+        if (!found) {
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const eventDoc = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('session_events')
+              .doc(incidentId)
+              .get();
+            if (eventDoc.exists) {
+              batch.update(eventDoc.ref, { archived: false });
+              foundCount++;
+              break;
+            }
+          }
+        }
       }
 
       await batch.commit();
+      console.log(`[unarchiveIncidents] Unarchived ${foundCount} of ${incidentIds.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to unarchive incidents: ${error}`);
     }
@@ -1485,16 +1577,46 @@ export class ExamService {
 
     try {
       const batch = db.batch();
+      let foundCount = 0;
 
       for (const incidentId of incidentIds) {
-        const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+        let found = false;
+        try {
+          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
+          if (!eventsSnapshot.empty) {
+            eventsSnapshot.docs.forEach(doc => {
+              batch.delete(doc.ref);
+            });
+            found = true;
+            foundCount++;
+          }
+        } catch {
+          // fallback
+        }
 
-        eventsSnapshot.docs.forEach(doc => {
-          batch.delete(doc.ref);
-        });
+        if (!found) {
+          const userDocs = await db.collection('examforge_users')
+            .orderBy('createdAt', 'desc')
+            .limit(100)
+            .get();
+          for (const userDoc of userDocs.docs) {
+            const eventDoc = await db
+              .collection('examforge_users')
+              .doc(userDoc.id)
+              .collection('session_events')
+              .doc(incidentId)
+              .get();
+            if (eventDoc.exists) {
+              batch.delete(eventDoc.ref);
+              foundCount++;
+              break;
+            }
+          }
+        }
       }
 
       await batch.commit();
+      console.log(`[deleteIncidents] Deleted ${foundCount} of ${incidentIds.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to delete incidents: ${error}`);
     }
@@ -1728,6 +1850,7 @@ export class ExamService {
             examTitle,
             studentId: sid,
             studentName: sessionData.studentName || 'Unknown',
+            studentNumber: sessionData.studentNumber || null,
             studentEmail: sessionData.studentEmail || '',
             score: sessionData.score ?? null,
             percentage: sessionData.percentage ?? null,

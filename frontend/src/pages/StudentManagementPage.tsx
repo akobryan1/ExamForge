@@ -403,7 +403,7 @@ export function StudentManagementPage() {
                           </td>
                           <td>
                             <div style={{ fontWeight: 500, fontSize: 'var(--text-sm)' }}>{p.studentName}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--color-gray-3)' }}>{p.studentEmail}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--color-gray-3)' }}>{p.studentNumber || p.studentEmail}</div>
                           </td>
                           <td className="score-cell">
                             {p.score !== null && p.score !== undefined ? (

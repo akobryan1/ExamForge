@@ -220,7 +220,7 @@ export function IncidentReportsPage() {
                       />
                     </td>
                     <td className="student-name">{incident.studentName}</td>
-                    <td className="student-id">{incident.studentId}</td>
+                    <td className="student-id">{incident.studentNumber || incident.studentId}</td>
                     <td className="exam-title">{incident.examTitle}</td>
                     <td className="event-type">{incident.eventType.replace('_', ' ')}</td>
                     <td className="event-detail">{incident.eventDetail}</td>
