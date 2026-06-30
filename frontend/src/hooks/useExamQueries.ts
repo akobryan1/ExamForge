@@ -150,7 +150,7 @@ export function useGradeQuestion() {
 export function useArchiveIncidents() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => ExamService.archiveIncidents(ids),
+    mutationFn: (incidents: { id: string; studentId: string }[]) => ExamService.archiveIncidents(incidents),
     onSuccess: () => qc.invalidateQueries({ queryKey: incidentKeys.all }),
   });
 }
@@ -158,7 +158,7 @@ export function useArchiveIncidents() {
 export function useUnarchiveIncidents() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => ExamService.unarchiveIncidents(ids),
+    mutationFn: (incidents: { id: string; studentId: string }[]) => ExamService.unarchiveIncidents(incidents),
     onSuccess: () => qc.invalidateQueries({ queryKey: incidentKeys.all }),
   });
 }
@@ -166,7 +166,7 @@ export function useUnarchiveIncidents() {
 export function useDeleteIncidents() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (ids: string[]) => ExamService.deleteIncidents(ids),
+    mutationFn: (incidents: { id: string; studentId: string }[]) => ExamService.deleteIncidents(incidents),
     onSuccess: () => qc.invalidateQueries({ queryKey: incidentKeys.all }),
   });
 }

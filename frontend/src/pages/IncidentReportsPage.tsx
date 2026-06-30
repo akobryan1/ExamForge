@@ -16,7 +16,7 @@ export function IncidentReportsPage() {
   const [filterSeverity, setFilterSeverity] = useState<'all' | 'low' | 'medium' | 'high'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   
-  const [selectedIncidents, setSelectedIncidents] = useState<Set<string>>(new Set());
+  const [selectedIncidents, setSelectedIncidents] = useState<Map<string, string>>(new Map()); // id → studentId
 
   const filteredIncidents = incidents.filter(incident => {
     // Status filter
@@ -40,31 +40,32 @@ export function IncidentReportsPage() {
     return true;
   });
 
-  const toggleIncidentSelection = (id: string) => {
+  const toggleIncidentSelection = (id: string, studentId: string) => {
     setSelectedIncidents(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(id)) {
-        newSet.delete(id);
+      const next = new Map(prev);
+      if (next.has(id)) {
+        next.delete(id);
       } else {
-        newSet.add(id);
+        next.set(id, studentId);
       }
-      return newSet;
+      return next;
     });
   };
 
   const toggleSelectAll = () => {
     if (selectedIncidents.size === filteredIncidents.length) {
-      setSelectedIncidents(new Set());
+      setSelectedIncidents(new Map());
     } else {
-      setSelectedIncidents(new Set(filteredIncidents.map(i => i.id)));
+      setSelectedIncidents(new Map(filteredIncidents.map(i => [i.id, i.studentId])));
     }
   };
 
   const handleArchiveSelected = async () => {
     if (selectedIncidents.size === 0) return;
     try {
-      await archiveMutation.mutateAsync(Array.from(selectedIncidents));
-      setSelectedIncidents(new Set());
+      const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
+      await archiveMutation.mutateAsync(payload);
+      setSelectedIncidents(new Map());
     } catch {
       alert('Failed to archive incidents');
     }
@@ -73,8 +74,9 @@ export function IncidentReportsPage() {
   const handleUnarchiveSelected = async () => {
     if (selectedIncidents.size === 0) return;
     try {
-      await unarchiveMutation.mutateAsync(Array.from(selectedIncidents));
-      setSelectedIncidents(new Set());
+      const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
+      await unarchiveMutation.mutateAsync(payload);
+      setSelectedIncidents(new Map());
     } catch {
       alert('Failed to unarchive incidents');
     }
@@ -84,8 +86,9 @@ export function IncidentReportsPage() {
     if (selectedIncidents.size === 0) return;
     if (!confirm(`Are you sure you want to delete ${selectedIncidents.size} incident(s)? This cannot be undone.`)) return;
     try {
-      await deleteMutation.mutateAsync(Array.from(selectedIncidents));
-      setSelectedIncidents(new Set());
+      const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
+      await deleteMutation.mutateAsync(payload);
+      setSelectedIncidents(new Map());
     } catch {
       alert('Failed to delete incidents');
     }
@@ -195,7 +198,7 @@ export function IncidentReportsPage() {
                   <th>
                     <input
                       type="checkbox"
-                      checked={selectedIncidents.size === filteredIncidents.length}
+                      checked={selectedIncidents.size === filteredIncidents.length && filteredIncidents.length > 0}
                       onChange={toggleSelectAll}
                     />
                   </th>
@@ -216,7 +219,7 @@ export function IncidentReportsPage() {
                       <input
                         type="checkbox"
                         checked={selectedIncidents.has(incident.id)}
-                        onChange={() => toggleIncidentSelection(incident.id)}
+                        onChange={() => toggleIncidentSelection(incident.id, incident.studentId)}
                       />
                     </td>
                     <td className="student-name">{incident.studentName}</td>

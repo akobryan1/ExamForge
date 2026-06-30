@@ -231,10 +231,10 @@ router.post(
   '/incidents/archive',
   authenticate,
   authorize('instructor', 'admin'),
-  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  [body('incidents').isArray().withMessage('incidents must be an array')],
   async (req: Request, res: Response) => {
     try {
-      await ExamService.archiveIncidents(req.body.incidentIds);
+      await ExamService.archiveIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents archived successfully' });
     } catch (error: any) {
@@ -250,10 +250,10 @@ router.post(
   '/incidents/unarchive',
   authenticate,
   authorize('instructor', 'admin'),
-  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  [body('incidents').isArray().withMessage('incidents must be an array')],
   async (req: Request, res: Response) => {
     try {
-      await ExamService.unarchiveIncidents(req.body.incidentIds);
+      await ExamService.unarchiveIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents unarchived successfully' });
     } catch (error: any) {
@@ -269,10 +269,10 @@ router.post(
   '/incidents/delete',
   authenticate,
   authorize('instructor', 'admin'),
-  [body('incidentIds').isArray().withMessage('incidentIds must be an array')],
+  [body('incidents').isArray().withMessage('incidents must be an array')],
   async (req: Request, res: Response) => {
     try {
-      await ExamService.deleteIncidents(req.body.incidentIds);
+      await ExamService.deleteIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents deleted successfully' });
     } catch (error: any) {

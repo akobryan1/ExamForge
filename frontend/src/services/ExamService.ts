@@ -182,22 +182,22 @@ class ExamServiceClass {
   /**
    * Archive incidents (Instructor only)
    */
-  async archiveIncidents(incidentIds: string[]): Promise<void> {
-    await apiClient.post('/api/exams/incidents/archive', { incidentIds });
+  async archiveIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/archive', { incidents });
   }
 
   /**
    * Unarchive incidents (Instructor only)
    */
-  async unarchiveIncidents(incidentIds: string[]): Promise<void> {
-    await apiClient.post('/api/exams/incidents/unarchive', { incidentIds });
+  async unarchiveIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/unarchive', { incidents });
   }
 
   /**
    * Delete incidents (Instructor only)
    */
-  async deleteIncidents(incidentIds: string[]): Promise<void> {
-    await apiClient.post('/api/exams/incidents/delete', { incidentIds });
+  async deleteIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
+    await apiClient.post('/api/exams/incidents/delete', { incidents });
   }
 
   /**

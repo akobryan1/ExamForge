@@ -1464,53 +1464,33 @@ export class ExamService {
   /**
    * Archive incidents
    */
-  static async archiveIncidents(incidentIds: string[]): Promise<void> {
+  /**
+   * Archive incidents
+   * Accepts: Array<{ id: string; studentId: string }>
+   */
+  static async archiveIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
     const db = getFirestore();
 
     try {
       const batch = db.batch();
       let foundCount = 0;
 
-      for (const incidentId of incidentIds) {
-        // Try collectionGroup first
-        let found = false;
-        try {
-          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
-          if (!eventsSnapshot.empty) {
-            eventsSnapshot.docs.forEach(doc => {
-              batch.update(doc.ref, { archived: true });
-            });
-            found = true;
-            foundCount++;
-          }
-        } catch {
-          // collectionGroup failed — fallback to user scan
-        }
-
-        if (!found) {
-          // Fallback: scan recent users
-          const userDocs = await db.collection('examforge_users')
-            .orderBy('createdAt', 'desc')
-            .limit(100)
-            .get();
-          for (const userDoc of userDocs.docs) {
-            const eventDoc = await db
-              .collection('examforge_users')
-              .doc(userDoc.id)
-              .collection('session_events')
-              .doc(incidentId)
-              .get();
-            if (eventDoc.exists) {
-              batch.update(eventDoc.ref, { archived: true });
-              foundCount++;
-              break;
-            }
-          }
+      for (const { id, studentId } of incidents) {
+        // Direct path lookup using studentId
+        const eventDoc = await db
+          .collection('examforge_users')
+          .doc(studentId)
+          .collection('session_events')
+          .doc(id)
+          .get();
+        if (eventDoc.exists) {
+          batch.update(eventDoc.ref, { archived: true });
+          foundCount++;
         }
       }
 
       await batch.commit();
-      console.log(`[archiveIncidents] Archived ${foundCount} of ${incidentIds.length} incidents`);
+      console.log(`[archiveIncidents] Archived ${foundCount} of ${incidents.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to archive incidents: ${error}`);
     }
@@ -1518,52 +1498,30 @@ export class ExamService {
 
   /**
    * Unarchive incidents
+   * Accepts: Array<{ id: string; studentId: string }>
    */
-  static async unarchiveIncidents(incidentIds: string[]): Promise<void> {
+  static async unarchiveIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
     const db = getFirestore();
 
     try {
       const batch = db.batch();
       let foundCount = 0;
 
-      for (const incidentId of incidentIds) {
-        let found = false;
-        try {
-          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
-          if (!eventsSnapshot.empty) {
-            eventsSnapshot.docs.forEach(doc => {
-              batch.update(doc.ref, { archived: false });
-            });
-            found = true;
-            foundCount++;
-          }
-        } catch {
-          // fallback
-        }
-
-        if (!found) {
-          const userDocs = await db.collection('examforge_users')
-            .orderBy('createdAt', 'desc')
-            .limit(100)
-            .get();
-          for (const userDoc of userDocs.docs) {
-            const eventDoc = await db
-              .collection('examforge_users')
-              .doc(userDoc.id)
-              .collection('session_events')
-              .doc(incidentId)
-              .get();
-            if (eventDoc.exists) {
-              batch.update(eventDoc.ref, { archived: false });
-              foundCount++;
-              break;
-            }
-          }
+      for (const { id, studentId } of incidents) {
+        const eventDoc = await db
+          .collection('examforge_users')
+          .doc(studentId)
+          .collection('session_events')
+          .doc(id)
+          .get();
+        if (eventDoc.exists) {
+          batch.update(eventDoc.ref, { archived: false });
+          foundCount++;
         }
       }
 
       await batch.commit();
-      console.log(`[unarchiveIncidents] Unarchived ${foundCount} of ${incidentIds.length} incidents`);
+      console.log(`[unarchiveIncidents] Unarchived ${foundCount} of ${incidents.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to unarchive incidents: ${error}`);
     }
@@ -1571,52 +1529,30 @@ export class ExamService {
 
   /**
    * Delete incidents
+   * Accepts: Array<{ id: string; studentId: string }>
    */
-  static async deleteIncidents(incidentIds: string[]): Promise<void> {
+  static async deleteIncidents(incidents: { id: string; studentId: string }[]): Promise<void> {
     const db = getFirestore();
 
     try {
       const batch = db.batch();
       let foundCount = 0;
 
-      for (const incidentId of incidentIds) {
-        let found = false;
-        try {
-          const eventsSnapshot = await db.collectionGroup('session_events').where('__name__', '==', incidentId).get();
-          if (!eventsSnapshot.empty) {
-            eventsSnapshot.docs.forEach(doc => {
-              batch.delete(doc.ref);
-            });
-            found = true;
-            foundCount++;
-          }
-        } catch {
-          // fallback
-        }
-
-        if (!found) {
-          const userDocs = await db.collection('examforge_users')
-            .orderBy('createdAt', 'desc')
-            .limit(100)
-            .get();
-          for (const userDoc of userDocs.docs) {
-            const eventDoc = await db
-              .collection('examforge_users')
-              .doc(userDoc.id)
-              .collection('session_events')
-              .doc(incidentId)
-              .get();
-            if (eventDoc.exists) {
-              batch.delete(eventDoc.ref);
-              foundCount++;
-              break;
-            }
-          }
+      for (const { id, studentId } of incidents) {
+        const eventDoc = await db
+          .collection('examforge_users')
+          .doc(studentId)
+          .collection('session_events')
+          .doc(id)
+          .get();
+        if (eventDoc.exists) {
+          batch.delete(eventDoc.ref);
+          foundCount++;
         }
       }
 
       await batch.commit();
-      console.log(`[deleteIncidents] Deleted ${foundCount} of ${incidentIds.length} incidents`);
+      console.log(`[deleteIncidents] Deleted ${foundCount} of ${incidents.length} incidents`);
     } catch (error) {
       throw new Error(`Failed to delete incidents: ${error}`);
     }
