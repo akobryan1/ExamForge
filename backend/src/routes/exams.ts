@@ -136,6 +136,24 @@ Be fair and consistent. Score must be between 0 and ${maxPoints}.`;
       }
 
       const userContent = `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`;
+
+      // Call OpenRouter API (OpenAI-compatible endpoint)
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://examforge-app.com',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userContent },
+          ],
+          temperature: 0.3,
+          max_tokens: 800,
+        }),
       });
 
       if (!response.ok) {
