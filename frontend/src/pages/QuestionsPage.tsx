@@ -3,8 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
+import { useExamDetail, useExamQuestions, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from '../hooks/useExamQueries';
 import { pageTransition, staggerContainer, staggerItem, fadeIn } from '../utils/animations';
-import type { Exam, Question } from '../types/exam';
+import type { Question } from '../types/exam';
 import { QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/questions.css';
 
@@ -222,7 +223,7 @@ export function QuestionsPage() {
         </div>
       ) : (
         <motion.div className="questions-list" variants={staggerContainer}>
-          {questions.map((question, index) => (
+          {questions.map((question: Question, index: number) => (
             <motion.div key={question.id} className="question-card" variants={staggerItem}>
               <div className="question-header">
                 <span className="question-number">Question {index + 1}</span>
@@ -243,7 +244,7 @@ export function QuestionsPage() {
               
               {question.type === 'multiple_choice' && question.choices && (
                 <div className="choices-preview">
-                  {question.choices.map((choice, i) => (
+                  {question.choices.map((choice: any, i: number) => (
                     <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
                       {String.fromCharCode(65 + i)}. {choice.text}
                       {choice.isCorrect && <span className="correct-indicator">✓</span>}

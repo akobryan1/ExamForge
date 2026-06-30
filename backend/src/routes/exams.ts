@@ -3,7 +3,6 @@ import { body, param } from 'express-validator';
 import { ExamService } from '../services/ExamService';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { getOrSet, invalidatePrefix } from '../utils/cache';
-import { Request } from 'express';
 
 const router: Router = express.Router();
 
@@ -45,11 +44,12 @@ router.get('/', optionalAuth, async (req: Request, res: Response) => {
       const exams = await ExamService.getAvailableExams('guest');
       return res.json(exams);
     }
-    const cacheKey = `exams_list_${req.user.userId}`;
+    const user = req.user;
+    const cacheKey = `exams_list_${user.userId}`;
     const exams = await getOrSet(cacheKey, 120, () =>
-      req.user.role === 'instructor' || req.user.role === 'admin'
-        ? ExamService.getInstructorExams(req.user!.userId)
-        : ExamService.getAvailableExams(req.user!.userId)
+      user.role === 'instructor' || user.role === 'admin'
+        ? ExamService.getInstructorExams(user.userId)
+        : ExamService.getAvailableExams(user.userId)
     );
     
     return res.json(exams);
