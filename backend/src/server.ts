@@ -66,6 +66,23 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(cookieParser()); // Parse cookies
 
+// Cache-Control headers for GET responses
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    if (req.path.startsWith('/api/exams/analytics/')) {
+      res.set('Cache-Control', 'private, max-age=300');
+    } else if (
+      req.path.startsWith('/api/exams/grading') ||
+      req.path.startsWith('/api/exams/incidents')
+    ) {
+      res.set('Cache-Control', 'private, max-age=60');
+    } else if (req.path.startsWith('/api/exams') && req.path !== '/api/exams/:id') {
+      res.set('Cache-Control', 'private, max-age=60');
+    }
+  }
+  next();
+});
+
 // Health check endpoint
 app.get('/', (req: Request, res: Response) => {
   res.json({

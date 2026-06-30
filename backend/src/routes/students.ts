@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
 import { StudentService } from '../services/StudentService';
 import { authenticate, authorize } from '../middleware/auth';
+import { getOrSet, invalidatePrefix } from '../utils/cache';
 
 const router = Router();
 
@@ -69,7 +70,8 @@ router.get(
         return res.status(403).json({ error: 'Unauthorized' });
       }
 
-      const students = await StudentService.getStudents(req.params.instructorId);
+      const cacheKey = `students_${req.params.instructorId}`;
+      const students = await getOrSet(cacheKey, 120, () => StudentService.getStudents(req.params.instructorId));
       return res.json(students);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -118,6 +120,7 @@ router.put(
         courses: req.body.courses,
       });
 
+      invalidatePrefix(`students_${req.params.instructorId}`);
       return res.json({ message: 'Fields saved successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

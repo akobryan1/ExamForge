@@ -2,6 +2,8 @@ import express, { Router, Request, Response } from 'express';
 import { body, param } from 'express-validator';
 import { ExamService } from '../services/ExamService';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
+import { getOrSet, invalidatePrefix } from '../utils/cache';
+import { Request } from 'express';
 
 const router: Router = express.Router();
 
@@ -26,6 +28,7 @@ router.post(
         req.user!.email,
         req.body
       );
+      invalidatePrefix('exams_list_');
       return res.status(201).json(exam);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -39,11 +42,15 @@ router.post(
 router.get('/', optionalAuth, async (req: Request, res: Response) => {
   try {
     if (!req.user) {
-      // Guest — show published/active exams only
       const exams = await ExamService.getAvailableExams('guest');
       return res.json(exams);
     }
-    const exams = req.user.role === 'instructor' || req.user.role === 'admin'
+    const cacheKey = `exams_list_${req.user.userId}`;
+    const exams = await getOrSet(cacheKey, 120, () =>
+      req.user.role === 'instructor' || req.user.role === 'admin'
+        ? ExamService.getInstructorExams(req.user!.userId)
+        : ExamService.getAvailableExams(req.user!.userId)
+    );
       ? await ExamService.getInstructorExams(req.user.userId)
       : await ExamService.getAvailableExams(req.user.userId);
     
@@ -62,7 +69,8 @@ router.get(
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
-      const queue = await ExamService.getGradingQueue(req.user!.userId);
+      const cacheKey = `grading_${req.user!.userId}`;
+      const queue = await getOrSet(cacheKey, 60, () => ExamService.getGradingQueue(req.user!.userId));
       return res.json(queue);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -87,6 +95,7 @@ router.post(
     try {
       const { attemptId, questionId, earnedPoints, feedback } = req.body;
       await ExamService.gradeQuestion(attemptId, questionId, earnedPoints, feedback);
+      invalidatePrefix('grading_');
       return res.json({ success: true, message: 'Grade submitted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -103,7 +112,8 @@ router.get(
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
-      const analytics = await ExamService.getExamAnalytics(req.params.examId, req.user!.userId);
+      const cacheKey = `analytics_${req.params.examId}_${req.user!.userId}`;
+      const analytics = await getOrSet(cacheKey, 300, () => ExamService.getExamAnalytics(req.params.examId, req.user!.userId));
       return res.json(analytics);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -120,7 +130,8 @@ router.get(
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
-      const incidents = await ExamService.getIncidentReports(req.user!.userId);
+      const cacheKey = `incidents_${req.user!.userId}`;
+      const incidents = await getOrSet(cacheKey, 60, () => ExamService.getIncidentReports(req.user!.userId));
       return res.json(incidents);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -139,6 +150,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       await ExamService.archiveIncidents(req.body.incidentIds);
+      invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents archived successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -157,6 +169,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       await ExamService.unarchiveIncidents(req.body.incidentIds);
+      invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents unarchived successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -175,6 +188,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       await ExamService.deleteIncidents(req.body.incidentIds);
+      invalidatePrefix('incidents_');
       return res.json({ success: true, message: 'Incidents deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -229,6 +243,7 @@ router.put(
         req.user!.userId,
         req.body
       );
+      invalidatePrefix('exams_list_');
       return res.json(exam);
     } catch (error: any) {
       console.error('[Exams] PUT /:id error:', error.message, error.stack);
@@ -247,6 +262,7 @@ router.delete(
   async (req: Request, res: Response) => {
     try {
       await ExamService.deleteExam(req.params.id, req.user!.userId);
+      invalidatePrefix('exams_list_');
       return res.json({ message: 'Exam deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
