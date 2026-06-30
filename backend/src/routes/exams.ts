@@ -102,6 +102,82 @@ router.post(
 );
 
 /**
+ * POST /api/exams/grading/ai-grade - Auto-grade an essay using AI (Instructor only)
+ */
+router.post(
+  '/grading/ai-grade',
+  authenticate,
+  authorize('instructor', 'admin'),
+  [
+    body('questionText').trim().notEmpty().withMessage('Question text is required'),
+    body('studentAnswer').trim().notEmpty().withMessage('Student answer is required'),
+    body('maxPoints').isNumeric().withMessage('Max points is required'),
+    body('model').trim().notEmpty().withMessage('AI model is required'),
+    body('apiKey').trim().notEmpty().withMessage('API key is required'),
+  ],
+  async (req: Request, res: Response) => {
+    try {
+      const { questionText, studentAnswer, maxPoints, model, apiKey } = req.body;
+
+      // Call OpenRouter API (OpenAI-compatible endpoint)
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'HTTP-Referer': 'https://examforge-app.com',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content: `You are an expert essay grader. Grade the student's answer based on the question.
+Return ONLY a JSON object with "score" (number out of ${maxPoints}) and "feedback" (string with brief explanation).
+Be fair and consistent. Score must be between 0 and ${maxPoints}.`,
+            },
+            {
+              role: 'user',
+              content: `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`,
+            },
+          ],
+          temperature: 0.3,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        console.error('[AIGrade] API error:', response.status, errBody);
+        return res.status(502).json({ error: `AI API error: ${response.statusText}` });
+      }
+
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content || '{}';
+      
+      let result: { score: number; feedback: string };
+      try {
+        result = JSON.parse(content);
+      } catch {
+        return res.status(502).json({ error: 'AI returned invalid JSON response' });
+      }
+
+      if (typeof result.score !== 'number' || result.score < 0 || result.score > maxPoints) {
+        return res.status(502).json({ error: 'AI returned invalid score' });
+      }
+
+      return res.json({
+        score: Math.round(result.score * 2) / 2, // Round to nearest 0.5
+        feedback: result.feedback || '',
+      });
+    } catch (error: any) {
+      console.error('[AIGrade] Error:', error.message);
+      return res.status(502).json({ error: error.message || 'AI grading failed' });
+    }
+  }
+);
+
+/**
  * GET /api/exams/analytics/:examId - Get analytics for an exam (Instructor only)
  */
 router.get(

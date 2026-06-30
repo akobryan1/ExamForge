@@ -3,9 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { useGradingQueue, useGradeQuestion } from '../hooks/useExamQueries';
+import { apiClient } from '../services/apiClient';
 import { pageTransition, fadeIn } from '../utils/animations';
 import type { Question } from '../types/exam';
 import '../styles/pages/grading-queue.css';
+
+const AI_MODELS = [
+  { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
+  { value: 'openai/gpt-4o-mini', label: 'OpenAI — GPT-4o Mini' },
+  { value: 'google/gemini-2.0-flash-001', label: 'Google — Gemini 2.0 Flash' },
+  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — DeepSeek Chat' },
+  { value: 'anthropic/claude-3.5-haiku', label: 'Anthropic — Claude 3.5 Haiku' },
+  { value: 'other', label: 'Other (custom API key)' },
+];
 
 interface GradingItem {
   attemptId: string;
@@ -27,6 +37,31 @@ export function GradingQueuePage() {
   const [selectedItem, setSelectedItem] = useState<any | null>(null);
   const [gradeValue, setGradeValue] = useState('');
   const [feedbackText, setFeedbackText] = useState('');
+
+  // AI grading state
+  const [aiModel, setAiModel] = useState('openai/gpt-oss-120b:free');
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiGrading, setAiGrading] = useState(false);
+
+  const handleAiGrade = async () => {
+    if (!selectedItem || !aiApiKey) return;
+    try {
+      setAiGrading(true);
+      const { data } = await apiClient.post('/api/exams/grading/ai-grade', {
+        questionText: selectedItem.question.text,
+        studentAnswer: selectedItem.answer,
+        maxPoints: selectedItem.question.points,
+        model: aiModel === 'other' ? '' : aiModel,
+        apiKey: aiApiKey,
+      });
+      setGradeValue(data.score.toString());
+      setFeedbackText(data.feedback || '');
+    } catch (err: any) {
+      alert('AI grading failed: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setAiGrading(false);
+    }
+  };
 
   const handleGradeSubmit = async () => {
     if (!selectedItem || !gradeValue) return;
@@ -193,7 +228,44 @@ export function GradingQueuePage() {
                       </div>
                     </div>
 
-                    {/* Grading Form */}
+                    {/* AI Auto-Grading */}
+                    <div className="grading-form">
+                      <h3>Auto-grade with AI</h3>
+                      <div className="form-group">
+                        <label>AI Model</label>
+                        <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
+                          {AI_MODELS.map(m => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label>{aiModel === 'openai/gpt-oss-120b:free' ? 'OpenRouter API Key' : 'API Key'}</label>
+                        <input
+                          type="password"
+                          value={aiApiKey}
+                          onChange={(e) => setAiApiKey(e.target.value)}
+                          placeholder={aiModel === 'openai/gpt-oss-120b:free' ? 'sk-or-v1-...' : 'Enter your API key'}
+                        />
+                        <p className="form-help">
+                          {aiModel === 'openai/gpt-oss-120b:free'
+                            ? 'Get your free key at openrouter.ai/keys'
+                            : aiModel === 'other'
+                              ? 'Enter any OpenAI-compatible API key'
+                              : `Key for ${aiModel.split('/')[0]}`}
+                        </p>
+                      </div>
+                      <Button
+                        variant="accent"
+                        onClick={handleAiGrade}
+                        disabled={aiGrading || !aiApiKey}
+                        style={{ width: '100%', marginBottom: 16 }}
+                      >
+                        {aiGrading ? 'Grading...' : '🤖 Auto-grade with AI'}
+                      </Button>
+                    </div>
+
+                    {/* Manual Grading Form */}
                     <div className="grading-form">
                       <div className="form-group">
                         <label htmlFor="grade">Grade (out of {selectedItem.question.points})</label>
