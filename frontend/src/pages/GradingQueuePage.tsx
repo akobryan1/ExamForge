@@ -42,18 +42,26 @@ export function GradingQueuePage() {
   const [aiModel, setAiModel] = useState('openai/gpt-oss-120b:free');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiGrading, setAiGrading] = useState(false);
+  const [aiResult, setAiResult] = useState<{ score: number; feedback: string; justification: string } | null>(null);
+  const [keyPoints, setKeyPoints] = useState('');
+  const [modelAnswer, setModelAnswer] = useState('');
+  const [manualJustification, setManualJustification] = useState('');
 
   const handleAiGrade = async () => {
     if (!selectedItem || !aiApiKey) return;
     try {
       setAiGrading(true);
+      setAiResult(null);
       const { data } = await apiClient.post('/api/exams/grading/ai-grade', {
         questionText: selectedItem.question.text,
         studentAnswer: selectedItem.answer,
         maxPoints: selectedItem.question.points,
         model: aiModel === 'other' ? '' : aiModel,
         apiKey: aiApiKey,
+        keyPoints: keyPoints || undefined,
+        modelAnswer: modelAnswer || undefined,
       });
+      setAiResult(data);
       setGradeValue(data.score.toString());
       setFeedbackText(data.feedback || '');
     } catch (err: any) {
@@ -67,17 +75,22 @@ export function GradingQueuePage() {
     if (!selectedItem || !gradeValue) return;
 
     try {
+      const feedback = manualJustification
+        ? (feedbackText ? `${feedbackText}\n\nJustification: ${manualJustification}` : `Justification: ${manualJustification}`)
+        : feedbackText;
       await gradeMutation.mutateAsync({
         attemptId: selectedItem.attemptId,
         questionId: selectedItem.question.id,
         earnedPoints: parseFloat(gradeValue),
-        feedback: feedbackText || undefined,
+        feedback: feedback || undefined,
       });
       
       alert('Grade submitted successfully!');
       setSelectedItem(null);
       setGradeValue('');
       setFeedbackText('');
+      setManualJustification('');
+      setAiResult(null);
     } catch (error: any) {
       alert('Failed to submit grade: ' + error.message);
     }
@@ -255,6 +268,26 @@ export function GradingQueuePage() {
                               : `Key for ${aiModel.split('/')[0]}`}
                         </p>
                       </div>
+                      <div className="form-group">
+                        <label>Key Points (optional)</label>
+                        <textarea
+                          value={keyPoints}
+                          onChange={(e) => setKeyPoints(e.target.value)}
+                          placeholder="List key points the answer should cover..."
+                          rows={2}
+                        />
+                        <p className="form-help">Helps the AI evaluate more accurately</p>
+                      </div>
+                      <div className="form-group">
+                        <label>Model Answer (optional)</label>
+                        <textarea
+                          value={modelAnswer}
+                          onChange={(e) => setModelAnswer(e.target.value)}
+                          placeholder="Provide a reference answer for comparison..."
+                          rows={3}
+                        />
+                        <p className="form-help">The AI will compare the student's answer to this</p>
+                      </div>
                       <Button
                         variant="accent"
                         onClick={handleAiGrade}
@@ -263,10 +296,43 @@ export function GradingQueuePage() {
                       >
                         {aiGrading ? 'Grading...' : '🤖 Auto-grade with AI'}
                       </Button>
+
+                      {aiResult && (
+                        <div className="ai-result" style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16, border: '1px solid var(--color-border)' }}>
+                          <div style={{ marginBottom: 8 }}>
+                            <strong>AI Score:</strong>{' '}
+                            <span style={{ fontSize: 24, fontWeight: 700 }}>{aiResult.score}</span>
+                            <span style={{ color: 'var(--color-gray-3)' }}> / {selectedItem.question.points}</span>
+                          </div>
+                          <div style={{ marginBottom: 8 }}>
+                            <strong>Feedback:</strong>
+                            <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-3)' }}>{aiResult.feedback}</p>
+                          </div>
+                          {aiResult.justification && (
+                            <div style={{ marginBottom: 8 }}>
+                              <strong>Justification:</strong>
+                              <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-3)', fontStyle: 'italic' }}>{aiResult.justification}</p>
+                            </div>
+                          )}
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => {
+                              setGradeValue(aiResult.score.toString());
+                              setFeedbackText(aiResult.feedback);
+                              setManualJustification(aiResult.justification || '');
+                            }}
+                            style={{ marginTop: 8 }}
+                          >
+                            ✓ Approve AI Grade
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Manual Grading Form */}
                     <div className="grading-form">
+                      <h3>Manual Grade</h3>
                       <div className="form-group">
                         <label htmlFor="grade">Grade (out of {selectedItem.question.points})</label>
                         <input
@@ -288,8 +354,20 @@ export function GradingQueuePage() {
                           value={feedbackText}
                           onChange={(e) => setFeedbackText(e.target.value)}
                           placeholder="Provide feedback to the student..."
-                          rows={6}
+                          rows={4}
                         />
+                      </div>
+
+                      <div className="form-group">
+                        <label htmlFor="justification">Justification (Optional)</label>
+                        <textarea
+                          id="justification"
+                          value={manualJustification}
+                          onChange={(e) => setManualJustification(e.target.value)}
+                          placeholder="Explain why this score was given..."
+                          rows={3}
+                        />
+                        <p className="form-help">Visible to the student to explain the reasoning</p>
                       </div>
 
                       <div className="form-actions">

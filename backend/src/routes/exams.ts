@@ -117,33 +117,25 @@ router.post(
   ],
   async (req: Request, res: Response) => {
     try {
-      const { questionText, studentAnswer, maxPoints, model, apiKey } = req.body;
+      const { questionText, studentAnswer, maxPoints, model, apiKey, keyPoints, modelAnswer } = req.body;
 
-      // Call OpenRouter API (OpenAI-compatible endpoint)
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://examforge-app.com',
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert essay grader. Grade the student's answer based on the question.
-Return ONLY a JSON object with "score" (number out of ${maxPoints}) and "feedback" (string with brief explanation).
-Be fair and consistent. Score must be between 0 and ${maxPoints}.`,
-            },
-            {
-              role: 'user',
-              content: `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`,
-            },
-          ],
-          temperature: 0.3,
-          max_tokens: 500,
-        }),
+      // Build system prompt with optional grading criteria
+      let systemPrompt = `You are an expert essay grader. Grade the student's answer based on the question.
+Return ONLY a JSON object with:
+- "score" (number out of ${maxPoints})
+- "feedback" (string with brief, constructive explanation for the student)
+- "justification" (string explaining WHY you gave this score, referencing specific parts of the answer)
+
+Be fair and consistent. Score must be between 0 and ${maxPoints}.`;
+
+      if (keyPoints?.trim()) {
+        systemPrompt += `\n\nKey points the answer should cover:\n${keyPoints}`;
+      }
+      if (modelAnswer?.trim()) {
+        systemPrompt += `\n\nModel/reference answer for comparison:\n${modelAnswer}`;
+      }
+
+      const userContent = `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`;
       });
 
       if (!response.ok) {
@@ -155,7 +147,7 @@ Be fair and consistent. Score must be between 0 and ${maxPoints}.`,
       const data = await response.json() as { choices?: { message?: { content?: string } }[] };
       const content = data.choices?.[0]?.message?.content || '{}';
       
-      let result: { score: number; feedback: string };
+      let result: { score: number; feedback: string; justification?: string };
       try {
         result = JSON.parse(content);
       } catch {
@@ -167,8 +159,9 @@ Be fair and consistent. Score must be between 0 and ${maxPoints}.`,
       }
 
       return res.json({
-        score: Math.round(result.score * 2) / 2, // Round to nearest 0.5
+        score: Math.round(result.score * 2) / 2,
         feedback: result.feedback || '',
+        justification: result.justification || '',
       });
     } catch (error: any) {
       console.error('[AIGrade] Error:', error.message);
