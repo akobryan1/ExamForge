@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { useAuth } from '../contexts/AuthContext';
-import { StudentService, StudentData, RegistrationFields } from '../services/StudentService';
+import { StudentData } from '../services/StudentService';
+import { useStudents, useRegistrationFields, useSaveRegistrationFields } from '../hooks/useStudentQueries';
 import { Button } from '../components/Button';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/students.css';
@@ -15,17 +16,24 @@ export function StudentManagementPage() {
   const navigate = useNavigate();
   const { examId } = useParams<{ examId?: string }>();
   const instructorId = user?.id || '';
+  const { data: students = [], isLoading: studentsLoading } = useStudents(instructorId || undefined);
+  const { data: fields = { sections: [], years: [], courses: [] }, isLoading: fieldsLoading } = useRegistrationFields(instructorId || undefined);
+  const saveFieldsMutation = useSaveRegistrationFields();
+  const loading = studentsLoading || fieldsLoading;
 
-  const [students, setStudents] = useState<StudentData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
   const [regLink, setRegLink] = useState<string>('');
-
-  // Registration field config
-  const [fields, setFields] = useState<RegistrationFields>({ sections: [], years: [], courses: [] });
   const [fieldInputs, setFieldInputs] = useState({ section: '', year: '', course: '' });
   const [savingFields, setSavingFields] = useState(false);
+
+  // Local copy of fields for editing
+  const [localFields, setLocalFields] = useState<{ sections: string[]; years: string[]; courses: string[] }>({ sections: [], years: [], courses: [] });
+  useEffect(() => {
+    if (fields.sections.length > 0 && localFields.sections.length === 0) {
+      setLocalFields({ sections: [...fields.sections], years: [...fields.years], courses: [...fields.courses] });
+    }
+  }, [fields, localFields.sections.length]);
 
   // Search with 1.2s debounce
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,28 +62,6 @@ export function StudentManagementPage() {
       (s.email?.toLowerCase() || '').includes(q)
     );
   }, [students, debouncedSearch]);
-
-  useEffect(() => {
-    if (instructorId) {
-      loadData();
-    }
-  }, [instructorId]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const [studentsData, fieldsData] = await Promise.all([
-        StudentService.getStudents(instructorId),
-        StudentService.getRegistrationFields(instructorId),
-      ]);
-      setStudents(studentsData);
-      setFields(fieldsData);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const generateLink = () => {
     const base = examId ? `/register/exam/${examId}` : '/register/exam';
@@ -106,27 +92,27 @@ export function StudentManagementPage() {
     if (!value) return;
     if (fields[`${type}s` as keyof RegistrationFields].includes(value)) return;
 
-    const updated = { ...fields };
+    const updated = { ...localFields };
     if (type === 'section') updated.sections = [...updated.sections, value];
     else if (type === 'year') updated.years = [...updated.years, value];
     else updated.courses = [...updated.courses, value];
 
-    setFields(updated);
+    setLocalFields(updated);
     setFieldInputs(prev => ({ ...prev, [type]: '' }));
   };
 
   const removeFieldOption = (type: 'section' | 'year' | 'course', value: string) => {
-    const updated = { ...fields };
-    if (type === 'section') updated.sections = fields.sections.filter(s => s !== value);
-    else if (type === 'year') updated.years = fields.years.filter(y => y !== value);
-    else updated.courses = fields.courses.filter(c => c !== value);
-    setFields(updated);
+    const updated = { ...localFields };
+    if (type === 'section') updated.sections = localFields.sections.filter(s => s !== value);
+    else if (type === 'year') updated.years = localFields.years.filter(y => y !== value);
+    else updated.courses = localFields.courses.filter(c => c !== value);
+    setLocalFields(updated);
   };
 
   const saveFieldOptions = async () => {
     try {
       setSavingFields(true);
-      await StudentService.saveRegistrationFields(instructorId, fields);
+      await saveFieldsMutation.mutateAsync({ instructorId, fields: localFields });
       setSuccessToast('Registration fields saved');
       setTimeout(() => setSuccessToast(null), 3000);
     } catch (err: any) {
@@ -200,10 +186,10 @@ export function StudentManagementPage() {
                   <button type="button" className="btn-add" onClick={() => addFieldOption('section')}>Add</button>
                 </div>
                 <div className="section-tags">
-                  {fields.sections.map(s => (
+                  {localFields.sections.map(s => (
                     <span key={s} className="section-tag">{s} <button type="button" onClick={() => removeFieldOption('section', s)}>×</button></span>
                   ))}
-                  {fields.sections.length === 0 && <span className="field-empty">No sections configured</span>}
+                  {localFields.sections.length === 0 && <span className="field-empty">No sections configured</span>}
                 </div>
               </div>
 
@@ -221,10 +207,10 @@ export function StudentManagementPage() {
                   <button type="button" className="btn-add" onClick={() => addFieldOption('year')}>Add</button>
                 </div>
                 <div className="section-tags">
-                  {fields.years.map(y => (
+                    {localFields.years.map(y => (
                     <span key={y} className="section-tag">{y} <button type="button" onClick={() => removeFieldOption('year', y)}>×</button></span>
                   ))}
-                  {fields.years.length === 0 && <span className="field-empty">No years configured</span>}
+                    {localFields.years.length === 0 && <span className="field-empty">No years configured</span>}
                 </div>
               </div>
 
@@ -242,10 +228,10 @@ export function StudentManagementPage() {
                   <button type="button" className="btn-add" onClick={() => addFieldOption('course')}>Add</button>
                 </div>
                 <div className="section-tags">
-                  {fields.courses.map(c => (
+                    {localFields.courses.map(c => (
                     <span key={c} className="section-tag">{c} <button type="button" onClick={() => removeFieldOption('course', c)}>×</button></span>
                   ))}
-                  {fields.courses.length === 0 && <span className="field-empty">No courses configured</span>}
+                    {localFields.courses.length === 0 && <span className="field-empty">No courses configured</span>}
                 </div>
               </div>
 
