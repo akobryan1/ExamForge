@@ -1986,6 +1986,7 @@ export class ExamService {
 
   /**
    * Manually complete an exam (instructor ends it early)
+   * Safe to call even if already completed — acts as a no-op
    */
   static async completeExam(examId: string, instructorId: string): Promise<Exam> {
     const db = getFirestore();
@@ -1998,8 +1999,10 @@ export class ExamService {
     const examDoc = await examRef.get();
     if (!examDoc.exists) throw new Error('Exam not found');
     const current = examDoc.data()!;
+
+    // Already completed or archived — just return current data (no-op)
     if (current.status === 'completed' || current.status === 'archived') {
-      throw new Error('Exam is already completed or archived');
+      return this.mapExamFromDb(examId, current, instructorId);
     }
 
     await examRef.update({

@@ -199,7 +199,7 @@ export function ExamsPage() {
                     <>
                       <Link to={`/exams/${exam.id}`} style={{ flex: 1 }}><Button variant="secondary" style={{ width: '100%' }}>Manage</Button></Link>
                       <Link to={`/exams/${exam.id}/questions`} style={{ flex: 1 }}><Button variant="outline" style={{ width: '100%' }}>Questions</Button></Link>
-                      {exam.status !== 'archived' && exam.status !== 'draft' && (
+                      {exam.status !== 'archived' && exam.status !== 'draft' && exam.status !== 'completed' && (
                         <Button variant="text" size="sm" onClick={() => handleComplete(exam.id)} style={{ padding: '8px' }} title="End exam">⏹</Button>
                       )}
                     </>
