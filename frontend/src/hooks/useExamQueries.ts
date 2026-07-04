@@ -110,6 +110,30 @@ export function useArchiveExam() {
   });
 }
 
+export function useCloneExam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (examId: string) => ExamService.cloneExam(examId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: examKeys.lists() }),
+  });
+}
+
+export function useRepublishExam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (examId: string) => ExamService.republishExam(examId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: examKeys.lists() }),
+  });
+}
+
+export function useCompleteExam() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (examId: string) => ExamService.completeExam(examId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: examKeys.lists() }),
+  });
+}
+
 export function useCreateQuestion() {
   const qc = useQueryClient();
   return useMutation({

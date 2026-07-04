@@ -378,13 +378,24 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Unauthorized access to exam' });
     }
 
-    // For non-instructors, check date range
+    // For non-instructors, check date range — with lazy auto-complete
     if (!isInstructor) {
       const now = new Date();
       if (exam.startDate && new Date(exam.startDate) > now) {
         return res.status(403).json({ error: 'This exam has not started yet' });
       }
       if (exam.endDate && new Date(exam.endDate) < now) {
+        // Auto-mark as completed
+        try {
+          const db = (await import('../config/firebase')).getFirestore();
+          await db
+            .collection('examforge_users')
+            .doc(exam.instructorId)
+            .collection('published_exams')
+            .doc(req.params.id)
+            .update({ status: 'completed' });
+          await db.collection('exams').doc(req.params.id).update({ status: 'completed' });
+        } catch { /* best-effort */ }
         return res.status(403).json({ error: 'This exam has already ended' });
       }
     }
@@ -395,6 +406,59 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     return res.status(400).json({ error: error.message });
   }
 });
+
+/**
+ * POST /api/exams/:id/clone - Clone an exam as a new draft (Instructor only)
+ */
+router.post(
+  '/:id/clone',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const cloned = await ExamService.cloneExam(req.params.id, req.user!.userId);
+      return res.status(201).json(cloned);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * PUT /api/exams/:id/republish - Republish a completed/archived exam (Instructor only)
+ */
+router.put(
+  '/:id/republish',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const exam = await ExamService.republishExam(req.params.id, req.user!.userId);
+      invalidatePrefix('exams_list_');
+      return res.json(exam);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * PUT /api/exams/:id/complete - Manually complete an exam (Instructor only)
+ */
+router.put(
+  '/:id/complete',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const exam = await ExamService.completeExam(req.params.id, req.user!.userId);
+      invalidatePrefix('exams_list_');
+      return res.json(exam);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
 
 /**
  * PUT /api/exams/:id - Update exam (Instructor only)

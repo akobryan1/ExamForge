@@ -90,6 +90,16 @@ export function ExamPreviewPage() {
     }
   };
 
+  const handleClone = async () => {
+    if (!examId) return;
+    try {
+      const cloned = await ExamService.cloneExam(examId);
+      navigate(`/exams/${cloned.id}/edit`);
+    } catch (err: any) {
+      alert('Failed to clone exam: ' + err.message);
+    }
+  };
+
   if (loading) {
     return (
       <MainLayout>
@@ -182,6 +192,9 @@ export function ExamPreviewPage() {
                   Archive
                 </Button>
               )}
+              <Button variant="outline" onClick={handleClone}>
+                🔄 Clone
+              </Button>
               <Button variant="outline" onClick={handleDelete} style={{ color: 'var(--danger-color)' }}>
                 Delete
               </Button>

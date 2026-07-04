@@ -546,12 +546,21 @@ export class ExamService {
       throw new Error('Exam is not available');
     }
 
-    // Check date range
+    // Check date range — with lazy auto-complete
     const now = new Date();
     if (examData.startDate && examData.startDate.toDate() > now) {
       throw new Error('This exam has not started yet');
     }
     if (examData.endDate && examData.endDate.toDate() < now) {
+      // Auto-mark as completed (lazy transition)
+      await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(data.examId)
+        .update({ status: 'completed', updatedAt: FieldValue.serverTimestamp() });
+      // Also sync flat index
+      await db.collection('exams').doc(data.examId).update({ status: 'completed' });
       throw new Error('This exam has already ended');
     }
 
@@ -1831,6 +1840,176 @@ export class ExamService {
     } catch (error) {
       throw new Error(`Failed to get submitted papers: ${error}`);
     }
+  }
+
+  /**
+   * Clone an exam with all its questions as a new draft
+   */
+  static async cloneExam(examId: string, instructorId: string): Promise<Exam> {
+    const db = getFirestore();
+
+    // Get original exam
+    const examDoc = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .get();
+
+    if (!examDoc.exists) throw new Error('Exam not found');
+    const original = examDoc.data()!;
+
+    // Create cloned exam data
+    const cloneData: Record<string, any> = {
+      title: `${original.title || 'Untitled'} (Copy)`,
+      description: original.description || '',
+      subject: original.subject || '',
+      grade: original.grade || '',
+      instructorId,
+      instructorName: original.instructorName || '',
+      status: 'draft',
+      startDate: null,
+      endDate: null,
+      timeLimit: original.timeLimit || null,
+      passingScore: original.passingScore || 70,
+      shuffleQuestions: original.shuffleQuestions ?? false,
+      shuffleAnswers: original.shuffleAnswers ?? false,
+      showResults: original.showResults ?? true,
+      allowReview: original.allowReview ?? true,
+      accessCode: null,
+      allowGuestAccess: original.allowGuestAccess ?? false,
+      accessMethod: original.accessMethod || 'student_login',
+      sections: original.sections || [],
+      tags: original.tags || [],
+      retakeConfig: original.retakeConfig || null,
+      lateSubmissionConfig: original.lateSubmissionConfig || null,
+      proctorConfig: original.proctorConfig || null,
+      customInstructions: original.customInstructions || null,
+      showRulesBeforeExam: original.showRulesBeforeExam ?? false,
+      allowedStudentIds: [],
+      questionCount: 0,
+      totalPoints: 0,
+      attemptCount: 0,
+      averageScore: 0,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    const examRef = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .add(cloneData);
+
+    // Copy all questions
+    const questionsSnapshot = await db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId)
+      .collection('questions')
+      .get();
+
+    let totalQ = 0;
+    let totalPts = 0;
+    for (const qDoc of questionsSnapshot.docs) {
+      const qData = qDoc.data();
+      const newQData = {
+        examId: examRef.id,
+        type: qData.type,
+        text: qData.text,
+        description: qData.description || '',
+        points: qData.points,
+        difficulty: qData.difficulty || 'medium',
+        order: qData.order || 0,
+        choices: qData.choices || [],
+        correctAnswer: qData.correctAnswer || null,
+        tags: qData.tags || [],
+        imageUrl: qData.imageUrl || null,
+        timeLimit: qData.timeLimit || null,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await db
+        .collection('examforge_users')
+        .doc(instructorId)
+        .collection('published_exams')
+        .doc(examRef.id)
+        .collection('questions')
+        .add(newQData);
+      totalQ++;
+      totalPts += (qData.points || 0);
+    }
+
+    // Update cloned exam with question count
+    await examRef.update({ questionCount: totalQ, totalPoints: totalPts });
+
+    // Flat index
+    await db.collection('exams').doc(examRef.id).set({
+      instructorId,
+      status: 'draft',
+      title: cloneData.title,
+      examRef: examRef.path,
+    });
+
+    const newDoc = await examRef.get();
+    return this.mapExamFromDb(examRef.id, newDoc.data()!, instructorId);
+  }
+
+  /**
+   * Republish a completed/archived exam — sets back to published
+   */
+  static async republishExam(examId: string, instructorId: string): Promise<Exam> {
+    const db = getFirestore();
+    const examRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId);
+
+    const examDoc = await examRef.get();
+    if (!examDoc.exists) throw new Error('Exam not found');
+    const current = examDoc.data()!;
+    if (current.status !== 'completed' && current.status !== 'archived') {
+      throw new Error('Only completed or archived exams can be republished');
+    }
+
+    await examRef.update({
+      status: 'published',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await db.collection('exams').doc(examId).update({ status: 'published' });
+
+    const updated = await examRef.get();
+    return this.mapExamFromDb(examId, updated.data()!, instructorId);
+  }
+
+  /**
+   * Manually complete an exam (instructor ends it early)
+   */
+  static async completeExam(examId: string, instructorId: string): Promise<Exam> {
+    const db = getFirestore();
+    const examRef = db
+      .collection('examforge_users')
+      .doc(instructorId)
+      .collection('published_exams')
+      .doc(examId);
+
+    const examDoc = await examRef.get();
+    if (!examDoc.exists) throw new Error('Exam not found');
+    const current = examDoc.data()!;
+    if (current.status === 'completed' || current.status === 'archived') {
+      throw new Error('Exam is already completed or archived');
+    }
+
+    await examRef.update({
+      status: 'completed',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    await db.collection('exams').doc(examId).update({ status: 'completed' });
+
+    const updated = await examRef.get();
+    return this.mapExamFromDb(examId, updated.data()!, instructorId);
   }
 
   /**

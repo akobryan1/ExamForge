@@ -63,6 +63,30 @@ class ExamServiceClass {
   }
 
   /**
+   * Clone an exam as a new draft (Instructor only)
+   */
+  async cloneExam(examId: string): Promise<Exam> {
+    const response = await apiClient.post(`/api/exams/${examId}/clone`);
+    return response.data;
+  }
+
+  /**
+   * Republish a completed/archived exam (Instructor only)
+   */
+  async republishExam(examId: string): Promise<Exam> {
+    const response = await apiClient.put(`/api/exams/${examId}/republish`);
+    return response.data;
+  }
+
+  /**
+   * Manually complete an exam (Instructor only)
+   */
+  async completeExam(examId: string): Promise<Exam> {
+    const response = await apiClient.put(`/api/exams/${examId}/complete`);
+    return response.data;
+  }
+
+  /**
    * Get questions for an exam
    */
   async getExamQuestions(examId: string): Promise<Question[]> {
