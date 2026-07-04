@@ -546,6 +546,15 @@ export class ExamService {
       throw new Error('Exam is not available');
     }
 
+    // Check date range
+    const now = new Date();
+    if (examData.startDate && examData.startDate.toDate() > now) {
+      throw new Error('This exam has not started yet');
+    }
+    if (examData.endDate && examData.endDate.toDate() < now) {
+      throw new Error('This exam has already ended');
+    }
+
     // Check access method
     const isGuest = studentId === 'guest' || !studentId || studentId === 'guest@anonymous.com';
     const allowGuest = examData.allowGuestAccess === true || examData.accessMethod === 'guest';

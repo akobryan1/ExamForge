@@ -378,6 +378,17 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Unauthorized access to exam' });
     }
 
+    // For non-instructors, check date range
+    if (!isInstructor) {
+      const now = new Date();
+      if (exam.startDate && new Date(exam.startDate) > now) {
+        return res.status(403).json({ error: 'This exam has not started yet' });
+      }
+      if (exam.endDate && new Date(exam.endDate) < now) {
+        return res.status(403).json({ error: 'This exam has already ended' });
+      }
+    }
+
     return res.json(exam);
   } catch (error: any) {
     console.error('[Exams] GET /:id error:', error);
