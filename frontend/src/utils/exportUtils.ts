@@ -1,5 +1,4 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 import Papa from 'papaparse';
 
 // ---------------------------------------------------------------------------
@@ -77,7 +76,7 @@ export function exportToCSV(
 }
 
 // ---------------------------------------------------------------------------
-// PDF Export (jsPDF + autoTable)
+// PDF Export (jsPDF — manual table, no autoTable dependency)
 // ---------------------------------------------------------------------------
 
 export function exportToPDF(
@@ -87,37 +86,79 @@ export function exportToPDF(
   filename: string,
 ) {
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginLeft = 10;
+  const marginRight = 10;
+  const marginTop = 25;
+  const usableW = pageW - marginLeft - marginRight;
 
   // Title
   doc.setFontSize(14);
-  doc.text(title, 14, 15);
-  doc.setFontSize(9);
+  doc.text(title, marginLeft, 12);
+  doc.setFontSize(8);
   doc.setTextColor(120);
-  doc.text(`Generated: ${new Date().toLocaleString()}  •  ${data.length} rows`, 14, 22);
+  doc.text(`Generated: ${new Date().toLocaleString()}  •  ${data.length} rows`, marginLeft, 18);
 
-  // Table
-  const headers = columns.map(c => c.label);
-  const rows = data.map(row => columns.map(c => formatCellValue(row[c.key])));
+  // Column widths (proportional)
+  const colW = usableW / columns.length;
 
-  (doc as any).autoTable({
-    head: [headers],
-    body: rows,
-    startY: 28,
-    styles: {
-      fontSize: 8,
-      cellPadding: 2,
-      lineColor: [200, 200, 200],
-      lineWidth: 0.1,
-    },
-    headStyles: {
-      fillColor: [49, 46, 129],
-      textColor: 255,
-      fontStyle: 'bold',
-    },
-    alternateRowStyles: {
-      fillColor: [245, 245, 250],
-    },
+  // Table drawing helpers
+  const rowH = 6;
+  const headerH = 7;
+  let y = marginTop;
+
+  const drawHeader = () => {
+    doc.setFillColor(49, 46, 129);
+    doc.rect(marginLeft, y, usableW, headerH, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    columns.forEach((col, i) => {
+      const x = marginLeft + i * colW;
+      doc.text(col.label, x + 0.5, y + 4.5);
+    });
+    y += headerH;
+  };
+
+  const drawRow = (row: Record<string, any>, rowIndex: number) => {
+    // Alternate background
+    if (rowIndex % 2 === 1) {
+      doc.setFillColor(245, 245, 250);
+      doc.rect(marginLeft, y, usableW, rowH, 'F');
+    }
+    doc.setTextColor(30);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    columns.forEach((col, i) => {
+      const x = marginLeft + i * colW;
+      doc.text(formatCellValue(row[col.key]).substring(0, Math.floor(colW / 1.5)), x + 0.5, y + 4);
+    });
+    // Bottom border
+    doc.setDrawColor(220, 220, 220);
+    doc.line(marginLeft, y + rowH, marginLeft + usableW, y + rowH);
+    y += rowH;
+  };
+
+  drawHeader();
+
+  data.forEach((row, i) => {
+    // Check if we need a new page
+    if (y + rowH > pageH - 15) {
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(`Continued...`, marginLeft, pageH - 8);
+      doc.addPage();
+      y = marginTop;
+      drawHeader();
+    }
+    drawRow(row, i);
   });
+
+  // Footer
+  doc.setFontSize(7);
+  doc.setTextColor(150);
+  doc.text(`Page ${(doc as any).internal.getNumberOfPages?.() || 1}`, pageW / 2, pageH - 5, { align: 'center' });
 
   doc.save(`${filename}.pdf`);
 }
