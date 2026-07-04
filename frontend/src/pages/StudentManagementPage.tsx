@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useStudents, useRegistrationFields, useSaveRegistrationFields } from '../hooks/useStudentQueries';
 import { useSubmittedPapers } from '../hooks/useExamQueries';
 import { Button } from '../components/Button';
+import { ExportPanel } from '../components/ExportPanel';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/students.css';
 
@@ -374,6 +375,8 @@ export function StudentManagementPage() {
                 <div className="card-title">Submitted exam papers</div>
                 <span className="count-badge">{papers.length}</span>
               </div>
+
+              <ExportPanel type="papers" />
 
               {papersLoading ? (
                 <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div>

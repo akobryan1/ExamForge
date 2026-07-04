@@ -282,6 +282,59 @@ router.post(
 );
 
 /**
+ * GET /api/exams/export - Export submitted papers with optional filters (Instructor only)
+ */
+router.get(
+  '/export',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { sections, examId, status } = req.query as Record<string, string | undefined>;
+      const papers = await ExamService.exportPapers(req.user!.userId, { sections, examId, status });
+      return res.json(papers);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/exams/export/incidents - Export incident reports with optional filters (Instructor only)
+ */
+router.get(
+  '/export/incidents',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const { sections, examId, severity, archived } = req.query as Record<string, string | undefined>;
+      const incidents = await ExamService.exportIncidents(req.user!.userId, { sections, examId, severity, archived });
+      return res.json(incidents);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
+ * GET /api/exams/export/options - Get available filter options for export (Instructor only)
+ */
+router.get(
+  '/export/options',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const options = await ExamService.getExportOptions(req.user!.userId);
+      return res.json(options);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+);
+
+/**
  * GET /api/exams/submitted-papers - Get all submitted exam papers (Instructor only)
  */
 router.get(

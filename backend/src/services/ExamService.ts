@@ -1436,6 +1436,7 @@ export class ExamService {
               studentId: sid,
               studentName: sessionData.studentName || 'Unknown',
               studentNumber: sessionData.studentNumber || null,
+              studentSection: sessionData.studentSection || null,
               examId: examDoc.id,
               examTitle: examData.title,
               eventType: eventData.eventType,
@@ -1787,6 +1788,9 @@ export class ExamService {
             studentId: sid,
             studentName: sessionData.studentName || 'Unknown',
             studentNumber: sessionData.studentNumber || null,
+            studentSection: sessionData.studentSection || null,
+            studentCourse: sessionData.studentCourse || null,
+            studentYear: sessionData.studentYear || null,
             studentEmail: sessionData.studentEmail || '',
             score: sessionData.score ?? null,
             percentage: sessionData.percentage ?? null,
@@ -1818,5 +1822,69 @@ export class ExamService {
     } catch (error) {
       throw new Error(`Failed to get submitted papers: ${error}`);
     }
+  }
+
+  /**
+   * Export submitted exam papers with optional filters
+   */
+  static async exportPapers(instructorId: string, filters: { sections?: string; examId?: string; status?: string }): Promise<any[]> {
+    const papers = await this.getSubmittedPapers(instructorId);
+    const sectionList = filters.sections ? filters.sections.split(',').map(s => s.trim().toLowerCase()) : null;
+    const statusList = filters.status ? filters.status.split(',').map(s => s.trim()) : null;
+
+    return papers.filter(p => {
+      if (filters.examId && p.examId !== filters.examId) return false;
+      if (sectionList && !sectionList.some(s => (p.studentSection || '').toLowerCase() === s)) return false;
+      if (statusList && !statusList.includes(p.status)) return false;
+      return true;
+    });
+  }
+
+  /**
+   * Export incident reports with optional filters
+   */
+  static async exportIncidents(instructorId: string, filters: { sections?: string; examId?: string; severity?: string; archived?: string }): Promise<any[]> {
+    const incidents = await this.getIncidentReports(instructorId);
+    const sectionList = filters.sections ? filters.sections.split(',').map(s => s.trim().toLowerCase()) : null;
+
+    return incidents.filter(i => {
+      if (filters.examId && i.examId !== filters.examId) return false;
+      if (sectionList && !sectionList.some(s => (i.studentSection || '').toLowerCase() === s)) return false;
+      if (filters.severity && i.severity !== filters.severity) return false;
+      if (filters.archived !== undefined) {
+        const wantArchived = filters.archived === 'true';
+        if (i.archived !== wantArchived) return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * Get available filter options for the export panel
+   */
+  static async getExportOptions(instructorId: string): Promise<{ sections: string[]; exams: { id: string; title: string }[]; statuses: string[]; severities: string[] }> {
+    const allPapers = await this.getSubmittedPapers(instructorId);
+    const allIncidents = await this.getIncidentReports(instructorId);
+
+    // Merge sections from session data
+    const sectionSet = new Set<string>();
+    allPapers.forEach(p => { if (p.studentSection) sectionSet.add(p.studentSection); });
+    // Also get from registration fields
+    try {
+      const { StudentService } = await import('./StudentService');
+      const fields = await StudentService.getRegistrationFields(instructorId);
+      fields.sections.forEach(s => sectionSet.add(s));
+    } catch { /* ignore */ }
+
+    // Unique exams
+    const examMap = new Map<string, string>();
+    allPapers.forEach(p => { if (!examMap.has(p.examId)) examMap.set(p.examId, p.examTitle); });
+
+    return {
+      sections: [...sectionSet].sort(),
+      exams: [...examMap.entries()].map(([id, title]) => ({ id, title })),
+      statuses: ['completed', 'pending', 'incomplete', 'submitted'],
+      severities: ['low', 'medium', 'high'],
+    };
   }
 }

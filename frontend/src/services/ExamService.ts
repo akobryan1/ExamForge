@@ -209,6 +209,14 @@ class ExamServiceClass {
   }
 
   /**
+   * Get filter options for the export panel (Instructor only)
+   */
+  async getExportOptions(): Promise<{ sections: string[]; exams: { id: string; title: string }[]; statuses: string[]; severities: string[] }> {
+    const response = await apiClient.get('/api/exams/export/options');
+    return response.data;
+  }
+
+  /**
    * Record a proctoring violation (Student)
    */
   async recordViolation(attemptId: string, violationType: string): Promise<void> {

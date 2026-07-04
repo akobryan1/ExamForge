@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
+import { ExportPanel } from '../components/ExportPanel';
 import { useIncidentReports, useArchiveIncidents, useUnarchiveIncidents, useDeleteIncidents } from '../hooks/useExamQueries';
 import { pageTransition } from '../utils/animations';
 import '../styles/pages/incident-reports.css';
@@ -130,7 +131,7 @@ export function IncidentReportsPage() {
             </p>
           </div>
         </div>
-
+        <ExportPanel type="incidents" />
         {/* Filters and Actions */}
         <div className="filters-section">
           <div className="filters">
