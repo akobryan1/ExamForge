@@ -39,10 +39,8 @@ services:
     healthCheckPath: /health
     
   # Frontend Static Site
-  - type: web
+  - type: static
     name: examforge-frontend
-    env: static
-    region: oregon
     rootDirectory: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
