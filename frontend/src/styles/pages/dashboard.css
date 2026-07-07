@@ -221,6 +221,7 @@
 }
 
 .stamp-active    { color: var(--ledger-amber); transform: rotate(-3deg); }
+.stamp-scheduled { color: var(--ledger-ink-blue); transform: rotate(2deg); }
 .stamp-draft     { color: var(--ledger-grey);  transform: rotate(2deg); }
 .stamp-completed { color: var(--ledger-green); transform: rotate(-2deg); }
 .stamp-archived  { color: var(--ledger-ink-soft); transform: rotate(3deg); }

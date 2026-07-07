@@ -5,32 +5,33 @@ import { useAuth } from '../contexts/AuthContext';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { useExamList, useCloneExam, useRepublishExam, useCompleteExam, useDeleteExam } from '../hooks/useExamQueries';
-import type { Exam, ExamStatus } from '../types/exam';
+import type { Exam } from '../types/exam';
 import '../styles/pages/exams.css';
 
 function getStatusBadgeClass(status: string): string {
   switch (status) {
-    case 'draft': return 'badge-draft';
-    case 'published': return 'badge-scheduled';
-    case 'active': return 'badge-live';
-    case 'completed': return 'badge-completed';
-    case 'archived': return 'badge-closed';
-    default: return 'badge-draft';
+    case 'draft': return 'stamp stamp-draft';
+    case 'published': return 'stamp stamp-scheduled';
+    case 'active': return 'stamp stamp-active';
+    case 'completed': return 'stamp stamp-completed';
+    case 'archived': return 'stamp stamp-archived';
+    default: return 'stamp stamp-draft';
+  }
+}
+
+function getSpineClass(status: string): string {
+  switch (status) {
+    case 'active':
+    case 'published': return 'spine-active';
+    case 'draft': return 'spine-draft';
+    case 'completed': return 'spine-completed';
+    case 'archived': return 'spine-archived';
+    default: return 'spine-draft';
   }
 }
 
 function getStatusLabel(status: string): string {
   return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-function getStatusColor(status: string): string {
-  switch (status) {
-    case 'active': return '#F59E0B';
-    case 'draft': return '#A8A29E';
-    case 'completed': return '#16A34A';
-    case 'archived': return '#78716C';
-    default: return '#A8A29E';
-  }
 }
 
 export function ExamsPage() {
@@ -134,38 +135,23 @@ export function ExamsPage() {
         </div>
 
         {isInstructor && (
-          <div className="subtab-nav" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--color-border)', paddingBottom: 0 }}>
+          <div className="folder-tabs">
             <button
-              className={`subtab-btn ${activeTab === 'active' ? 'active' : ''}`}
+              className={`folder-tab ${activeTab === 'active' ? 'active' : ''}`}
               onClick={() => setActiveTab('active')}
-              style={{
-                padding: '8px 18px', fontSize: 'var(--text-sm)',
-                fontWeight: activeTab === 'active' ? 600 : 400,
-                color: activeTab === 'active' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
-                background: 'none', border: 'none',
-                borderBottom: activeTab === 'active' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
-                marginBottom: -2, cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
-              }}
             >
               📋 Active Exams ({activeExams.length})
             </button>
             <button
-              className={`subtab-btn ${activeTab === 'past' ? 'active' : ''}`}
+              className={`folder-tab ${activeTab === 'past' ? 'active' : ''}`}
               onClick={() => setActiveTab('past')}
-              style={{
-                padding: '8px 18px', fontSize: 'var(--text-sm)',
-                fontWeight: activeTab === 'past' ? 600 : 400,
-                color: activeTab === 'past' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
-                background: 'none', border: 'none',
-                borderBottom: activeTab === 'past' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
-                marginBottom: -2, cursor: 'pointer', transition: 'all 150ms', fontFamily: 'var(--font-body)',
-              }}
             >
               🏛️ Past Exams ({pastExams.length})
             </button>
           </div>
         )}
 
+        <div className="folder-body">
         {activeTab === 'active' && (activeExams.length === 0 ? (
           <div className="empty-state">
             <h2>No active exams</h2>
@@ -176,10 +162,10 @@ export function ExamsPage() {
           <div className="exams-grid">
             {activeExams.map((exam: Exam, index: number) => (
               <motion.div key={exam.id} className="exam-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: index * 0.04 }}>
-                <div className="exam-indicator" style={{ background: getStatusColor(exam.status) }} />
+                <div className={`exam-indicator ${getSpineClass(exam.status)}`} />
                 <div className="exam-card-header">
                   <h3>{exam.title}</h3>
-                  <span className={`badge ${getStatusBadgeClass(exam.status)}`}>{getStatusLabel(exam.status)}</span>
+                  <span className={getStatusBadgeClass(exam.status)}>{getStatusLabel(exam.status)}</span>
                 </div>
                 {exam.description && <p className="exam-description">{exam.description}</p>}
                 <div className="exam-meta">
@@ -190,8 +176,8 @@ export function ExamsPage() {
                 </div>
                 {isInstructor && (
                   <div className="exam-stats">
-                    <span>Attempts: {exam.attemptCount || 0}</span>
-                    {exam.averageScore != null && <span>Avg score: {exam.averageScore.toFixed(1)}%</span>}
+                    <span>Attempts: <b>{exam.attemptCount || 0}</b></span>
+                    {exam.averageScore != null && <span>Avg score: <b>{exam.averageScore.toFixed(1)}%</b></span>}
                   </div>
                 )}
                 <div className="exam-card-actions">
@@ -226,17 +212,17 @@ export function ExamsPage() {
           <div className="exams-grid">
             {pastExams.map((exam: Exam, index: number) => (
               <motion.div key={exam.id} className="exam-card past-exam-card" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: index * 0.04 }}>
-                <div className="exam-indicator" style={{ background: '#78716C' }} />
+                <div className={`exam-indicator spine-archived`} />
                 <div className="exam-card-header">
                   <h3>{exam.title}</h3>
-                  <span className={`badge ${getStatusBadgeClass(exam.status)}`}>{getStatusLabel(exam.status)}</span>
+                  <span className={getStatusBadgeClass(exam.status)}>{getStatusLabel(exam.status)}</span>
                 </div>
                 {exam.description && <p className="exam-description">{exam.description}</p>}
                 <div className="exam-meta">
                   <span className="meta-item">{exam.questionCount || 0} questions</span>
                   <span className="meta-item">{exam.totalPoints || 0} points</span>
-                  {exam.attemptCount > 0 && <span className="meta-item">{exam.attemptCount} attempts</span>}
-                  {exam.averageScore != null && <span className="meta-item">Avg: {exam.averageScore.toFixed(1)}%</span>}
+                  {exam.attemptCount > 0 && <span className="meta-item"><b>{exam.attemptCount}</b> attempts</span>}
+                  {exam.averageScore != null && <span className="meta-item">Avg: <b>{exam.averageScore.toFixed(1)}%</b></span>}
                 </div>
                 <div className="exam-card-actions" style={{ flexWrap: 'wrap' }}>
                   <Button variant="secondary" size="sm" onClick={() => handleClone(exam.id)} style={{ flex: 1, minWidth: 80 }}>
@@ -250,7 +236,7 @@ export function ExamsPage() {
                   <Link to={`/exams/${exam.id}`} style={{ flex: 1, minWidth: 80 }}>
                     <Button variant="outline" size="sm" style={{ width: '100%' }}>👁 View</Button>
                   </Link>
-                  <Button variant="text" size="sm" onClick={() => handleDelete(exam.id)} style={{ color: '#dc2626', padding: '8px' }} title="Delete permanently">
+                  <Button variant="text" size="sm" onClick={() => handleDelete(exam.id)} style={{ color: 'var(--ledger-red)', padding: '8px' }} title="Delete permanently">
                     🗑
                   </Button>
                 </div>
@@ -258,6 +244,7 @@ export function ExamsPage() {
             ))}
           </div>
         ))}
+        </div>{/* end folder-body */}
       </motion.div>
     </div>
     </MainLayout>
