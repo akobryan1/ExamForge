@@ -178,6 +178,34 @@
 }
 
 /* ============================================
+   LEDGER / GRADE-BOOK THEME TOKENS
+   — scoped use only; do not replace existing globals
+   ============================================ */
+
+:root {
+  --ledger-paper:       #E9EEEF;
+  --ledger-card:        #F6F7F2;
+  --ledger-ink:         #1E2A3A;
+  --ledger-ink-soft:    #5A6472;
+  --ledger-ink-blue:    #2C4270;
+  --ledger-kraft:       #CBA876;
+  --ledger-kraft-dark:  #9C7C46;
+  --ledger-gold:        #E4C989;
+  --ledger-red:         #A5342A;
+  --ledger-green:       #3E6B47;
+  --ledger-amber:       #B9791E;
+  --ledger-grey:        #6B6459;
+  --ledger-line:        rgba(30,42,58,0.14);
+  --ledger-line-soft:   rgba(30,42,58,0.08);
+  --ledger-cover-1:     #1B2540;
+  --ledger-cover-2:     #283B63;
+  --ledger-cover-line:  rgba(255,255,255,0.12);
+  --ledger-cover-text:  rgba(235,236,240,0.82);
+  --font-mono-ledger:   'JetBrains Mono', monospace;
+  --font-display-ledger:'Fraunces', serif;
+}
+
+/* ============================================
    GLOBAL RESETS & BASE STYLES
    ============================================ */
 

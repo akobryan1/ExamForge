@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, Fragment, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -82,15 +82,20 @@ export function MainLayout({ children }: MainLayoutProps) {
         </div>
 
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </Link>
+          {navItems.map((item, idx) => (
+            <Fragment key={item.path}>
+              {/* Insert "Instructor" label before the first instructor-only item */}
+              {idx === 2 && user?.role === 'instructor' && (
+                <div className="nav-section-label">Instructor</div>
+              )}
+              <Link
+                to={item.path}
+                className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
+              >
+                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-label">{item.label}</span>
+              </Link>
+            </Fragment>
           ))}
         </nav>
 

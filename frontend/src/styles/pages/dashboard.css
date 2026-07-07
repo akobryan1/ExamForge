@@ -1,10 +1,40 @@
-/* Dashboard Page Styles - ExamForge Design System */
+/* Dashboard Page Styles — Ledger / Grade-book Theme */
 
 .dashboard-page {
   padding-bottom: var(--spacing-12);
 }
 
-/* Content Row (2-column on desktop) */
+/* ── Stamp-date chip (rotated, red-bordered) ── */
+
+.stamp-date {
+  flex-shrink: 0;
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--ledger-red);
+  border: 2px solid var(--ledger-red);
+  border-radius: 4px;
+  padding: 8px 10px;
+  text-align: center;
+  line-height: 1.5;
+  transform: rotate(-5deg);
+  position: relative;
+  overflow: hidden;
+  background: rgba(165,52,42,0.03);
+}
+.stamp-date::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.stamp-date span { display: block; }
+
+/* ── Content Row (2-column on desktop) ── */
 
 .content-row {
   display: grid;
@@ -12,55 +42,249 @@
   gap: 14px;
 }
 
-/* Exam Row (inside recent exams card) */
+/* ── Stat cards ── */
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px 18px;
+  margin-bottom: 36px;
+}
+
+.stat-card {
+  position: relative;
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 2px 8px 8px 8px;
+  padding: 30px 18px 20px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(30,42,58,0.08);
+}
+
+/* Folder tab above each stat card */
+.stat-tab {
+  position: absolute;
+  top: -13px;
+  left: 14px;
+  background: var(--ledger-kraft);
+  color: #3A2E17;
+  font-family: var(--font-mono-ledger);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 9px 5px;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.25) inset;
+}
+
+.stat-value {
+  font-family: var(--font-display-ledger);
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ledger-ink);
+  margin-bottom: 8px;
+}
+
+.stat-value.amber { color: var(--ledger-amber); }
+.stat-value.red   { color: var(--ledger-red); }
+.stat-value.green { color: var(--ledger-green); }
+.stat-value.blue  { color: var(--ledger-ink-blue); }
+
+.stat-delta {
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  color: var(--ledger-ink-soft);
+}
+
+/* ── Cards (shared) ── */
+
+.card {
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 6px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--ledger-line);
+}
+
+.card-title {
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+}
+
+.card-link {
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  color: var(--ledger-ink-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.card-link:hover { text-decoration: underline; }
+
+/* ── Ledger notebook margin (exam rows) ── */
+
+.ledger {
+  position: relative;
+  padding-left: 40px;
+}
+
+.ledger::before {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 30px;
+  width: 1px;
+  background: rgba(165,52,42,0.28);
+}
+
+/* ── Exam rows ── */
 
 .exam-row {
   display: flex;
   align-items: center;
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--color-border);
-  gap: 10px;
-  transition: background var(--transition-fast);
+  gap: 14px;
+  padding: 13px 18px 13px 0;
+  border-bottom: 1px solid var(--ledger-line-soft);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s ease;
 }
 
-.exam-row:last-child {
-  border-bottom: none;
-}
+.exam-row:last-child { border-bottom: none; }
 
 .exam-row:hover {
-  background: var(--color-surface);
+  background: rgba(44,66,112,0.045);
 }
 
-.exam-info {
-  flex: 1;
-  min-width: 0;
-}
+.exam-info { flex: 1; min-width: 0; }
 
 .exam-name {
-  font-size: 13px;
-  font-weight: var(--font-medium);
-  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ledger-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .exam-meta {
-  font-size: 11px;
-  color: var(--color-gray-2);
-  margin-top: 1px;
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  color: var(--ledger-ink-soft);
 }
 
-/* Responsive */
+/* ── Rubber stamp status badges ── */
+
+.stamp {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono-ledger);
+  font-weight: 700;
+  font-size: 9.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+/* Noise-texture overlay shared with sidebar */
+.stamp::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+.stamp-active    { color: var(--ledger-amber); transform: rotate(-3deg); }
+.stamp-draft     { color: var(--ledger-grey);  transform: rotate(2deg); }
+.stamp-completed { color: var(--ledger-green); transform: rotate(-2deg); }
+.stamp-archived  { color: var(--ledger-ink-soft); transform: rotate(3deg); }
+
+/* ── Quick actions "note" card ── */
+
+.note-card { position: relative; }
+.note-card::before,
+.note-card::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #B7B2A4;
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.25), 0 1px 0 rgba(255,255,255,0.3);
+}
+.note-card::before { left: 22px; }
+.note-card::after  { right: 22px; }
+
+/* ── Empty state ── */
+
+.empty-state-ledger {
+  padding: 34px 18px;
+  text-align: center;
+  color: var(--ledger-ink-soft);
+  font-size: 13px;
+}
+
+/* ── Responsive ── */
 
 @media (max-width: 1024px) {
   .content-row {
     grid-template-columns: 1fr;
+  }
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 16px 12px;
   }
+  .stat-value {
+    font-size: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card, .exam-row { transition: none !important; }
+}
+
+/* Focus-visible for ledger-context elements */
+.dashboard-page a:focus-visible,
+.dashboard-page .btn:focus-visible {
+  outline: 2px solid var(--ledger-ink-blue);
+  outline-offset: 2px;
 }
