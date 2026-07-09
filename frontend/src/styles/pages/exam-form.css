@@ -94,11 +94,21 @@
   margin-bottom: 24px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  padding-right: 24px;
 }
 
 .tab-navigation::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.tab-navigation::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tab-navigation::-webkit-scrollbar-thumb {
+  background: var(--ledger-line);
+  border-radius: 4px;
 }
 
 .tab-button {
