@@ -229,6 +229,58 @@
   font-size: var(--text-base);
 }
 
+/* ============================================
+   CHART COMPONENTS
+   ============================================ */
+
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.chart-axis-label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  fill: var(--ledger-ink-soft);
+  letter-spacing: 0.02em;
+}
+
+.chart-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--ledger-line-soft);
+  margin-top: 4px;
+}
+
+.chart-footer-label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ledger-ink-soft);
+}
+
+.chart-footer-value {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  color: var(--ledger-ink);
+  font-weight: 600;
+}
+
+.trend-hint {
+  color: var(--ledger-ink-soft);
+  font-weight: 400;
+}
+
 /* Responsive Design */
 
 @media (max-width: 768px) {

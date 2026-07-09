@@ -1368,6 +1368,34 @@ export class ExamService {
         });
       }
 
+      // ── Score distribution buckets ──
+      const totalPoints = examData.totalPoints || 100;
+      const buckets = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+      const scoreDistribution = buckets.map(min => {
+        const max = min + 10;
+        const label = `${min}-${max}%`;
+        const count = attemptsData.filter(a => {
+          const pct = ((a.score || 0) / totalPoints) * 100;
+          return pct >= min && pct < max;
+        }).length;
+        return { range: label, count };
+      });
+      // Ensure 100% exactly lands in the 90-100 bucket
+      const perfectCount = attemptsData.filter(a => ((a.score || 0) / totalPoints) * 100 === 100).length;
+      if (perfectCount > 0) {
+        const last = scoreDistribution[scoreDistribution.length - 1];
+        last.count += perfectCount - attemptsData.filter(a => {
+          const pct = ((a.score || 0) / totalPoints) * 100;
+          return pct >= 90 && pct < 100;
+        }).length;
+      }
+
+      // ── Time vs Score scatter data ──
+      const timeVsScore = attemptsData.map(a => ({
+        timeSpent: Math.round((a.timeSpent || 0) / 60), // convert seconds → minutes
+        score: parseFloat((((a.score || 0) / totalPoints) * 100).toFixed(1)),
+      }));
+
       return {
         examId,
         examTitle: examData.title,
@@ -1376,6 +1404,8 @@ export class ExamService {
         passRate,
         averageTime,
         questionStats,
+        scoreDistribution,
+        timeVsScore,
       };
 
     } catch (error) {
