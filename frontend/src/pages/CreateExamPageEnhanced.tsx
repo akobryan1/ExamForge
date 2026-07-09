@@ -11,16 +11,6 @@ import '../styles/pages/questions.css';
 
 type TabType = 'basic' | 'access' | 'timing' | 'questions' | 'proctoring' | 'advanced' | 'instructions';
 
-const TAB_ICONS: Record<TabType, string> = {
-  basic: '◇',
-  access: '◉',
-  timing: '⏱',
-  questions: '▤',
-  proctoring: '△',
-  advanced: '⊡',
-  instructions: '◻',
-};
-
 const TAB_LABELS: Record<TabType, string> = {
   basic: 'Basic Info',
   access: 'Access Control',
@@ -525,6 +515,11 @@ export function CreateExamPageEnhanced() {
 
   const tabIndex = TAB_ORDER.indexOf(activeTab) + 1;
 
+  const difficultyStampClass = (d: string | undefined) => {
+    const map: Record<string, string> = { easy: 'stamp-easy', medium: 'stamp-medium', hard: 'stamp-hard' };
+    return map[d || 'medium'] || 'stamp-medium';
+  };
+
   return (
     <MainLayout>
     <div className="exam-form-page">
@@ -534,9 +529,9 @@ export function CreateExamPageEnhanced() {
         transition={{ duration: 0.3 }}
       >
         <div className="form-header">
+          <div className="step-chip"><b>{String(tabIndex).padStart(2, '0')}</b> / 07 &mdash; {TAB_LABELS[activeTab]}</div>
           <h1>{isEditing ? 'Edit exam' : 'Create new exam'}</h1>
           <p className="form-subtitle">Set up exam details, questions, access control, and proctoring rules — all in one place</p>
-          <p className="form-step-indicator">Step {tabIndex} of 7: {TAB_LABELS[activeTab]}</p>
         </div>
 
         {error && (
@@ -555,7 +550,7 @@ export function CreateExamPageEnhanced() {
               className={`tab-button ${activeTab === tab ? 'active' : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              <span className="tab-icon">{TAB_ICONS[tab]}</span>
+              <span className="tab-index">{String(TAB_ORDER.indexOf(tab) + 1).padStart(2, '0')}</span>
               <span className="tab-label">{TAB_LABELS[tab]}</span>
             </button>
           ))}
@@ -597,8 +592,8 @@ export function CreateExamPageEnhanced() {
             <motion.div key="access" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
 
               <FormSection title="Who can take this exam" defaultOpen={true}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
-                  <label className="option-label" style={{ cursor: 'pointer' }}>
+                <div className="option-group">
+                  <label className={`option-label ${formData.accessMethod === 'student_login' ? 'selected' : ''}`}>
                     <input
                       type="radio"
                       name="accessMethod"
@@ -607,13 +602,13 @@ export function CreateExamPageEnhanced() {
                       onChange={handleChange}
                     />
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>Student login</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>
+                      <div className="option-title">Student login</div>
+                      <div className="option-desc">
                         Only registered students can log in and take the exam using their student portal credentials
                       </div>
                     </div>
                   </label>
-                  <label className="option-label" style={{ cursor: 'pointer' }}>
+                  <label className={`option-label ${formData.accessMethod === 'guest' ? 'selected' : ''}`}>
                     <input
                       type="radio"
                       name="accessMethod"
@@ -622,8 +617,8 @@ export function CreateExamPageEnhanced() {
                       onChange={handleChange}
                     />
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>Guest access</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>
+                      <div className="option-title">Guest access</div>
+                      <div className="option-desc">
                         Anyone with the link can take the exam — they just provide their name, student ID, course, and year
                       </div>
                     </div>
@@ -699,17 +694,17 @@ export function CreateExamPageEnhanced() {
                 ) : (
                   <div className="questions-list" style={{ marginTop: 8 }}>
                     {questions.map((question, index) => (
-                      <div key={question.id} className="question-card" style={{ padding: 'var(--spacing-4)', marginBottom: 0 }}>
+                      <div key={question.id} className="question-card">
+                        <div className="points-seal">{question.points || 1}<span>pt</span></div>
                         <div className="question-header">
                           <span className="question-number">Q{index + 1}</span>
                           <div className="question-meta">
-                            <span className={`question-type type-${question.type}`}>
+                            <span className={`stamp stamp-type`}>
                               {question.type.replace('_', ' ')}
                             </span>
-                            <span className={`difficulty-badge difficulty-${question.difficulty || 'medium'}`}>
+                            <span className={`stamp ${difficultyStampClass(question.difficulty)}`}>
                               {question.difficulty || 'medium'}
                             </span>
-                            <span className="points-badge">{question.points || 1} pts</span>
                           </div>
                         </div>
                         <div className="question-text">{question.text}</div>
@@ -720,8 +715,8 @@ export function CreateExamPageEnhanced() {
                           <div className="choices-preview">
                             {question.choices.map((choice, i) => (
                               <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
-                                {String.fromCharCode(65 + i)}. {choice.text}
-                                {choice.isCorrect && <span className="correct-indicator">✓</span>}
+                                <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
+                                <span className="choice-text">{choice.text}</span>
                               </div>
                             ))}
                           </div>
@@ -753,12 +748,12 @@ export function CreateExamPageEnhanced() {
               <Reveal open={formData.proctorEnabled}>
                 <div className="form-subsection">
                   <h3>Behavioral monitoring</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                      <input type="checkbox" name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                  <div className="option-group">
+                    <label className={`option-label ${formData.proctorDetectTabSwitch ? 'selected' : ''}`}>
+                      <input type="checkbox" name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} />
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>Detect tab switching</div>
-                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Record when students switch browser tabs</div>
+                        <div className="option-title">Detect tab switching</div>
+                        <div className="option-desc">Record when students switch browser tabs</div>
                       </div>
                     </label>
                     <Reveal open={formData.proctorDetectTabSwitch}>
@@ -766,11 +761,11 @@ export function CreateExamPageEnhanced() {
                         <input type="number" name="proctorPointDeductionTabSwitch" value={formData.proctorPointDeductionTabSwitch} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                      <input type="checkbox" name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                    <label className={`option-label ${formData.proctorDetectCopyPaste ? 'selected' : ''}`}>
+                      <input type="checkbox" name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} />
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>Detect copy/paste</div>
-                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Record copy and paste attempts</div>
+                        <div className="option-title">Detect copy/paste</div>
+                        <div className="option-desc">Record copy and paste attempts</div>
                       </div>
                     </label>
                     <Reveal open={formData.proctorDetectCopyPaste}>
@@ -778,11 +773,11 @@ export function CreateExamPageEnhanced() {
                         <input type="number" name="proctorPointDeductionCopyPaste" value={formData.proctorPointDeductionCopyPaste} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                      <input type="checkbox" name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                    <label className={`option-label ${formData.proctorDisableRightClick ? 'selected' : ''}`}>
+                      <input type="checkbox" name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} />
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>Disable right-click</div>
-                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Prevent right-click context menu</div>
+                        <div className="option-title">Disable right-click</div>
+                        <div className="option-desc">Prevent right-click context menu</div>
                       </div>
                     </label>
                     <Reveal open={formData.proctorDisableRightClick}>
@@ -790,11 +785,11 @@ export function CreateExamPageEnhanced() {
                         <input type="number" name="proctorPointDeductionRightClick" value={formData.proctorPointDeductionRightClick} onChange={handleChange} min="0" placeholder="0" />
                       </Field>
                     </Reveal>
-                    <label className="option-label" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)' }}>
-                      <input type="checkbox" name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} style={{ accentColor: 'var(--color-accent-500)' }} />
+                    <label className={`option-label ${formData.proctorEnforceFullscreen ? 'selected' : ''}`}>
+                      <input type="checkbox" name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} />
                       <div>
-                        <div style={{ fontWeight: 500, fontSize: 14 }}>Enforce full-screen mode</div>
-                        <div style={{ fontSize: 12, color: 'var(--color-gray-3)', marginTop: 2 }}>Students must stay in fullscreen mode</div>
+                        <div className="option-title">Enforce full-screen mode</div>
+                        <div className="option-desc">Students must stay in fullscreen mode</div>
                       </div>
                     </label>
                     <Reveal open={formData.proctorEnforceFullscreen}>
@@ -893,6 +888,7 @@ export function CreateExamPageEnhanced() {
           )}
 
           <div className="form-actions">
+            <span className="form-actions-legend"><span className="required-ast">*</span> required fields</span>
             <button
               type="button"
               className="btn btn-secondary"
@@ -1001,7 +997,7 @@ export function CreateExamPageEnhanced() {
                   <label>Answer Choices</label>
                   {questionForm.choices.map((choice, index) => (
                     <div key={index} className="choice-input-group" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 6 }}>
-                      <input type="radio" name="correctChoice" checked={choice.isCorrect} onChange={() => toggleCorrectChoice(index)} />
+                      <input type="radio" name="correctChoice" className="bubble-radio" checked={choice.isCorrect} onChange={() => toggleCorrectChoice(index)} />
                       <input type="text" value={choice.text} onChange={(e) => updateChoice(index, e.target.value)}
                         placeholder={`Choice ${String.fromCharCode(65 + index)}`} required style={{ flex: 1 }} />
                       {questionForm.choices.length > 2 && (

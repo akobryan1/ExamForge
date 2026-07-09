@@ -10,8 +10,7 @@
 }
 
 /* ============================================
-   PAGE HEADER
-   Spec: Space Grotesk 22px 700 Navy, subtitle 13px Gray 2
+   PAGE HEADER — Ledger theme
    ============================================ */
 
 .form-header {
@@ -19,40 +18,53 @@
 }
 
 .form-header h1 {
-  font-family: var(--font-display);
+  font-family: var(--font-display-ledger);
   font-size: var(--text-2xl);
   font-weight: var(--font-bold);
-  color: var(--color-primary-900);
+  color: var(--ledger-ink-blue);
   letter-spacing: var(--tracking-tight);
   margin: 0 0 2px;
 }
 
 .form-subtitle {
   font-size: 13px;
-  color: var(--color-gray-2);
+  color: var(--ledger-ink-soft);
   margin: 0 0 24px;
   font-family: var(--font-body);
   font-weight: var(--font-normal);
 }
 
-.form-step-indicator {
-  font-size: var(--text-sm);
-  color: var(--color-gray-2);
-  margin-bottom: 0;
-  font-weight: var(--font-medium);
+.step-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--ledger-kraft-tint);
+  color: var(--ledger-kraft-dark);
+  border: 1px solid rgba(156,124,70,0.35);
+  padding: 4px 10px;
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+
+.step-chip b {
+  color: var(--ledger-ink-blue);
 }
 
 /* ============================================
-   ERROR BANNER
-   Spec: Red 10% bg, red border, red text
+   ERROR BANNER — Ledger theme
    ============================================ */
 
 .error-banner {
   padding: var(--spacing-3) var(--spacing-4);
-  background: rgba(220, 38, 38, 0.1);
-  border: 1px solid var(--color-error-600);
+  background: rgba(165,52,42,0.07);
+  border: 1px solid var(--ledger-red);
   border-radius: var(--radius-md);
-  color: var(--color-error-700);
+  color: var(--ledger-red);
   margin-bottom: var(--spacing-4);
   font-size: var(--text-sm);
   display: flex;
@@ -64,7 +76,7 @@
 .error-banner-dismiss {
   background: none;
   border: none;
-  color: var(--color-error-700);
+  color: var(--ledger-red);
   cursor: pointer;
   font-size: var(--text-lg);
   padding: 0;
@@ -72,14 +84,13 @@
 }
 
 /* ============================================
-   TAB SYSTEM - Horizontal Scroll Tabs
-   Spec: 13px 500, amber active underline
+   TAB SYSTEM — Numbered Index Tabs
    ============================================ */
 
 .tab-navigation {
   display: flex;
   gap: 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--ledger-line);
   margin-bottom: 24px;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -100,9 +111,9 @@
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
   font-family: var(--font-body);
-  font-size: 13px;
-  font-weight: var(--font-medium);
-  color: var(--color-gray-3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ledger-ink-soft);
   cursor: pointer;
   white-space: nowrap;
   transition: color var(--transition-fast), border-color var(--transition-fast);
@@ -110,22 +121,24 @@
 }
 
 .tab-button:hover {
-  color: var(--color-text-primary);
+  color: var(--ledger-ink);
 }
 
 .tab-button.active {
-  color: var(--color-accent-500);
-  border-bottom-color: var(--color-accent-500);
+  color: var(--ledger-ink-blue);
+  border-bottom-color: var(--ledger-amber);
 }
 
-.tab-icon {
-  font-size: 14px;
-  width: 16px;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: inherit;
+.tab-index {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ledger-kraft-dark);
+  letter-spacing: 0.05em;
+}
+
+.tab-button.active .tab-index {
+  color: var(--ledger-amber);
 }
 
 .tab-label {
@@ -133,20 +146,19 @@
 }
 
 /* ============================================
-   FORM CONTAINER
-   Spec: White bg, 1px Gray 1 border, 10px radius
+   FORM CONTAINER — Ledger card
    ============================================ */
 
 .exam-form {
-  background: var(--color-surface-elevated);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 2px 8px 8px 8px;
   padding: 24px;
   max-width: 100%;
 }
 
 /* ============================================
-   FORM SECTIONS
+   FORM SECTIONS — Ledger style
    ============================================ */
 
 .form-section {
@@ -158,21 +170,25 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+  padding-bottom: 8px;
   cursor: pointer;
   user-select: none;
+  border-bottom: 1px dashed var(--ledger-line-dash);
 }
 
 .form-section-title {
-  font-family: var(--font-display);
-  font-size: 13px;
-  font-weight: var(--font-semibold);
-  color: var(--color-primary-900);
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ledger-ink);
   margin: 0;
 }
 
 .form-section-chevron {
   font-size: 12px;
-  color: var(--color-gray-2);
+  color: var(--ledger-ink-soft);
   transition: transform var(--transition-fast);
 }
 
@@ -191,8 +207,7 @@
 }
 
 /* ============================================
-   FORM FIELDS
-   Spec: 8px 12px padding, 1px Gray 1 border, 8px radius
+   FORM FIELDS — Ledger style
    ============================================ */
 
 .form-group {
@@ -205,13 +220,16 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: var(--text-sm);
-  font-weight: var(--font-medium);
-  color: var(--color-primary-900);
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
 }
 
 .form-group label .required {
-  color: var(--color-error-600);
+  color: var(--ledger-red);
   font-weight: var(--font-bold);
 }
 
@@ -223,12 +241,12 @@
 .form-group select {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ledger-line);
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: var(--text-base);
-  color: var(--color-text-primary);
-  background: var(--color-surface-elevated);
+  color: var(--ledger-ink);
+  background: white;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
   line-height: 1.5;
 }
@@ -237,26 +255,26 @@
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-accent-500);
-  box-shadow: 0 0 0 2px var(--color-accent-500);
+  border-color: var(--ledger-ink-blue);
+  box-shadow: 0 0 0 2px rgba(44,66,112,0.15);
 }
 
 .form-group input.error,
 .form-group textarea.error,
 .form-group select.error {
-  border-color: var(--color-error-600);
+  border-color: var(--ledger-red);
 }
 
 .form-group input.error:focus,
 .form-group textarea.error:focus,
 .form-group select.error:focus {
-  border-color: var(--color-error-600);
-  box-shadow: 0 0 0 2px var(--color-error-600);
+  border-color: var(--ledger-red);
+  box-shadow: 0 0 0 2px rgba(165,52,42,0.15);
 }
 
 .form-group input::placeholder,
 .form-group textarea::placeholder {
-  color: var(--color-gray-3);
+  color: var(--ledger-ink-soft);
 }
 
 .form-group textarea {
@@ -267,7 +285,7 @@
 
 .form-group select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2378716c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 36px;
@@ -276,14 +294,14 @@
 
 .form-help {
   font-size: 11px;
-  color: var(--color-gray-3);
+  color: var(--ledger-ink-soft);
   line-height: 1.4;
   margin: 0;
 }
 
 .form-error {
   font-size: 11px;
-  color: var(--color-error-600);
+  color: var(--ledger-red);
   margin: 0;
   line-height: 1.4;
 }
@@ -299,7 +317,7 @@
 }
 
 /* ============================================
-   TOGGLE SWITCH
+   TOGGLE SWITCH — Ledger recolor
    ============================================ */
 
 .toggle-wrapper {
@@ -313,13 +331,13 @@
   flex: 1;
   font-size: var(--text-base);
   font-weight: var(--font-medium);
-  color: var(--color-text-primary);
+  color: var(--ledger-ink);
   cursor: pointer;
 }
 
 .toggle-hint {
   font-size: 11px;
-  color: var(--color-gray-3);
+  color: var(--ledger-ink-soft);
   margin-top: 2px;
 }
 
@@ -340,11 +358,11 @@
 .toggle-slider {
   position: absolute;
   inset: 0;
-  background: var(--color-gray-2);
+  background: #D8D3C6;
   border-radius: 12px;
   transition: background var(--transition-fast);
   cursor: pointer;
-  border: 1px solid var(--color-gray-2);
+  border: 1px solid var(--ledger-line);
 }
 
 .toggle-slider::before {
@@ -360,7 +378,7 @@
 }
 
 .toggle input:checked + .toggle-slider {
-  background: var(--color-accent-500);
+  background: var(--ledger-ink-blue);
 }
 
 .toggle input:checked + .toggle-slider::before {
@@ -368,7 +386,7 @@
 }
 
 .toggle input:focus-visible + .toggle-slider {
-  box-shadow: 0 0 0 2px var(--color-accent-500);
+  box-shadow: 0 0 0 2px var(--ledger-ink-blue);
 }
 
 /* ============================================
@@ -430,7 +448,7 @@
 }
 
 /* ============================================
-   SECTION TAGS (Access Control)
+   SECTION TAGS (Filing Tags) — Ledger theme
    ============================================ */
 
 .section-input-group {
@@ -444,8 +462,8 @@
 
 .btn-add {
   padding: 8px 16px;
-  background: var(--color-accent-500);
-  color: var(--color-primary-900);
+  background: var(--ledger-kraft);
+  color: #3A2E17;
   border: none;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
@@ -457,34 +475,53 @@
 }
 
 .btn-add:hover {
-  background: var(--color-accent-600);
+  background: var(--ledger-kraft-dark);
+  color: white;
 }
 
 .section-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 10px 12px;
+  margin-top: 12px;
 }
 
 .section-tag {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  background: var(--color-primary-50);
-  color: var(--color-primary-700);
+  gap: 7px;
+  padding: 6px 12px 6px 20px;
+  background: var(--ledger-kraft-tint);
+  color: var(--ledger-kraft-dark);
+  font-family: var(--font-mono-ledger);
   font-size: 11px;
-  font-weight: var(--font-medium);
-  border-radius: var(--radius-pill);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid rgba(156,124,70,0.4);
+  clip-path: polygon(11px 0, 100% 0, 100% 100%, 11px 100%, 0 50%);
+}
+
+.section-tag::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ledger-paper);
+  border: 1px solid var(--ledger-kraft-dark);
 }
 
 .section-tag button {
   background: none;
   border: none;
-  color: var(--color-primary-700);
+  color: var(--ledger-kraft-dark);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 13px;
   padding: 0;
   line-height: 1;
   opacity: 0.6;
@@ -502,22 +539,24 @@
 .form-subsection {
   margin-top: 8px;
   padding: 16px;
-  background: var(--color-surface);
+  background: var(--ledger-paper);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--ledger-line);
 }
 
 .form-subsection h3 {
-  font-family: var(--font-display);
-  font-size: var(--text-sm);
-  font-weight: var(--font-semibold);
-  color: var(--color-primary-900);
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ledger-ink);
   margin: 0 0 12px;
 }
 
 .subsection-description {
   font-size: var(--text-sm);
-  color: var(--color-gray-3);
+  color: var(--ledger-ink-soft);
   margin: 0 0 16px;
   line-height: 1.5;
 }
@@ -528,11 +567,11 @@
 
 .form-note {
   padding: 12px;
-  background: var(--color-info-50);
+  background: rgba(44,66,112,0.06);
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-info-50);
+  border: 1px solid rgba(44,66,112,0.12);
   font-size: var(--text-sm);
-  color: var(--color-info-500);
+  color: var(--ledger-ink-blue);
   line-height: 1.5;
   margin-bottom: 16px;
 }
@@ -553,19 +592,18 @@
   gap: 8px;
   cursor: pointer;
   font-size: var(--text-base);
-  color: var(--color-text-primary);
+  color: var(--ledger-ink);
 }
 
 .radio-label input[type="radio"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--color-accent-500);
+  accent-color: var(--ledger-ink-blue);
   cursor: pointer;
 }
 
 /* ============================================
    FORM ACTIONS (sticky footer)
-   Spec: White bg, 1px top border, sticky bottom
    ============================================ */
 
 .form-actions {
@@ -575,16 +613,27 @@
   gap: 12px;
   padding: 16px 24px;
   margin: 0 -24px -24px;
-  background: var(--color-surface-elevated);
-  border-top: 1px solid var(--color-border);
+  background: var(--ledger-card);
+  border-top: 1px solid var(--ledger-line);
   position: sticky;
   bottom: 0;
   z-index: 10;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  border-radius: 0 0 2px 8px;
+}
+
+.form-actions-legend {
+  margin-right: auto;
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  color: var(--ledger-ink-soft);
+}
+
+.form-actions-legend .required-ast {
+  color: var(--ledger-red);
 }
 
 /* ============================================
-   SUCCESS TOAST
+   SUCCESS TOAST — Ledger theme
    ============================================ */
 
 .toast-success {
@@ -595,8 +644,9 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: 12px;
-  background: rgba(22, 163, 74, 0.1);
-  color: var(--color-success-700);
+  background: rgba(62,107,71,0.1);
+  border: 1px solid var(--ledger-green);
+  color: var(--ledger-green);
   border-radius: var(--radius-lg);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -609,6 +659,59 @@
 @keyframes slideIn {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
+}
+
+/* ============================================
+   OPTION CARDS (radio/checkbox — Access Control, Proctoring)
+   ============================================ */
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.option-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--ledger-line);
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.option-label:hover {
+  border-color: var(--ledger-ink-blue);
+  background: rgba(44,66,112,0.03);
+}
+
+.option-label.selected {
+  border-color: var(--ledger-ink-blue);
+  background: rgba(44,66,112,0.06);
+}
+
+.option-label input[type="radio"],
+.option-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--ledger-ink-blue);
+  margin-top: 1px;
+}
+
+.option-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ledger-ink);
+}
+
+.option-desc {
+  font-size: 12px;
+  color: var(--ledger-ink-soft);
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* ============================================
@@ -652,7 +755,7 @@
   .exam-form {
     padding: 16px;
     max-width: 100%;
-    border-radius: var(--radius-md);
+    border-radius: 2px 6px 6px 6px;
   }
 
   .form-row {
@@ -663,19 +766,26 @@
     flex-direction: column-reverse;
     padding: 12px 16px;
     margin: 0 -16px -16px;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: 0 0 2px 6px;
   }
 
   .form-actions .btn {
     width: 100%;
   }
 
-  .tab-button {
-    padding: 8px 12px;
-    font-size: 12px;
+  .form-actions-legend {
+    margin-right: 0;
+    text-align: center;
+    padding-bottom: 8px;
   }
 
-  .tab-icon {
-    font-size: 13px;
+  .tab-button {
+    padding: 8px 10px;
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .tab-index {
+    font-size: 9px;
   }
 }

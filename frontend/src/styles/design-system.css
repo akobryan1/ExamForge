@@ -197,6 +197,9 @@
   --ledger-grey:        #6B6459;
   --ledger-line:        rgba(30,42,58,0.14);
   --ledger-line-soft:   rgba(30,42,58,0.08);
+  --ledger-line-dash:   rgba(30,42,58,0.18);
+  --ledger-card-lift:   #FCFBF7;
+  --ledger-kraft-tint:  #F5EDE0;
   --ledger-cover-1:     #1B2540;
   --ledger-cover-2:     #283B63;
   --ledger-cover-line:  rgba(255,255,255,0.12);
