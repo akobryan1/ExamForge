@@ -1468,6 +1468,18 @@ export class ExamService {
         for (const { doc: sessionDoc, data: sessionData, studentId } of sessionsDocs) {
           const sid = sessionData.studentId || studentId;
           const attemptId = sessionDoc.id;
+
+          // Look up the actual student ID number from their profile if not in session
+          let studentNumber = sessionData.studentNumber || null;
+          if (!studentNumber && sid && !sid.startsWith('guest_')) {
+            try {
+              const profileDoc = await db.collection('examforge_users').doc(sid).get();
+              if (profileDoc.exists) {
+                const profile = profileDoc.data()!;
+                studentNumber = profile.studentId || null;
+              }
+            } catch { /* silent */ }
+          }
           
           // Get session events (incidents)
           const eventsSnapshot = await db
@@ -1483,7 +1495,7 @@ export class ExamService {
               id: eventDoc.id,
               studentId: sid,
               studentName: sessionData.studentName || 'Unknown',
-              studentNumber: sessionData.studentNumber || null,
+              studentNumber: studentNumber,
               studentSection: sessionData.studentSection || null,
               examId: examDoc.id,
               examTitle: examData.title,
