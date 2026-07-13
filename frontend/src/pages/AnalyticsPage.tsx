@@ -209,25 +209,32 @@ export function AnalyticsPage() {
    Histogram: Grade Distribution
    ───────────────────────────────────────────── */
 function HistogramChart({ data, totalAttempts }: { data: ScoreBucket[]; totalAttempts: number }) {
-  const W = 600, H = 260, P = { top: 20, right: 20, bottom: 40, left: 50 };
+  const W = 600, H = 300, P = { top: 30, right: 20, bottom: 50, left: 55 };
   const maxCount = Math.max(...data.map(d => d.count), 1);
   const innerW = W - P.left - P.right;
   const innerH = H - P.top - P.bottom;
-  const barW = Math.max(innerW / data.length - 6, 18);
+  const barW = Math.max(innerW / data.length - 12, 28);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
 
-  const yTicks = [0, Math.round(maxCount / 2) || 1, maxCount];
+  // Generate Y-axis ticks covering 0 → maxCount in ~5 steps
+  const yStep = Math.max(1, Math.ceil(maxCount / 5));
+  const yTicks: number[] = [];
+  for (let v = 0; v <= maxCount; v += yStep) yTicks.push(v);
+  if (yTicks[yTicks.length - 1] !== maxCount) yTicks.push(maxCount);
 
   return (
     <div className="chart-container">
-      <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg">
-        {/* Grid lines */}
-        {yTicks.map(v => (
-          <g key={v}>
-            <line x1={P.left} y1={P.top + innerH - (v / maxCount) * innerH} x2={W - P.right} y2={P.top + innerH - (v / maxCount) * innerH} stroke="var(--ledger-line-soft)" strokeWidth="1" />
-            <text x={P.left - 8} y={P.top + innerH - (v / maxCount) * innerH + 4} textAnchor="end" className="chart-axis-label">{v}</text>
-          </g>
-        ))}
+      <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" style={{ maxHeight: 320 }}>
+        {/* Grid lines + Y-axis labels */}
+        {yTicks.map(v => {
+          const y = P.top + innerH - (v / maxCount) * innerH;
+          return (
+            <g key={v}>
+              <line x1={P.left} y1={y} x2={W - P.right} y2={y} stroke="var(--ledger-line-soft)" strokeWidth="1" />
+              <text x={P.left - 10} y={y + 3} textAnchor="end" className="chart-axis-label">{v}</text>
+            </g>
+          );
+        })}
 
         {/* Bars */}
         {data.map((d, i) => {
@@ -235,35 +242,50 @@ function HistogramChart({ data, totalAttempts }: { data: ScoreBucket[]; totalAtt
           const x = P.left + (i / data.length) * innerW + (innerW / data.length - barW) / 2;
           const y = P.top + innerH - barH;
           const isHover = hoverIdx === i;
+          const pct = totalAttempts > 0 ? ((d.count / totalAttempts) * 100).toFixed(1) : '0';
           return (
             <g key={d.range}>
+              {/* Count label above bar */}
+              {d.count > 0 && (
+                <text
+                  x={x + barW / 2}
+                  y={y - 8}
+                  textAnchor="middle"
+                  fill="var(--ledger-ink)"
+                  fontSize="12"
+                  fontWeight="700"
+                  fontFamily="var(--font-mono-ledger)"
+                >{d.count}</text>
+              )}
               <motion.rect
                 x={x} y={P.top + innerH} width={barW} height={0}
                 initial={{ height: 0, y: P.top + innerH }}
                 animate={{ height: barH, y }}
                 transition={{ duration: 0.5, delay: i * 0.03, ease: 'easeOut' }}
-                rx={3} ry={3}
+                rx={4} ry={4}
                 fill={d.count === 0 ? 'var(--ledger-line-soft)' : 'var(--ledger-ink-blue)'}
-                opacity={isHover ? 1 : 0.78}
+                opacity={isHover ? 1 : 0.92}
                 onMouseEnter={() => setHoverIdx(i)}
                 onMouseLeave={() => setHoverIdx(null)}
                 style={{ cursor: 'pointer', transition: 'opacity 0.15s' }}
               />
               {/* X-axis label */}
               <text
-                x={P.left + (i / data.length) * innerW + innerW / data.length / 2}
-                y={H - 8}
+                x={x + barW / 2}
+                y={H - 12}
                 textAnchor="end"
-                transform={`rotate(-35, ${P.left + (i / data.length) * innerW + innerW / data.length / 2}, ${H - 8})`}
+                transform={`rotate(-35, ${x + barW / 2}, ${H - 12})`}
                 className="chart-axis-label"
-                fontSize="9"
+                fontSize="10"
+                fill="var(--ledger-ink)"
+                fontWeight="500"
               >{d.range}</text>
-              {/* Tooltip */}
+              {/* Tooltip on hover */}
               {isHover && (
                 <g>
-                  <rect x={x + barW / 2 + 6} y={y - 30} width={80} height={26} rx={4} fill="var(--ledger-ink)" opacity={0.9} />
-                  <text x={x + barW / 2 + 46} y={y - 13} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
-                    {d.count} student{d.count !== 1 ? 's' : ''}
+                  <rect x={Math.min(x + barW / 2 - 40, W - P.right - 90)} y={y - 34} width={90} height={24} rx={4} fill="var(--ledger-ink)" opacity={0.92} />
+                  <text x={Math.min(x + barW / 2 - 40, W - P.right - 90) + 45} y={y - 18} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
+                    {d.count} / {totalAttempts} ({pct}%)
                   </text>
                 </g>
               )}
@@ -272,8 +294,8 @@ function HistogramChart({ data, totalAttempts }: { data: ScoreBucket[]; totalAtt
         })}
 
         {/* Axes */}
-        <line x1={P.left} y1={P.top} x2={P.left} y2={H - P.bottom} stroke="var(--ledger-line)" strokeWidth="1" />
-        <line x1={P.left} y1={H - P.bottom} x2={W - P.right} y2={H - P.bottom} stroke="var(--ledger-line)" strokeWidth="1" />
+        <line x1={P.left} y1={P.top} x2={P.left} y2={H - P.bottom} stroke="var(--ledger-line)" strokeWidth="1.5" />
+        <line x1={P.left} y1={H - P.bottom} x2={W - P.right} y2={H - P.bottom} stroke="var(--ledger-line)" strokeWidth="1.5" />
       </svg>
       <div className="chart-footer">
         <span className="chart-footer-label">Score range</span>
