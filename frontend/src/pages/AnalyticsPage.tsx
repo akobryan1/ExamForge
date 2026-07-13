@@ -245,15 +245,18 @@ function HistogramChart({ data, totalAttempts }: { data: ScoreBucket[]; totalAtt
           const pct = totalAttempts > 0 ? ((d.count / totalAttempts) * 100).toFixed(1) : '0';
           return (
             <g key={d.range}>
-              {/* Count label above bar */}
+              {/* Count label above bar — white outline for contrast against any bg */}
               {d.count > 0 && (
                 <text
                   x={x + barW / 2}
-                  y={y - 8}
+                  y={y - 10}
                   textAnchor="middle"
                   fill="var(--ledger-ink)"
-                  fontSize="12"
-                  fontWeight="700"
+                  stroke="white"
+                  strokeWidth="3"
+                  paintOrder="stroke"
+                  fontSize="13"
+                  fontWeight="800"
                   fontFamily="var(--font-mono-ledger)"
                 >{d.count}</text>
               )}
@@ -376,13 +379,23 @@ function TimeScoreChart({ data }: { data: TimeScorePoint[] }) {
                 onMouseLeave={() => setHoverIdx(null)}
                 style={{ cursor: 'pointer', transition: 'r 0.15s, opacity 0.15s' }}
               />
-              {isHover && (
-                <g>
-                  <rect x={cx + 10} y={cy - 20} width={120} height={32} rx={4} fill="var(--ledger-ink)" opacity={0.9} />
-                  <text x={cx + 70} y={cy - 7} textAnchor="middle" fill="white" fontSize="10" fontWeight="600">{d.timeSpent}m · {d.score}%</text>
-                  <text x={cx + 70} y={cy + 5} textAnchor="middle" fill="rgba(255,255,255,0.7)" fontSize="9">{d.score >= 60 ? 'Passed' : 'Failed'}</text>
-                </g>
-              )}
+              {isHover && (() => {
+                const tipW = 130, tipH = 36;
+                let tipX = cx + 12;
+                const tipY = Math.max(0, Math.min(cy - tipH - 6, H - P.bottom - tipH));
+                if (tipX + tipW > W - P.right) tipX = cx - tipW - 12;
+                return (
+                  <g>
+                    <rect x={tipX} y={tipY} width={tipW} height={tipH} rx={5} fill="var(--ledger-ink)" opacity={0.93} />
+                    <text x={tipX + tipW / 2} y={tipY + 16} textAnchor="middle" fill="white" fontSize="11" fontWeight="600">
+                      {d.timeSpent}m &middot; {d.score}%
+                    </text>
+                    <text x={tipX + tipW / 2} y={tipY + 28} textAnchor="middle" fill="rgba(255,255,255,0.65)" fontSize="10">
+                      {d.score >= 60 ? 'Passed' : 'Failed'}
+                    </text>
+                  </g>
+                );
+              })()}
             </g>
           );
         })}
