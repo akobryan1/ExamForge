@@ -130,7 +130,7 @@ export function GradingQueuePage() {
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+          <div style={{ textAlign: 'center', padding: 'var(--spacing-12)', color: 'var(--ledger-ink-soft)' }}>
             <p>Loading grading queue...</p>
           </div>
         ) : filteredItems.length === 0 ? (
@@ -161,9 +161,9 @@ export function GradingQueuePage() {
                   <div className="queue-item-header">
                     <span className="student-name">{item.studentName}</span>
                     {item.currentGrade !== undefined ? (
-                      <span className="graded-badge">✓ Graded</span>
+                      <span className="stamp stamp-graded">✓ Graded</span>
                     ) : (
-                      <span className="pending-badge">Pending</span>
+                      <span className="stamp stamp-pending">Pending</span>
                     )}
                   </div>
                   <p className="exam-title">{item.examTitle}</p>
@@ -194,7 +194,7 @@ export function GradingQueuePage() {
                   <div className="panel-header">
                     <h2>Grade Submission</h2>
                     <button
-                      className="close-btn"
+                      className="panel-close-btn"
                       onClick={() => setSelectedItem(null)}
                     >
                       ×
@@ -207,16 +207,20 @@ export function GradingQueuePage() {
                       <h3>Student Information</h3>
                       <div className="info-grid">
                         <div>
-                          <strong>Name:</strong> {selectedItem.studentName}
+                          <strong>Name</strong>
+                          <span>{selectedItem.studentName}</span>
                         </div>
                         <div>
-                          <strong>Email:</strong> {selectedItem.studentEmail}
+                          <strong>Email</strong>
+                          <span>{selectedItem.studentEmail}</span>
                         </div>
                         <div>
-                          <strong>Exam:</strong> {selectedItem.examTitle}
+                          <strong>Exam</strong>
+                          <span>{selectedItem.examTitle}</span>
                         </div>
                         <div>
-                          <strong>Submitted:</strong> {new Date(selectedItem.submittedAt).toLocaleString()}
+                          <strong>Submitted</strong>
+                          <span>{new Date(selectedItem.submittedAt).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>
@@ -229,7 +233,7 @@ export function GradingQueuePage() {
                         <p className="question-description">{selectedItem.question.description}</p>
                       )}
                       <div className="question-meta">
-                        <span className="points-badge">{selectedItem.question.points} points</span>
+                        <div className="points-seal">{selectedItem.question.points}<span>pt</span></div>
                       </div>
                     </div>
 
@@ -243,7 +247,7 @@ export function GradingQueuePage() {
 
                     {/* AI Auto-Grading */}
                     <div className="grading-form">
-                      <h3>Auto-grade with AI</h3>
+                      <h3>Auto-grade with AI <span className="ai-chip">AI Assist</span></h3>
                       <div className="form-group">
                         <label>AI Model</label>
                         <select value={aiModel} onChange={(e) => setAiModel(e.target.value)}>
@@ -298,20 +302,20 @@ export function GradingQueuePage() {
                       </Button>
 
                       {aiResult && (
-                        <div className="ai-result" style={{ background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 16, border: '1px solid var(--color-border)' }}>
+                        <div className="ai-result">
                           <div style={{ marginBottom: 8 }}>
-                            <strong>AI Score:</strong>{' '}
-                            <span style={{ fontSize: 24, fontWeight: 700 }}>{aiResult.score}</span>
-                            <span style={{ color: 'var(--color-gray-3)' }}> / {selectedItem.question.points}</span>
+                            <span className="ai-label">AI Score</span>
+                            <span className="ai-score">{aiResult.score}</span>
+                            <span className="ai-score-total"> / {selectedItem.question.points}</span>
                           </div>
                           <div style={{ marginBottom: 8 }}>
-                            <strong>Feedback:</strong>
-                            <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-3)' }}>{aiResult.feedback}</p>
+                            <span className="ai-label">Feedback</span>
+                            <p className="ai-feedback">{aiResult.feedback}</p>
                           </div>
                           {aiResult.justification && (
                             <div style={{ marginBottom: 8 }}>
-                              <strong>Justification:</strong>
-                              <p style={{ margin: '4px 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--color-gray-3)', fontStyle: 'italic' }}>{aiResult.justification}</p>
+                              <span className="ai-label">Justification</span>
+                              <p className="ai-justification">{aiResult.justification}</p>
                             </div>
                           )}
                           <Button
@@ -334,17 +338,20 @@ export function GradingQueuePage() {
                     <div className="grading-form">
                       <h3>Manual Grade</h3>
                       <div className="form-group">
-                        <label htmlFor="grade">Grade (out of {selectedItem.question.points})</label>
-                        <input
-                          type="number"
-                          id="grade"
-                          min="0"
-                          max={selectedItem.question.points}
-                          step="0.5"
-                          value={gradeValue}
-                          onChange={(e) => setGradeValue(e.target.value)}
-                          placeholder="Enter points"
-                        />
+                        <label htmlFor="grade">Grade</label>
+                        <div className="grade-fraction">
+                          <input
+                            type="number"
+                            id="grade"
+                            min="0"
+                            max={selectedItem.question.points}
+                            step="0.5"
+                            value={gradeValue}
+                            onChange={(e) => setGradeValue(e.target.value)}
+                            placeholder="Enter points"
+                          />
+                          <span>/ {selectedItem.question.points} points</span>
+                        </div>
                       </div>
 
                       <div className="form-group">
