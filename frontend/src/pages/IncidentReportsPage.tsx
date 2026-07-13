@@ -20,35 +20,24 @@ export function IncidentReportsPage() {
   const [selectedIncidents, setSelectedIncidents] = useState<Map<string, string>>(new Map()); // id → studentId
 
   const filteredIncidents = incidents.filter(incident => {
-    // Status filter
     if (filterStatus === 'active' && incident.archived) return false;
     if (filterStatus === 'archived' && !incident.archived) return false;
-    
-    // Severity filter
     if (filterSeverity !== 'all' && incident.severity !== filterSeverity) return false;
-    
-    // Search filter
     if (searchTerm) {
-      const search = searchTerm.toLowerCase();
-      return (
-        incident.studentName.toLowerCase().includes(search) ||
-        incident.studentId.toLowerCase().includes(search) ||
-        incident.examTitle.toLowerCase().includes(search) ||
-        incident.eventType.toLowerCase().includes(search)
-      );
+      const s = searchTerm.toLowerCase();
+      return incident.studentName.toLowerCase().includes(s) ||
+        incident.studentId.toLowerCase().includes(s) ||
+        incident.examTitle.toLowerCase().includes(s) ||
+        incident.eventType.toLowerCase().includes(s);
     }
-    
     return true;
   });
 
   const toggleIncidentSelection = (id: string, studentId: string) => {
     setSelectedIncidents(prev => {
       const next = new Map(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.set(id, studentId);
-      }
+      if (next.has(id)) next.delete(id);
+      else next.set(id, studentId);
       return next;
     });
   };
@@ -67,9 +56,7 @@ export function IncidentReportsPage() {
       const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
       await archiveMutation.mutateAsync(payload);
       setSelectedIncidents(new Map());
-    } catch {
-      alert('Failed to archive incidents');
-    }
+    } catch { alert('Failed to archive incidents'); }
   };
 
   const handleUnarchiveSelected = async () => {
@@ -78,30 +65,17 @@ export function IncidentReportsPage() {
       const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
       await unarchiveMutation.mutateAsync(payload);
       setSelectedIncidents(new Map());
-    } catch {
-      alert('Failed to unarchive incidents');
-    }
+    } catch { alert('Failed to unarchive incidents'); }
   };
 
   const handleDeleteSelected = async () => {
     if (selectedIncidents.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedIncidents.size} incident(s)? This cannot be undone.`)) return;
+    if (!confirm(`Delete ${selectedIncidents.size} incident(s)? This cannot be undone.`)) return;
     try {
       const payload = Array.from(selectedIncidents.entries()).map(([id, sid]) => ({ id, studentId: sid }));
       await deleteMutation.mutateAsync(payload);
       setSelectedIncidents(new Map());
-    } catch {
-      alert('Failed to delete incidents');
-    }
-  };
-
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high': return '#dc2626';
-      case 'medium': return '#f59e0b';
-      case 'low': return '#10b981';
-      default: return '#6b7280';
-    }
+    } catch { alert('Failed to delete incidents'); }
   };
 
   if (loading) {
@@ -116,23 +90,16 @@ export function IncidentReportsPage() {
 
   return (
     <MainLayout>
-      <motion.div
-        className="incident-reports-page"
-        variants={pageTransition}
-        initial="initial"
-        animate="animate"
-        exit="exit"
-      >
+      <motion.div className="incident-reports-page" variants={pageTransition} initial="initial" animate="animate" exit="exit">
         <div className="page-header">
           <div>
             <h1>Incident Reports</h1>
-            <p className="page-subtitle">
-              Monitor and manage exam integrity violations
-            </p>
+            <p className="page-subtitle">Monitor and manage exam integrity violations</p>
           </div>
         </div>
+
         <ExportPanel type="incidents" />
-        {/* Filters and Actions */}
+
         <div className="filters-section">
           <div className="filters">
             <div className="filter-group">
@@ -143,7 +110,6 @@ export function IncidentReportsPage() {
                 <option value="archived">Archived</option>
               </select>
             </div>
-
             <div className="filter-group">
               <label>Severity</label>
               <select value={filterSeverity} onChange={(e) => setFilterSeverity(e.target.value as any)}>
@@ -153,56 +119,35 @@ export function IncidentReportsPage() {
                 <option value="high">High</option>
               </select>
             </div>
-
             <div className="filter-group search-group">
               <label>Search</label>
-              <input
-                type="text"
-                placeholder="Search by student, exam, or type..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+              <span className="search-icon">⌕</span>
+              <input type="text" placeholder="Search by student, exam, or type..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
           </div>
 
           {selectedIncidents.size > 0 && (
             <div className="bulk-actions">
               <span className="selection-count">{selectedIncidents.size} selected</span>
-              <Button variant="outline" size="sm" onClick={handleArchiveSelected}>
-                Archive
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleUnarchiveSelected}>
-                Unarchive
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleDeleteSelected}>
-                Delete
-              </Button>
+              <Button variant="outline" size="sm" onClick={handleArchiveSelected}>Archive</Button>
+              <Button variant="outline" size="sm" onClick={handleUnarchiveSelected}>Unarchive</Button>
+              <Button variant="outline" size="sm" className="danger" onClick={handleDeleteSelected}>Delete</Button>
             </div>
           )}
         </div>
 
-        {/* Incidents Table */}
         {filteredIncidents.length === 0 ? (
           <div className="empty-state">
+            <div className="empty-stamp">Nothing filed</div>
             <h3>No incidents found</h3>
-            <p>
-              {searchTerm || filterStatus !== 'all' || filterSeverity !== 'all'
-                ? 'Try adjusting your filters'
-                : 'No exam integrity violations have been recorded'}
-            </p>
+            <p>{searchTerm || filterStatus !== 'all' || filterSeverity !== 'all' ? 'Try adjusting your filters' : 'No exam integrity violations have been recorded'}</p>
           </div>
         ) : (
           <div className="incidents-table-container">
             <table className="incidents-table">
               <thead>
                 <tr>
-                  <th>
-                    <input
-                      type="checkbox"
-                      checked={selectedIncidents.size === filteredIncidents.length && filteredIncidents.length > 0}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
+                  <th><input type="checkbox" checked={selectedIncidents.size === filteredIncidents.length && filteredIncidents.length > 0} onChange={toggleSelectAll} /></th>
                   <th>Student</th>
                   <th>Student ID</th>
                   <th>Exam</th>
@@ -215,35 +160,16 @@ export function IncidentReportsPage() {
               </thead>
               <tbody>
                 {filteredIncidents.map(incident => (
-                  <tr key={incident.id} className={selectedIncidents.has(incident.id) ? 'selected' : ''}>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIncidents.has(incident.id)}
-                        onChange={() => toggleIncidentSelection(incident.id, incident.studentId)}
-                      />
-                    </td>
+                  <tr key={incident.id} className={`${selectedIncidents.has(incident.id) ? 'selected' : ''} sev-${incident.severity}`}>
+                    <td><input type="checkbox" checked={selectedIncidents.has(incident.id)} onChange={() => toggleIncidentSelection(incident.id, incident.studentId)} /></td>
                     <td className="student-name">{incident.studentName}</td>
                     <td className="student-id">{incident.studentNumber || incident.studentId}</td>
                     <td className="exam-title">{incident.examTitle}</td>
                     <td className="event-type">{incident.eventType.replace('_', ' ')}</td>
                     <td className="event-detail">{incident.eventDetail}</td>
-                    <td>
-                      <span 
-                        className="severity-badge"
-                        style={{ backgroundColor: getSeverityColor(incident.severity) }}
-                      >
-                        {incident.severity}
-                      </span>
-                    </td>
-                    <td className="timestamp">
-                      {new Date(incident.timestamp).toLocaleString()}
-                    </td>
-                    <td>
-                      <span className={`status-badge ${incident.archived ? 'archived' : 'active'}`}>
-                        {incident.archived ? 'Archived' : 'Active'}
-                      </span>
-                    </td>
+                    <td><span className={`stamp stamp-sev-${incident.severity}`}>{incident.severity}</span></td>
+                    <td className="timestamp">{new Date(incident.timestamp).toLocaleString()}</td>
+                    <td><span className={`stamp stamp-status-${incident.archived ? 'archived' : 'active'}`}>{incident.archived ? 'Archived' : 'Active'}</span></td>
                   </tr>
                 ))}
               </tbody>
@@ -252,9 +178,7 @@ export function IncidentReportsPage() {
         )}
 
         <div className="incidents-summary">
-          <p>
-            Showing {filteredIncidents.length} of {incidents.length} incident{incidents.length !== 1 ? 's' : ''}
-          </p>
+          <p>Showing {filteredIncidents.length} of {incidents.length} incident{incidents.length !== 1 ? 's' : ''}</p>
         </div>
       </motion.div>
     </MainLayout>

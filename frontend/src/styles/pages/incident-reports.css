@@ -2,27 +2,36 @@
   padding: var(--spacing-8);
 }
 
+/* ============================================
+   PAGE HEADER
+   ============================================ */
+
 .page-header {
   margin-bottom: var(--spacing-8);
 }
 
 .page-header h1 {
-  font-family: var(--font-display);
-  font-size: var(--font-size-4xl);
-  color: var(--text-primary);
+  font-family: var(--font-display-ledger);
+  font-size: var(--text-4xl);
+  color: var(--ledger-ink-blue);
   margin: 0 0 var(--spacing-2);
 }
 
 .page-subtitle {
-  font-size: var(--font-size-lg);
-  color: var(--text-secondary);
+  font-size: var(--text-lg);
+  color: var(--ledger-ink-soft);
   margin: 0;
 }
 
+/* ============================================
+   FILTERS — Intake card
+   ============================================ */
+
 .filters-section {
-  background: var(--background-secondary);
-  padding: var(--spacing-6);
-  border-radius: var(--border-radius-lg);
+  background: var(--ledger-kraft-tint);
+  border: 1px solid rgba(156,124,70,0.25);
+  border-radius: 8px;
+  padding: 20px 22px;
   margin-bottom: var(--spacing-6);
 }
 
@@ -40,22 +49,57 @@
 }
 
 .filter-group label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ledger-kraft-dark);
 }
 
 .filter-group select,
 .filter-group input {
   padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-md);
-  font-size: var(--font-size-base);
-  background: var(--background-primary);
+  border: 1px solid var(--ledger-line);
+  border-radius: 4px;
+  font-size: var(--text-base);
+  background: #FFFFFF;
+  color: var(--ledger-ink);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filter-group select:focus,
+.filter-group input:focus {
+  outline: none;
+  border-color: var(--ledger-ink-blue);
+  box-shadow: 0 0 0 2px rgba(44,66,112,0.15);
+}
+
+.filter-group select {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
 }
 
 .search-group {
+  position: relative;
   grid-column: span 2;
+}
+
+.search-group input {
+  padding-left: 32px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 34px;
+  color: var(--ledger-ink-soft);
+  font-size: 13px;
+  pointer-events: none;
 }
 
 .bulk-actions {
@@ -63,20 +107,31 @@
   align-items: center;
   gap: var(--spacing-3);
   padding-top: var(--spacing-4);
-  border-top: 1px solid var(--border-color);
+  border-top: 1px dashed rgba(156,124,70,0.35);
 }
 
 .selection-count {
-  font-weight: 600;
-  color: var(--primary-color);
+  font-family: var(--font-mono-ledger);
+  font-weight: 700;
+  color: var(--ledger-ink-blue);
   margin-right: auto;
 }
 
+.btn-outline.danger {
+  border-color: var(--ledger-red);
+  color: var(--ledger-red);
+}
+
+.btn-outline.danger:hover {
+  background: rgba(165,52,42,0.08);
+}
+
 .incidents-table-container {
-  background: var(--background-primary);
-  border-radius: var(--border-radius-lg);
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
+  overflow-x: auto;
 }
 
 .incidents-table {
@@ -85,55 +140,78 @@
 }
 
 .incidents-table thead {
-  background: var(--background-secondary);
-  border-bottom: 2px solid var(--border-color);
+  background: var(--ledger-kraft-tint);
+  border-bottom: 1.5px solid var(--ledger-kraft-dark);
 }
 
 .incidents-table th {
   padding: var(--spacing-4);
   text-align: left;
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ledger-kraft-dark);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
 }
 
 .incidents-table tbody tr {
-  border-bottom: 1px solid var(--border-color);
-  transition: background-color 0.2s;
+  position: relative;
+  border-bottom: 1px solid var(--ledger-line-soft);
+  box-shadow: inset 3px 0 0 transparent;
+  transition: background-color 0.15s ease;
+}
+
+.incidents-table tbody tr:nth-child(even) {
+  background: rgba(30,42,58,0.015);
 }
 
 .incidents-table tbody tr:hover {
-  background: var(--background-secondary);
+  background: rgba(44,66,112,0.04);
 }
 
 .incidents-table tbody tr.selected {
-  background: rgba(79, 70, 229, 0.1);
+  background: rgba(44,66,112,0.07);
+}
+
+.incidents-table tbody tr.sev-high {
+  box-shadow: inset 3px 0 0 var(--ledger-red);
+}
+
+.incidents-table tbody tr.sev-medium {
+  box-shadow: inset 3px 0 0 var(--ledger-amber);
+}
+
+.incidents-table tbody tr.sev-low {
+  box-shadow: inset 3px 0 0 var(--ledger-green);
 }
 
 .incidents-table td {
   padding: var(--spacing-4);
-  font-size: var(--font-size-sm);
+  font-size: var(--text-sm);
+}
+
+.incidents-table input[type="checkbox"] {
+  accent-color: var(--ledger-ink-blue);
 }
 
 .student-name {
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--ledger-ink);
 }
 
 .student-id {
-  font-family: monospace;
-  color: var(--text-secondary);
+  font-family: var(--font-mono-ledger);
+  color: var(--ledger-ink-soft);
 }
 
 .exam-title {
-  color: var(--text-primary);
+  color: var(--ledger-ink);
 }
 
 .event-type {
   text-transform: capitalize;
-  color: var(--text-secondary);
+  color: var(--ledger-ink-soft);
 }
 
 .event-detail {
@@ -141,7 +219,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text-secondary);
+  color: var(--ledger-ink-soft);
 }
 
 .severity-badge {
@@ -176,46 +254,124 @@
 }
 
 .timestamp {
-  font-size: var(--font-size-xs);
-  color: var(--text-secondary);
+  font-family: var(--font-mono-ledger);
+  font-size: var(--text-xs);
+  color: var(--ledger-ink-soft);
   white-space: nowrap;
 }
+
+/* ============================================
+   STAMPS — shared component
+   ============================================ */
+
+.stamp {
+  display: inline-block;
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+}
+
+.stamp-sev-high {
+  color: var(--ledger-red);
+  transform: rotate(-3deg);
+}
+
+.stamp-sev-medium {
+  color: var(--ledger-amber);
+  transform: rotate(2deg);
+}
+
+.stamp-sev-low {
+  color: var(--ledger-green);
+  transform: rotate(-2deg);
+}
+
+.stamp-status-active {
+  color: var(--ledger-ink-blue);
+  transform: rotate(2deg);
+}
+
+.stamp-status-archived {
+  color: var(--ledger-grey);
+  border-style: dashed;
+  transform: rotate(-2deg);
+}
+
+/* ============================================
+   EMPTY STATE
+   ============================================ */
 
 .empty-state {
   text-align: center;
   padding: var(--spacing-12);
-  background: var(--background-secondary);
-  border-radius: var(--border-radius-lg);
+  background: var(--ledger-card);
+  border: 2px dashed var(--ledger-line);
+  border-radius: 8px;
+}
+
+.empty-stamp {
+  display: inline-block;
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border: 1.5px solid var(--ledger-ink-soft);
+  border-radius: 2px;
+  color: var(--ledger-ink-soft);
+  transform: rotate(-3deg);
+  margin-bottom: 16px;
 }
 
 .empty-state h3 {
-  font-family: var(--font-heading);
-  font-size: var(--font-size-2xl);
-  color: var(--text-primary);
+  font-family: var(--font-display-ledger);
+  font-size: var(--text-2xl);
+  color: var(--ledger-ink);
   margin: 0 0 var(--spacing-2);
 }
 
 .empty-state p {
-  color: var(--text-secondary);
+  color: var(--ledger-ink-soft);
   margin: 0;
 }
 
+/* ============================================
+   SUMMARY — ledger double-rule
+   ============================================ */
+
 .incidents-summary {
-  margin-top: var(--spacing-4);
-  padding: var(--spacing-3);
+  margin-top: 18px;
+  padding-top: 14px;
   text-align: center;
-  font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  border-top: 3px double var(--ledger-line);
+  font-family: var(--font-mono-ledger);
+  font-size: 11px;
+  color: var(--ledger-ink-soft);
+  letter-spacing: 0.03em;
 }
 
+/* ============================================
+   ERROR BANNER
+   ============================================ */
+
 .error-banner {
-  background: #fee2e2;
-  border: 1px solid #ef4444;
-  color: #991b1b;
+  background: rgba(165,52,42,0.07);
+  border: 1px solid var(--ledger-red);
+  color: var(--ledger-red);
   padding: var(--spacing-4);
-  border-radius: var(--border-radius-md);
+  border-radius: var(--radius-md);
   margin-bottom: var(--spacing-6);
 }
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 
 @media (max-width: 1200px) {
   .incidents-table-container {
