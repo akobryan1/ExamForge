@@ -163,7 +163,7 @@ export function IncidentReportsPage() {
                   <tr key={incident.id} className={`${selectedIncidents.has(incident.id) ? 'selected' : ''} sev-${incident.severity}`}>
                     <td><input type="checkbox" checked={selectedIncidents.has(incident.id)} onChange={() => toggleIncidentSelection(incident.id, incident.studentId)} /></td>
                     <td className="student-name">{incident.studentName}</td>
-                    <td className="student-id">{incident.studentNumber || incident.studentId}</td>
+                    <td className="student-id">{incident.studentNumber || '—'}</td>
                     <td className="exam-title">{incident.examTitle}</td>
                     <td className="event-type">{incident.eventType.replace('_', ' ')}</td>
                     <td className="event-detail">{incident.eventDetail}</td>
