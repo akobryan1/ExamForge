@@ -46,6 +46,7 @@ export function MainLayout({ children }: MainLayoutProps) {
       { path: '/analytics', label: 'Analytics', icon: '📈' },
       { path: '/incidents', label: 'Incident Reports', icon: '👁️' },
     ] : []),
+    { path: '/settings', label: 'Settings', icon: '⚙️' },
     ...(user?.role === 'student' ? [
       { path: '/my-exams', label: 'My Exams', icon: '📚' },
       { path: '/results', label: 'Results', icon: '🎯' },

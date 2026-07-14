@@ -16,6 +16,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { IncidentReportsPage } from './pages/IncidentReportsPage'
 import { StudentRegistrationPage } from './pages/StudentRegistrationPage';
 import { AIQuestionGeneratorPage } from './pages/AIQuestionGeneratorPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { StudentManagementPage } from './pages/StudentManagementPage';
 import { ExamineeRegistrationPage } from './pages/ExamineeRegistrationPage';
 const queryClient = new QueryClient({
@@ -125,6 +126,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <IncidentReportsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
                 </ProtectedRoute>
               }
             />

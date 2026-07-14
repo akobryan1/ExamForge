@@ -1,0 +1,129 @@
+/* Settings Page Styles — Ledger Theme */
+
+.settings-page {
+  padding-bottom: var(--spacing-12);
+}
+
+.page-header {
+  margin-bottom: var(--spacing-6);
+}
+
+.page-header h1 {
+  font-family: var(--font-display-ledger);
+  font-size: var(--text-4xl);
+  color: var(--ledger-ink-blue);
+  margin: 0 0 var(--spacing-1);
+}
+
+.page-subtitle {
+  font-size: var(--text-base);
+  color: var(--ledger-ink-soft);
+  margin: 0;
+}
+
+.settings-card {
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 2px 8px 8px 8px;
+  padding: 28px;
+  max-width: 680px;
+}
+
+.settings-section h2 {
+  font-family: var(--font-display-ledger);
+  font-size: var(--text-2xl);
+  color: var(--ledger-ink-blue);
+  margin: 0 0 8px;
+}
+
+.settings-description {
+  font-size: var(--text-sm);
+  color: var(--ledger-ink-soft);
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+
+.settings-description a {
+  color: var(--ledger-ink-blue);
+  font-weight: 600;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+}
+
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--ledger-line);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  color: var(--ledger-ink);
+  background: white;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  line-height: 1.5;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: var(--ledger-ink-blue);
+  box-shadow: 0 0 0 2px rgba(44,66,112,0.15);
+}
+
+.form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--ledger-ink-soft);
+  font-style: italic;
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+.settings-message {
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.settings-message.success {
+  background: rgba(62,107,71,0.08);
+  border: 1px solid var(--ledger-green);
+  color: var(--ledger-green);
+}
+
+.settings-message.error {
+  background: rgba(165,52,42,0.07);
+  border: 1px solid var(--ledger-red);
+  color: var(--ledger-red);
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
