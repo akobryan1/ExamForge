@@ -139,47 +139,23 @@ export function StudentManagementPage() {
             </div>
           </div>
 
-          {/* Subtab Navigation */}
-          <div className="subtab-nav" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid var(--color-border)', paddingBottom: 0 }}>
+          {/* Folder Tabs */}
+          <div className="folder-tabs">
             <button
-              className={`subtab-btn ${activeTab === 'registered' ? 'active' : ''}`}
+              className={`folder-tab ${activeTab === 'registered' ? 'active' : ''}`}
               onClick={() => setActiveTab('registered')}
-              style={{
-                padding: '8px 18px',
-                fontSize: 'var(--text-sm)',
-                fontWeight: activeTab === 'registered' ? 600 : 400,
-                color: activeTab === 'registered' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === 'registered' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
-                marginBottom: -2,
-                cursor: 'pointer',
-                transition: 'all 150ms',
-                fontFamily: 'var(--font-body)',
-              }}
             >
               👥 Registered Students
             </button>
             <button
-              className={`subtab-btn ${activeTab === 'papers' ? 'active' : ''}`}
+              className={`folder-tab ${activeTab === 'papers' ? 'active' : ''}`}
               onClick={() => setActiveTab('papers')}
-              style={{
-                padding: '8px 18px',
-                fontSize: 'var(--text-sm)',
-                fontWeight: activeTab === 'papers' ? 600 : 400,
-                color: activeTab === 'papers' ? 'var(--color-accent-500)' : 'var(--color-gray-3)',
-                background: 'none',
-                border: 'none',
-                borderBottom: activeTab === 'papers' ? '2px solid var(--color-accent-500)' : '2px solid transparent',
-                marginBottom: -2,
-                cursor: 'pointer',
-                transition: 'all 150ms',
-                fontFamily: 'var(--font-body)',
-              }}
             >
               📝 Submitted Papers
             </button>
           </div>
+
+          <div className="folder-body">
 
           {error && (
             <div className="error-banner">
@@ -197,7 +173,7 @@ export function StudentManagementPage() {
               <div className="card-title">Registration link</div>
             </div>
             <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-gray-3)' }}>
+              <p className="card-body-description">
                 Generate a registration link to send to your students. They will use this to create their accounts.
               </p>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -296,34 +272,19 @@ export function StudentManagementPage() {
             </div>
 
             {/* Search bar */}
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--color-border)' }}>
+            <div className="search-bar">
               <input
                 type="text"
                 placeholder="Search by name, course, year, section, or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  fontFamily: 'var(--font-body)',
-                  fontSize: '14px',
-                  color: 'var(--color-text-primary)',
-                  background: 'var(--color-surface-elevated)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  outline: 'none',
-                  transition: 'border-color 150ms',
-                  boxSizing: 'border-box',
-                }}
-                onFocus={(e) => e.target.style.borderColor = 'var(--color-accent-500)'}
-                onBlur={(e) => e.target.style.borderColor = 'var(--color-border)'}
               />
             </div>
 
             {loading ? (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div>
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--ledger-ink-soft)' }}>Loading...</div>
             ) : students.length === 0 ? (
-              <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>
+              <div style={{ padding: 24, textAlign: 'center', color: 'var(--ledger-ink-soft)', fontSize: 'var(--text-sm)' }}>
                 No students registered yet. Generate a registration link to get started.
               </div>
             ) : (
@@ -343,7 +304,7 @@ export function StudentManagementPage() {
                   <tbody>
                     {filteredStudents.length === 0 ? (
                       <tr>
-                        <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>
+                        <td colSpan={7} style={{ padding: 24, textAlign: 'center', color: 'var(--ledger-ink-soft)' }}>
                           No students match your search.
                         </td>
                       </tr>
@@ -379,9 +340,9 @@ export function StudentManagementPage() {
               <ExportPanel type="papers" />
 
               {papersLoading ? (
-                <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div>
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--ledger-ink-soft)' }}>Loading...</div>
               ) : papers.length === 0 ? (
-                <div style={{ padding: 24, textAlign: 'center', color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>
+                <div style={{ padding: 24, textAlign: 'center', color: 'var(--ledger-ink-soft)', fontSize: 'var(--text-sm)' }}>
                   No submitted exam papers yet.
                 </div>
               ) : (
@@ -406,31 +367,31 @@ export function StudentManagementPage() {
                           </td>
                           <td>
                             <div style={{ fontWeight: 500, fontSize: 'var(--text-sm)' }}>{p.studentName}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--color-gray-3)' }}>{p.studentNumber || p.studentEmail}</div>
+                            <div className="sub-detail">{p.studentNumber || p.studentEmail}</div>
                           </td>
                           <td className="score-cell">
                             {p.score !== null && p.score !== undefined ? (
-                              <span className={`score-badge ${p.passed ? 'passed' : 'failed'}`}>
+                              <span className={`stamp ${p.passed ? 'stamp-pass' : 'stamp-fail'}`}>
                                 {p.score}/{p.totalPoints}
                                 {p.percentage !== null && (
                                   <span className="score-pct"> ({Math.round(p.percentage)}%)</span>
                                 )}
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>—</span>
+                              <span className="dash">—</span>
                             )}
                           </td>
                           <td>
                             {p.hasIncidents ? (
-                              <span className="incident-badge has-incidents" title={p.incidents.map((i: any) => i.eventDetail || i.eventType).join(', ')}>
+                              <span className="stamp stamp-warn" title={p.incidents.map((i: any) => i.eventDetail || i.eventType).join(', ')}>
                                 ⚠ {p.incidents.length}
                               </span>
                             ) : (
-                              <span style={{ color: 'var(--color-gray-3)', fontSize: 'var(--text-sm)' }}>None</span>
+                              <span className="dash">None</span>
                             )}
                           </td>
                           <td>
-                            <span className={`status-badge status-${p.status}`}>
+                            <span className={`stamp stamp-${p.status === 'completed' ? 'pass' : p.status === 'pending' ? 'warn' : p.status === 'incomplete' ? 'neutral' : p.status === 'submitted' ? 'info' : 'neutral'}`}>
                               {p.status === 'completed' && '✅ Completed'}
                               {p.status === 'pending' && '⏳ Pending Review'}
                               {p.status === 'incomplete' && (
@@ -454,18 +415,6 @@ export function StudentManagementPage() {
                               onClick={() => {
                                 navigate(`/attempts/${p.attemptId}/results?studentId=${p.studentId}`);
                               }}
-                              style={{
-                                padding: '5px 12px',
-                                fontSize: '12px',
-                                fontWeight: 600,
-                                color: 'var(--color-accent-500)',
-                                background: 'var(--color-accent-50)',
-                                border: '1px solid var(--color-accent-200)',
-                                borderRadius: 'var(--radius-sm)',
-                                cursor: 'pointer',
-                                transition: 'all 150ms',
-                                fontFamily: 'var(--font-body)',
-                              }}
                             >
                               Review
                             </button>
@@ -478,6 +427,8 @@ export function StudentManagementPage() {
               )}
             </div>
           )}
+
+          </div> {/* end folder-body */}
 
         </motion.div>
       </div>

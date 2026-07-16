@@ -79,8 +79,7 @@ export function Login() {
           variants={staggerContainer}
           initial="initial"
           animate="animate"
-        >
-          {/* Header */}
+        >          <div className="seal-emblem">EF</div>          {/* Header */}
           <motion.div className="auth-header" variants={staggerItem}>
             <h1 className="auth-title">Welcome Back</h1>
             <p className="auth-subtitle">Sign in to your ExamForge account</p>
@@ -127,14 +126,15 @@ export function Login() {
               </Link>
             </div>
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-lg auth-submit"
+              variant="primary"
+              size="lg"
+              className="auth-submit"
               disabled={isLoading}
-              onClick={() => console.log('[Login] Sign In button clicked, email:', formData.email)}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}
-            </button>
+            </Button>
           </form>
 
           {/* Divider */}

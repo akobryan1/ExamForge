@@ -10,11 +10,6 @@ import '../styles/pages/grading-queue.css';
 
 const AI_MODELS = [
   { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
-  { value: 'openai/gpt-4o-mini', label: 'OpenAI — GPT-4o Mini' },
-  { value: 'google/gemini-2.0-flash-001', label: 'Google — Gemini 2.0 Flash' },
-  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — DeepSeek Chat' },
-  { value: 'anthropic/claude-3.5-haiku', label: 'Anthropic — Claude 3.5 Haiku' },
-  { value: 'other', label: 'Other (custom API key)' },
 ];
 
 interface GradingItem {
@@ -257,19 +252,15 @@ export function GradingQueuePage() {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label>{aiModel === 'openai/gpt-oss-120b:free' ? 'OpenRouter API Key' : 'API Key'}</label>
+                        <label>OpenRouter API Key</label>
                         <input
                           type="password"
                           value={aiApiKey}
                           onChange={(e) => setAiApiKey(e.target.value)}
-                          placeholder={aiModel === 'openai/gpt-oss-120b:free' ? 'sk-or-v1-...' : 'Enter your API key'}
+                          placeholder="sk-or-v1-..."
                         />
                         <p className="form-help">
-                          {aiModel === 'openai/gpt-oss-120b:free'
-                            ? 'Get your free key at openrouter.ai/keys'
-                            : aiModel === 'other'
-                              ? 'Enter any OpenAI-compatible API key'
-                              : `Key for ${aiModel.split('/')[0]}`}
+                          Get your free key at openrouter.ai/keys
                         </p>
                       </div>
                       <div className="form-group">

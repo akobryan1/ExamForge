@@ -121,7 +121,7 @@ export function AIQuestionGeneratorPage() {
     <MainLayout>
       <div className="ai-generator-page">
         <div className="page-header">
-          <h1>🤖 AI Question Generator</h1>
+          <h1><span className="ai-mark">AI</span> Question Generator</h1>
           <p className="page-description">Generate exam questions using AI from your study materials</p>
         </div>
 
@@ -292,7 +292,8 @@ export function AIQuestionGeneratorPage() {
 
                 {usingPlaceholder && (
                   <div className="info-banner">
-                    ℹ️ Using placeholder AI (demo mode). Configure OPENAI_API_KEY for real AI generation.
+                    <span className="ai-chip">AI Assist</span>
+                    <span>Using placeholder AI (demo mode). Configure OPENAI_API_KEY for real AI generation.</span>
                   </div>
                 )}
 
@@ -325,8 +326,8 @@ export function AIQuestionGeneratorPage() {
                       <div className="question-content">
                         <div className="question-header-preview">
                           <span className="question-number">Q{index + 1}</span>
-                          <span className="question-type-badge">{question.type.replace('_', ' ')}</span>
-                          <span className="question-points">{question.points} pts</span>
+                          <span className="stamp stamp-type">{question.type.replace('_', ' ')}</span>
+                          <div className="question-points">{question.points}<span>pt</span></div>
                         </div>
                         <p className="question-text">{question.text}</p>
                         {question.description && (
@@ -336,6 +337,7 @@ export function AIQuestionGeneratorPage() {
                           <div className="question-choices">
                             {question.choices.map((choice, i) => (
                               <div key={i} className="choice-item">
+                                <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
                                 {choice}
                               </div>
                             ))}

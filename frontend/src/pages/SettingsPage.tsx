@@ -8,11 +8,6 @@ import '../styles/pages/settings.css';
 
 const AI_MODELS = [
   { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
-  { value: 'openai/gpt-4o-mini', label: 'OpenAI — GPT-4o Mini' },
-  { value: 'google/gemini-2.0-flash-001', label: 'Google — Gemini 2.0 Flash' },
-  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — DeepSeek Chat' },
-  { value: 'anthropic/claude-3.5-haiku', label: 'Anthropic — Claude 3.5 Haiku' },
-  { value: 'other', label: 'Other (custom API key)' },
 ];
 
 export function SettingsPage() {

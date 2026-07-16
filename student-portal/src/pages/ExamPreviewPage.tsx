@@ -18,26 +18,26 @@ export function ExamPreviewPage() {
   }, [examId]);
 
   if (loading) return <div className="loading-container"><div className="spinner" /> <span>Loading exam...</span></div>;
-  if (error) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}><h1 className="auth-title" style={{ marginBottom: 12 }}>Exam not found</h1><p style={{ color: 'var(--color-gray-3)' }}>{error}</p></div></div>;
+  if (error) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}><h1 className="auth-title" style={{ marginBottom: 12 }}>Exam not found</h1><p className="center-note">{error}</p></div></div>;
   if (!exam) return null;
 
   return (
     <div className="auth-container">
       <div className="auth-content" style={{ maxWidth: 600 }}>
         <div className="card" style={{ padding: 32 }}>
-          <h1 className="auth-title" style={{ marginBottom: 8 }}>{exam.title}</h1>
-          <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, fontSize: 14 }}>{exam.description}</p>
+          <h1 className="preview-title">{exam.title}</h1>
+          <p className="preview-desc">{exam.description}</p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: 'var(--color-surface)', borderRadius: 'var(--radius-md)' }}>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subject</strong><p style={{ marginTop: 4, fontSize: 14 }}>{exam.subject || 'N/A'}</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Questions</strong><p style={{ marginTop: 4, fontSize: 14 }}>{exam.questionCount || 0}</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Points</strong><p style={{ marginTop: 4, fontSize: 14 }}>{exam.totalPoints || 0}</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Time limit</strong><p style={{ marginTop: 4, fontSize: 14 }}>{exam.timeLimit ? `${exam.timeLimit} min` : 'Untimed'}</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Passing score</strong><p style={{ marginTop: 4, fontSize: 14 }}>{exam.passingScore || 70}%</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</strong><p style={{ marginTop: 4, fontSize: 14 }}><span className={`badge ${exam.status === 'published' || exam.status === 'active' ? 'badge-live' : 'badge-draft'}`}>{exam.status}</span></p></div>
+          <div className="info-grid">
+            <div className="info-item"><strong>Subject</strong>{exam.subject || 'N/A'}</div>
+            <div className="info-item"><strong>Questions</strong>{exam.questionCount || 0}</div>
+            <div className="info-item"><strong>Points</strong>{exam.totalPoints || 0}</div>
+            <div className="info-item"><strong>Time limit</strong>{exam.timeLimit ? `${exam.timeLimit} min` : 'Untimed'}</div>
+            <div className="info-item"><strong>Passing score</strong>{exam.passingScore || 70}%</div>
+            <div className="info-item"><strong>Status</strong><span className={`stamp ${exam.status === 'published' || exam.status === 'active' ? 'stamp-live' : 'stamp-draft'}`}>{exam.status}</span></div>
           </div>
 
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <div className="actions-row">
             <button className="btn btn-primary" onClick={() => navigate(`/exams/${examId}/take`)} disabled={exam.status !== 'published' && exam.status !== 'active'}>
               Take exam
             </button>

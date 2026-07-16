@@ -1,19 +1,181 @@
-/* Examinee Registration Page Styles */
+/* Examinee Registration Page Styles — Ledger Theme */
 
-.register-form {
+/* ============================================
+   FORM FIELDS (page-scoped, not inherited from Input.tsx)
+   ============================================ */
+
+.form-group {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 6px;
+  margin-bottom: 15px;
 }
 
-.register-form .form-row {
+.form-group label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+}
+
+.form-group label .required {
+  color: var(--ledger-red);
+  font-weight: 700;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 13px;
+  border: 1px solid var(--ledger-line);
+  border-radius: 4px;
+  font-size: 13.5px;
+  color: var(--ledger-ink);
+  background: #FFFFFF;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--ledger-ink-blue);
+  box-shadow: 0 0 0 2px rgba(44,66,112,0.15);
+}
+
+.input.error {
+  border-color: var(--ledger-red);
+}
+
+.input.error:focus {
+  box-shadow: 0 0 0 2px rgba(165,52,42,0.15);
+}
+
+select.input {
+  appearance: none;
+  cursor: pointer;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235A6472' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+.form-error {
+  font-size: 11px;
+  color: var(--ledger-red);
+  margin: 5px 0 0;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.form-error::before {
+  content: '✕';
+  font-size: 9px;
+}
+
+/* ============================================
+   FORM ROW (side-by-side)
+   ============================================ */
+
+.form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+  margin-bottom: 15px;
 }
 
-@media (max-width: 500px) {
-  .register-form .form-row {
+.form-row .form-group {
+  margin-bottom: 0;
+}
+
+/* ============================================
+   SUCCESS SEAL — Wax seal for enrollment confirmation
+   ============================================ */
+
+.success-seal {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin: 4px auto 20px;
+  background: radial-gradient(circle at 35% 30%, #5C8A63, var(--ledger-green));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255,255,255,0.4);
+  box-shadow: 0 8px 20px rgba(62,107,71,0.4);
+  transform: rotate(-5deg);
+}
+
+.success-seal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.35;
+}
+
+.success-seal-check {
+  color: white;
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.success-label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ledger-green);
+  text-align: center;
+  margin: -10px 0 20px;
+}
+
+/* ============================================
+   STATE HELPERS
+   ============================================ */
+
+.loading-text {
+  text-align: center;
+  color: var(--ledger-ink-soft);
+  font-size: 13.5px;
+  padding: 40px 0;
+}
+
+.center-state {
+  text-align: center;
+}
+
+.center-text {
+  color: var(--ledger-ink-soft);
+  margin-bottom: 24px;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 560px) {
+  .form-row {
     grid-template-columns: 1fr;
+    gap: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .success-seal {
+    width: 72px;
+    height: 72px;
+  }
+
+  .success-seal-check {
+    font-size: 34px;
   }
 }

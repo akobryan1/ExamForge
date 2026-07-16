@@ -105,7 +105,7 @@ export function ExamineeRegistrationPage() {
   if (loading) {
     return (
       <div className="auth-container">
-        <div className="auth-content" style={{ textAlign: 'center', color: 'var(--color-gray-3)' }}>
+        <div className="auth-content loading-text">
           Loading registration form...
         </div>
       </div>
@@ -115,9 +115,9 @@ export function ExamineeRegistrationPage() {
   if (!instructorId) {
     return (
       <div className="auth-container">
-        <div className="auth-content" style={{ textAlign: 'center' }}>
+        <div className="auth-content center-state">
           <h1 className="auth-title" style={{ marginBottom: 12 }}>Invalid link</h1>
-          <p style={{ color: 'var(--color-gray-3)', marginBottom: 24 }}>
+          <p className="center-text">
             This registration link is missing required information.
           </p>
           <Button variant="primary" onClick={() => navigate('/')}>Go home</Button>
@@ -129,11 +129,12 @@ export function ExamineeRegistrationPage() {
   if (success) {
     return (
       <div className="auth-container">
-        <div className="auth-content" style={{ textAlign: 'center' }}>
+        <div className="auth-content center-state">
           <div className="auth-card">
-            <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+            <div className="success-seal"><span className="success-seal-check">✓</span></div>
+            <div className="success-label">Enrollment confirmed</div>
             <h1 className="auth-title" style={{ marginBottom: 8 }}>Registration successful</h1>
-            <p style={{ color: 'var(--color-gray-3)', marginBottom: 24 }}>
+            <p className="center-text" style={{ marginBottom: 24 }}>
               Your account has been created. You can now log in with your student ID and password.
             </p>
             <Button variant="primary" onClick={() => navigate('/login')}>Go to login</Button>
@@ -181,7 +182,7 @@ export function ExamineeRegistrationPage() {
               {fieldErrors.studentId && <p className="form-error">{fieldErrors.studentId}</p>}
             </div>
 
-            <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, display: 'grid', marginBottom: 16 }}>
+            <div className="form-row">
               <div className="form-group">
                 <label>Section <span className="required">*</span></label>
                 {fields.sections.length > 0 ? (
@@ -271,7 +272,7 @@ export function ExamineeRegistrationPage() {
               {fieldErrors.email && <p className="form-error">{fieldErrors.email}</p>}
             </div>
 
-            <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', gap: 12, display: 'grid', marginBottom: 16 }}>
+            <div className="form-row">
               <div className="form-group">
                 <label>Password <span className="required">*</span></label>
                 <input

@@ -18,7 +18,7 @@ export function ExamResultsPage() {
   }, [attemptId]);
 
   if (loading) return <div className="loading-container"><div className="spinner" /> <span>Loading results...</span></div>;
-  if (error) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}><p style={{ color: 'var(--color-error-600)' }}>{error}</p></div></div>;
+  if (error) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}><p style={{ color: 'var(--ledger-red)' }}>{error}</p></div></div>;
   if (!attempt) return null;
 
   return (
@@ -28,23 +28,24 @@ export function ExamResultsPage() {
           <h1 className="auth-title" style={{ marginBottom: 8 }}>
             {attempt.passed ? 'Congratulations!' : 'Exam completed'}
           </h1>
-          <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, fontSize: 14 }}>
+          <p className="center-note" style={{ marginBottom: 24 }}>
             {attempt.passed ? 'You passed the exam' : 'Review your results below'}
           </p>
 
-          <div style={{ fontSize: 56, fontWeight: 700, fontFamily: 'var(--font-display)', color: attempt.passed ? 'var(--color-success-600)' : 'var(--color-primary-900)', marginBottom: 8 }}>
-            {attempt.percentage?.toFixed(0) || 0}%
-          </div>
-          <p style={{ color: 'var(--color-gray-2)', fontSize: 14, marginBottom: 24 }}>
+          <div className="grade-circle-big">{attempt.percentage?.toFixed(0) || 0}%</div>
+          <div className="verdict-stamp" style={{ marginBottom: 24 }}>{attempt.passed ? '✓ Passed' : 'Keep Practicing'}</div>
+          <p style={{ color: 'var(--ledger-ink-soft)', fontSize: 14, marginBottom: 24 }}>
             {attempt.score} out of {attempt.totalPoints || 100} points
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24, padding: 16, background: 'var(--color-surface)', borderRadius: 'var(--radius-md)', textAlign: 'left' }}>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Exam</strong><p style={{ marginTop: 4, fontSize: 14 }}>{attempt.examTitle}</p></div>
-            <div><strong style={{ fontSize: 11, color: 'var(--color-gray-2)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</strong><p style={{ marginTop: 4, fontSize: 14 }}><span className={`badge ${attempt.passed ? 'badge-completed' : 'badge-draft'}`}>{attempt.passed ? 'Passed' : 'Failed'}</span></p></div>
+          <div className="info-grid" style={{ textAlign: 'left' }}>
+            <div className="info-item"><strong>Exam</strong>{attempt.examTitle}</div>
+            <div className="info-item"><strong>Status</strong><span className={`stamp ${attempt.passed ? 'stamp-completed' : 'stamp-draft'}`}>{attempt.passed ? 'Passed' : 'Failed'}</span></div>
           </div>
 
-          <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
+          <div style={{ marginTop: 24 }}>
+            <button className="btn btn-primary" onClick={() => navigate('/')}>Back to home</button>
+          </div>
         </div>
       </div>
     </div>

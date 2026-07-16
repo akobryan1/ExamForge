@@ -57,6 +57,7 @@ export function StudentLoginPage() {
     <div className="auth-container">
       <div className="auth-content">
         <div className="auth-card">
+          <div className="seal-emblem">EF</div>
           <div className="auth-header">
             <h1 className="auth-title">ExamForge</h1>
             <p className="auth-subtitle">Sign in to access your exams</p>

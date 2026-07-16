@@ -216,26 +216,35 @@
 }
 
 .input.error {
-  border-color: var(--color-error-500);
+  border-color: var(--ledger-red);
 }
 
 .input.error:focus {
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  border-color: var(--ledger-red);
+  box-shadow: 0 0 0 2px rgba(165,52,42,0.15);
 }
 
 .input-hint {
   display: block;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
+  font-size: 11px;
+  color: var(--ledger-ink-soft);
+  font-style: italic;
   margin-top: var(--spacing-2);
 }
 
 .input-error {
-  display: block;
-  font-size: var(--text-sm);
-  color: var(--color-error-600);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--ledger-red);
   margin-top: var(--spacing-2);
-  font-weight: var(--font-medium);
+  font-weight: 600;
+}
+
+.input-error::before {
+  content: '✕';
+  font-size: 9px;
 }
 
 /* Textarea */

@@ -110,6 +110,7 @@ export function Signup() {
           initial="initial"
           animate="animate"
         >
+          <div className="seal-emblem">EF</div>
           {/* Header */}
           <motion.div className="auth-header" variants={staggerItem}>
             <h1 className="auth-title">Create Account</h1>
@@ -178,13 +179,15 @@ export function Signup() {
               autoComplete="new-password"
             />
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-lg auth-submit"
+              variant="primary"
+              size="lg"
+              className="auth-submit"
               disabled={isLoading}
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
-            </button>
+            </Button>
           </form>
 
           {/* Divider */}

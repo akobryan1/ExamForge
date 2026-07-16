@@ -53,7 +53,7 @@ export function ExamResultsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <p>Loading results...</p>
         </div>
       </MainLayout>
@@ -85,12 +85,14 @@ export function ExamResultsPage() {
         animate="animate"
         exit="exit"
       >
-        {/* Results Header */}
-        <div className={`results-header ${passed ? 'passed' : 'failed'}`}>
-          <div className="results-icon">
-            {passed ? '🎉' : '📝'}
+        {/* Paper Hero — Returned graded paper */}
+        <div className="paper-hero">
+          <p className="eyebrow">{exam.title} — {isInstructor ? `Reviewing ${attempt.studentName || 'Student'}'s paper` : 'Graded Paper'}</p>
+          <div className="grade-circle-big">{percentage.toFixed(1)}%</div>
+          <div className="score-details">{score} out of {totalPoints} points</div>
+          <div className={`verdict-stamp ${passed ? 'passed' : 'failed'}`}>
+            {passed ? '✓ Passed' : 'Keep Practicing'}
           </div>
-          <h1>{isInstructor ? `Paper: ${attempt.studentName || 'Student'}` : (passed ? 'Congratulations!' : 'Exam Completed')}</h1>
           <p className="results-message">
             {isInstructor
               ? `Reviewing ${attempt.studentName || 'student'}'s submission for "${exam.title}"`
@@ -100,48 +102,36 @@ export function ExamResultsPage() {
           </p>
         </div>
 
-        {/* Score Card */}
-        <motion.div className="score-card" variants={fadeIn}>
-          <div className="score-main">
-            <div className="score-value">{percentage.toFixed(1)}%</div>
-            <div className="score-details">
-              {score} out of {totalPoints} points
+        {/* Breakdown Card */}
+        <div className="breakdown-card">
+          <h3>Score Breakdown</h3>
+          <div className="breakdown-grid">
+            <div className="breakdown-item">
+              <span className="breakdown-label">Exam</span>
+              <span>{exam.title}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Student</span>
+              <span>{attempt.studentName || 'Unknown'}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Submitted</span>
+              <span>{attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString() : 'N/A'}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Time Taken</span>
+              <span>{attempt.timeSpent ? `${Math.floor(attempt.timeSpent / 60)} minutes` : 'N/A'}</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Passing Score</span>
+              <span>{exam.passingScore}%</span>
+            </div>
+            <div className="breakdown-item">
+              <span className="breakdown-label">Status</span>
+              <span className={`stamp stamp-${passed ? 'pass' : 'fail'}`}>{passed ? 'Passed' : 'Not passed'}</span>
             </div>
           </div>
-          
-          <div className="score-breakdown">
-            <div className="breakdown-item">
-              <span className="breakdown-label">Exam:</span>
-              <span className="breakdown-value">{exam.title}</span>
-            </div>
-            <div className="breakdown-item">
-              <span className="breakdown-label">Student:</span>
-              <span className="breakdown-value">{attempt.studentName || 'Unknown'}</span>
-            </div>
-            <div className="breakdown-item">
-              <span className="breakdown-label">Submitted:</span>
-              <span className="breakdown-value">
-                {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString() : 'N/A'}
-              </span>
-            </div>
-            <div className="breakdown-item">
-              <span className="breakdown-label">Time Taken:</span>
-              <span className="breakdown-value">
-                {attempt.timeSpent ? `${Math.floor(attempt.timeSpent / 60)} minutes` : 'N/A'}
-              </span>
-            </div>
-            <div className="breakdown-item">
-              <span className="breakdown-label">Passing Score:</span>
-              <span className="breakdown-value">{exam.passingScore}%</span>
-            </div>
-            <div className="breakdown-item">
-              <span className="breakdown-label">Status:</span>
-              <span className={`status-badge ${passed ? 'passed' : 'failed'}`}>
-                {passed ? 'PASSED' : 'FAILED'}
-              </span>
-            </div>
-          </div>
-        </motion.div>
+        </div>
 
         {/* Question Review (if allowed) */}
         {exam.allowReview && attempt.answers && questions.length > 0 && (
@@ -164,11 +154,11 @@ export function ExamResultsPage() {
                     <div className="review-question-header">
                       <span className="review-question-number">Question {index + 1}</span>
                       <div className="review-question-meta">
-                        <span className={`review-result ${resultClass}`}>
+                        <span className={`stamp review-result ${resultClass}`}>
                           {resultLabel}
                         </span>
                         <span className="review-points">
-                          {isUngraded ? 'Pending' : `${earnedPoints ?? 0} / ${question.points} pts`}
+                          {isUngraded ? 'Pending' : `${earnedPoints ?? 0}/${question.points} pts`}
                         </span>
                       </div>
                     </div>

@@ -1,0 +1,538 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Git commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/services/ExamService.ts",
+				"backend/src/routes/exams.ts",
+				"frontend/src/utils/exportUtils.ts",
+				"frontend/src/components/ExportPanel.tsx",
+				"frontend/src/pages/StudentManagementPage.tsx",
+				"frontend/src/pages/IncidentReportsPage.tsx",
+				"frontend/src/services/ExamService.ts",
+				"frontend/package.json"
+			]
+		},
+		{
+			"label": "Check git log",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"log",
+				"--oneline",
+				"-5"
+			]
+		},
+		{
+			"label": "Commit export",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Add CSV/PDF export for papers and incidents"
+			]
+		},
+		{
+			"label": "Push export",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "Commit dep fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Add jspdf-autotable dependency",
+				"--",
+				"frontend/package.json"
+			]
+		},
+		{
+			"label": "Push dep fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "Fix dep conflict",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Remove jspdf-autotable, use manual PDF table rendering",
+				"--",
+				"frontend/package.json",
+				"frontend/src/utils/exportUtils.ts"
+			]
+		},
+		{
+			"label": "Push dep fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "tsc",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\backend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "Stage",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/services/ExamService.ts",
+				"backend/src/routes/exams.ts"
+			]
+		},
+		{
+			"label": "Commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Reject expired/not-yet-started exams at access time"
+			]
+		},
+		{
+			"label": "Push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "tsc backend",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\backend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "tsc frontend",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\frontend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "Stage all",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/services/ExamService.ts",
+				"backend/src/routes/exams.ts",
+				"frontend/src/pages/ExamsPage.tsx",
+				"frontend/src/pages/ExamPreviewPage.tsx",
+				"frontend/src/services/ExamService.ts",
+				"frontend/src/hooks/useExamQueries.ts"
+			]
+		},
+		{
+			"label": "Commit all",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Add exam auto-complete and exam bank with clone/republish"
+			]
+		},
+		{
+			"label": "Push all",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "tsc check",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\backend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "stage fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/services/ExamService.ts",
+				"frontend/src/pages/ExamsPage.tsx"
+			]
+		},
+		{
+			"label": "commit fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Fix completeExam: no-op if already completed, hide End btn for completed exams"
+			]
+		},
+		{
+			"label": "push fix",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main:devBryan"
+			]
+		},
+		{
+			"label": "Check commits",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"log",
+				"--oneline",
+				"-3"
+			]
+		},
+		{
+			"label": "Push to main",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "stage",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"render.yaml"
+			]
+		},
+		{
+			"label": "commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Fix render.yaml: change frontend from web to static site"
+			]
+		},
+		{
+			"label": "push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "tsc check",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\frontend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Restyle dashboard and sidebar to ledger/grade-book theme"
+			]
+		},
+		{
+			"label": "add files",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"frontend/index.html",
+				"frontend/src/layouts/MainLayout.tsx",
+				"frontend/src/pages/Dashboard.tsx",
+				"frontend/src/styles/design-system.css",
+				"frontend/src/styles/layouts/main-layout.css",
+				"frontend/src/styles/pages/dashboard.css"
+			]
+		},
+		{
+			"label": "commit theme",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Restyle dashboard and sidebar to ledger/grade-book theme"
+			]
+		},
+		{
+			"label": "push theme",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "retry push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "check stat",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"diff",
+				"--stat"
+			]
+		},
+		{
+			"label": "show diff",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"diff",
+				"frontend/src/pages/ExamsPage.tsx"
+			]
+		},
+		{
+			"label": "tsc check",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\frontend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "stage exams",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"frontend/src/pages/ExamsPage.tsx",
+				"frontend/src/styles/pages/exams.css",
+				"frontend/src/styles/pages/dashboard.css"
+			]
+		},
+		{
+			"label": "commit exams",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Restyle Exams page with ledger folder-tabs theme"
+			]
+		},
+		{
+			"label": "push exams",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "tsc backend",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"cd /d c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge\\backend && node node_modules\\typescript\\bin\\tsc --noEmit 2>&1"
+			]
+		},
+		{
+			"label": "stage",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/routes/exams.ts"
+			]
+		},
+		{
+			"label": "unstage",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"reset",
+				"HEAD",
+				"render.yaml"
+			]
+		},
+		{
+			"label": "stage right",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"add",
+				"backend/src/routes/exams.ts"
+			]
+		},
+		{
+			"label": "commit",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"commit",
+				"-m",
+				"Fix 403: instructors can view any exam regardless of status"
+			]
+		},
+		{
+			"label": "push",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"push",
+				"origin",
+				"main"
+			]
+		},
+		{
+			"label": "verify",
+			"type": "shell",
+			"command": "git",
+			"args": [
+				"-C",
+				"c:\\Users\\braea\\OneDrive\\Documents\\Exam Forge",
+				"show",
+				"--stat"
+			]
+		}
+	]
+}

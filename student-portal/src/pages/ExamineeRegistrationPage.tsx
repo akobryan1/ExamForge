@@ -62,16 +62,16 @@ export function ExamineeRegistrationPage() {
     } finally { setSubmitting(false); }
   };
 
-  if (loading) return <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center', color: 'var(--color-gray-3)' }}>Loading...</div></div>;
+  if (loading) return <div className="auth-container"><div className="auth-content center-note">Loading...</div></div>;
   if (!instructorId) return (
     <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}>
       <div className="auth-card" style={{ maxWidth: 420 }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+        <div className="seal-emblem alert">!</div>
         <h1 className="auth-title" style={{ marginBottom: 8 }}>Student Registration</h1>
-        <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, lineHeight: 1.6 }}>
+        <p className="center-note">
           To register, please use the registration link provided by your instructor or school administrator.
         </p>
-        <p style={{ color: 'var(--color-gray-3)', marginBottom: 24, fontSize: 'var(--font-size-sm)' }}>
+        <p className="center-note">
           If you already have an account, <a href="/login" className="auth-link-bold">sign in here</a>.
         </p>
       </div>
@@ -80,9 +80,9 @@ export function ExamineeRegistrationPage() {
   if (success) return (
     <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}>
       <div className="auth-card">
-        <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+        <div className="seal-emblem check">✓</div>
         <h1 className="auth-title" style={{ marginBottom: 8 }}>Registration successful</h1>
-        <p style={{ color: 'var(--color-gray-3)', marginBottom: 24 }}>Your account has been created. You can now log in.</p>
+        <p className="center-note">Your account has been created. You can now log in.</p>
         <button className="btn btn-primary" onClick={() => navigate('/login')}>Go to login</button>
       </div>
     </div></div>
@@ -92,6 +92,7 @@ export function ExamineeRegistrationPage() {
     <div className="auth-container">
       <div className="auth-content">
         <div className="auth-card">
+          <div className="seal-emblem">EF</div>
           <div className="auth-header">
             <h1 className="auth-title">Student registration</h1>
             <p className="auth-subtitle">Create your account to access exams</p>

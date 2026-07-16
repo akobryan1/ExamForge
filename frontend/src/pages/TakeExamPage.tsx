@@ -338,9 +338,8 @@ export function TakeExamPage() {
                   checked={answer === choice.text}
                   onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                 />
-                <span className="option-text">
-                  {String.fromCharCode(65 + index)}. {choice.text}
-                </span>
+                <span className="option-bubble"></span>
+                <span className="option-text">{choice.text}</span>
               </label>
             ))}
           </div>
@@ -357,6 +356,7 @@ export function TakeExamPage() {
                 checked={answer === 'true'}
                 onChange={(e) => handleAnswerChange(question.id, e.target.value)}
               />
+              <span className="option-bubble"></span>
               <span className="option-text">True</span>
             </label>
             <label className="option-label">
@@ -367,6 +367,7 @@ export function TakeExamPage() {
                 checked={answer === 'false'}
                 onChange={(e) => handleAnswerChange(question.id, e.target.value)}
               />
+              <span className="option-bubble"></span>
               <span className="option-text">False</span>
             </label>
           </div>
@@ -384,6 +385,7 @@ export function TakeExamPage() {
                   checked={answer?.startsWith?.('true') || answer === 'true'}
                   onChange={(e) => handleAnswerChange(question.id, 'true')}
                 />
+                <span className="option-bubble"></span>
                 <span className="option-text">True</span>
               </label>
               <label className="option-label">
@@ -394,14 +396,13 @@ export function TakeExamPage() {
                   checked={answer?.startsWith?.('false') || answer?.includes?.('False')}
                   onChange={(e) => handleAnswerChange(question.id, 'false__')}
                 />
+                <span className="option-bubble"></span>
                 <span className="option-text">False</span>
               </label>
             </div>
             {(answer?.startsWith?.('false') || answer?.includes?.('False')) && (
               <div className="correction-input" style={{ marginTop: 'var(--spacing-3)' }}>
-                <label style={{ display: 'block', marginBottom: 'var(--spacing-2)', fontSize: 'var(--font-size-sm)' }}>
-                  If false, provide the correct answer:
-                </label>
+                <label className="helper-text">If false, provide the correct answer:</label>
                 <textarea
                   className="answer-textarea"
                   value={answer?.replace('false__', '') || ''}
@@ -429,9 +430,7 @@ export function TakeExamPage() {
         const enumerationItems = typeof answer === 'string' ? answer.split('\n') : (Array.isArray(answer) ? answer : ['']);
         return (
           <div className="enumeration-input">
-            <p style={{ fontSize: 'var(--font-size-sm)', marginBottom: 'var(--spacing-2)', color: 'var(--text-secondary)' }}>
-              Enter each item on a new line:
-            </p>
+            <p className="helper-text">Enter each item on a new line:</p>
             <textarea
               className="answer-textarea"
               value={Array.isArray(answer) ? answer.join('\n') : answer}
@@ -461,7 +460,7 @@ export function TakeExamPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <p>Loading exam...</p>
         </div>
       </MainLayout>
@@ -471,7 +470,7 @@ export function TakeExamPage() {
   if (error || !exam) {
     return (
       <MainLayout>
-        <div style={{ padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <div className="error-banner">{error || 'Exam not found'}</div>
           <Button onClick={() => navigate('/exams')}>Back to Exams</Button>
         </div>
@@ -490,18 +489,18 @@ export function TakeExamPage() {
             
             <div className="exam-info">
               <div className="info-item">
-                <strong>Questions:</strong> {questions.length}
+                <strong>Questions</strong>{questions.length}
               </div>
               <div className="info-item">
-                <strong>Total Points:</strong> {exam.totalPoints || 0}
+                <strong>Total Points</strong>{exam.totalPoints || 0}
               </div>
               {exam.timeLimit && (
                 <div className="info-item">
-                  <strong>Time Limit:</strong> {exam.timeLimit} minutes
+                  <strong>Time Limit</strong>{exam.timeLimit} minutes
                 </div>
               )}
               <div className="info-item">
-                <strong>Passing Score:</strong> {exam.passingScore}%
+                <strong>Passing Score</strong>{exam.passingScore}%
               </div>
             </div>
 
@@ -590,7 +589,7 @@ export function TakeExamPage() {
                   <span className="question-number">Question {currentQuestionIndex + 1}</span>
                   <div className="question-meta">
                     <span className="question-type">{currentQuestion.type.replace('_', ' ')}</span>
-                    <span className="question-points">{currentQuestion.points} pts</span>
+                  <div className="question-points">{currentQuestion.points}<span>pt</span></div>
                   </div>
                 </div>
 

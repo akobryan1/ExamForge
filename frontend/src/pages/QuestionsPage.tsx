@@ -175,7 +175,7 @@ export function QuestionsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <p>Loading questions...</p>
         </div>
       </MainLayout>
@@ -217,6 +217,7 @@ export function QuestionsPage() {
 
       {questions.length === 0 ? (
         <div className="empty-state">
+          <div className="empty-stamp">Nothing filed</div>
           <h3>No questions yet</h3>
           <p>Add your first question to get started.</p>
           <Button onClick={handleAddQuestion}>Add Question</Button>
@@ -225,16 +226,12 @@ export function QuestionsPage() {
         <motion.div className="questions-list" variants={staggerContainer}>
           {questions.map((question: Question, index: number) => (
             <motion.div key={question.id} className="question-card" variants={staggerItem}>
+              <div className="points-seal">{question.points}<span>pt</span></div>
               <div className="question-header">
                 <span className="question-number">Question {index + 1}</span>
                 <div className="question-meta">
-                  <span className={`question-type type-${question.type}`}>
-                    {question.type.replace('_', ' ')}
-                  </span>
-                  <span className={`difficulty-badge difficulty-${question.difficulty}`}>
-                    {question.difficulty}
-                  </span>
-                  <span className="points-badge">{question.points} pts</span>
+                  <span className="stamp stamp-type">{question.type.replace('_', ' ')}</span>
+                  <span className={`stamp stamp-${question.difficulty}`}>{question.difficulty}</span>
                 </div>
               </div>
               <div className="question-text">{question.text}</div>
@@ -246,8 +243,8 @@ export function QuestionsPage() {
                 <div className="choices-preview">
                   {question.choices.map((choice: any, i: number) => (
                     <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
-                      {String.fromCharCode(65 + i)}. {choice.text}
-                      {choice.isCorrect && <span className="correct-indicator">✓</span>}
+                      <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
+                      <span className="choice-text">{choice.text}</span>
                     </div>
                   ))}
                 </div>

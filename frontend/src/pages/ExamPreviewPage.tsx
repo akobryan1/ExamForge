@@ -103,7 +103,7 @@ export function ExamPreviewPage() {
   if (loading) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <p>Loading exam...</p>
         </div>
       </MainLayout>
@@ -113,7 +113,7 @@ export function ExamPreviewPage() {
   if (!exam) {
     return (
       <MainLayout>
-        <div style={{ textAlign: 'center', padding: 'var(--spacing-12)' }}>
+        <div className="center-state">
           <p>Exam not found.</p>
           <Button onClick={() => navigate('/exams')}>Back to Exams</Button>
         </div>
@@ -132,7 +132,7 @@ export function ExamPreviewPage() {
       >
         {/* Error Banner */}
         {error && (
-          <div className="error-banner" style={{ marginBottom: 'var(--spacing-4)' }}>
+          <div className="error-banner">
             ⚠️ {error}
           </div>
         )}
@@ -141,17 +141,17 @@ export function ExamPreviewPage() {
         {exam.status === 'draft' && (
           <div style={{ marginBottom: 'var(--spacing-4)' }}>
             {questions.length === 0 && (
-              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+              <div className="warning-banner">
                 ⚠️ <strong>No questions added.</strong> You need at least one question before publishing.
               </div>
             )}
             {!exam.startDate && !exam.endDate && (
-              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+              <div className="warning-banner">
                 📅 <strong>No schedule set.</strong> Without dates, this exam will be available immediately upon publish.
               </div>
             )}
             {!exam.timeLimit && (
-              <div className="warning-banner" style={{ background: 'var(--color-warning-bg, #fff3cd)', border: '1px solid var(--color-warning, #ffc107)', padding: '12px 16px', borderRadius: '8px', marginBottom: '8px', color: '#856404' }}>
+              <div className="warning-banner">
                 ⏱️ <strong>No time limit set.</strong> Students will have unlimited time to complete this exam.
               </div>
             )}
@@ -166,7 +166,7 @@ export function ExamPreviewPage() {
               <h1>{exam.title}</h1>
               <p className="exam-subtitle">{exam.description}</p>
               <div className="status-row">
-                <span className={`status-badge status-${exam.status}`}>
+                <span className={`stamp stamp-${exam.status === 'published' ? 'scheduled' : exam.status === 'active' ? 'active' : exam.status}`}>
                   {exam.status?.toUpperCase()}
                 </span>
                 <span className="meta-text">
@@ -195,7 +195,7 @@ export function ExamPreviewPage() {
               <Button variant="outline" onClick={handleClone}>
                 🔄 Clone
               </Button>
-              <Button variant="outline" onClick={handleDelete} style={{ color: 'var(--danger-color)' }}>
+              <Button variant="outline" onClick={handleDelete} className="danger">
                 Delete
               </Button>
             </div>
@@ -204,35 +204,15 @@ export function ExamPreviewPage() {
 
         {/* Student Exam Link — shown when published or active */}
         {(exam.status === 'published' || exam.status === 'active') && (
-          <motion.div
-            className="preview-section"
-            variants={fadeIn}
-            style={{
-              background: 'var(--color-primary-bg, #e8f0fe)',
-              border: '2px solid var(--color-primary, #1a73e8)',
-              borderRadius: 'var(--radius-lg)',
-              padding: 'var(--spacing-6)',
-              marginBottom: 'var(--spacing-4)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 8px 0' }}>📎 Student Exam Link</h3>
-            <p style={{ margin: '0 0 12px 0', color: 'var(--color-text-secondary)' }}>
-              Share this link with your students so they can take the exam:
-            </p>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div className="link-callout">
+            <h3>📎 Student Exam Link</h3>
+            <p>Share this link with your students so they can take the exam:</p>
+            <div className="link-row">
               <input
                 type="text"
                 readOnly
                 value={`${import.meta.env.VITE_EXAM_PORTAL_URL || window.location.origin}/exams/${examId}/take`}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: '14px',
-                  fontFamily: 'monospace',
-                  background: 'var(--color-surface)',
-                }}
+                className="link-input"
                 onClick={(e) => (e.target as HTMLInputElement).select()}
               />
               <Button
@@ -247,11 +227,11 @@ export function ExamPreviewPage() {
               </Button>
             </div>
             {exam.accessCode && (
-              <p style={{ margin: '12px 0 0 0', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
+              <p className="access-code-note">
                 🔑 Access code required: <strong>{exam.accessCode}</strong>
               </p>
             )}
-          </motion.div>
+          </div>
         )}
 
         {/* Exam Details */}
@@ -260,61 +240,61 @@ export function ExamPreviewPage() {
           <div className="details-grid">
             {exam.subject && (
               <div className="detail-item">
-                <strong>Subject:</strong> {exam.subject}
-              </div>
+              <strong>Subject</strong>{exam.subject}
+            </div>
             )}
             {exam.grade && (
               <div className="detail-item">
-                <strong>Grade Level:</strong> {exam.grade}
-              </div>
+              <strong>Grade Level</strong>{exam.grade}
+            </div>
             )}
             <div className="detail-item">
-              <strong>Passing Score:</strong> {exam.passingScore}%
+              <strong>Passing Score</strong>{exam.passingScore}%
             </div>
             {exam.timeLimit && (
               <div className="detail-item">
-                <strong>Time Limit:</strong> {exam.timeLimit} minutes
+                <strong>Time Limit</strong>{exam.timeLimit} minutes
               </div>
             )}
             {exam.accessCode && (
               <div className="detail-item">
-                <strong>Access Code:</strong> {exam.accessCode}
+                <strong>Access Code</strong>{exam.accessCode}
               </div>
             )}
             {exam.startDate && (
               <div className="detail-item">
-                <strong>Start Date:</strong> {new Date(exam.startDate).toLocaleString()}
+                <strong>Start Date</strong>{new Date(exam.startDate).toLocaleString()}
               </div>
             )}
             {exam.endDate && (
               <div className="detail-item">
-                <strong>End Date:</strong> {new Date(exam.endDate).toLocaleString()}
+                <strong>End Date</strong>{new Date(exam.endDate).toLocaleString()}
               </div>
             )}
           </div>
 
-          <h3 style={{ marginTop: 'var(--spacing-6)' }}>Exam Options</h3>
+          <h3>Exam Options</h3>
           <div className="options-list">
             <div className="option-item">
-              <span className={exam.shuffleQuestions ? 'enabled' : 'disabled'}>
+              <span className={`opt-mark ${exam.shuffleQuestions ? 'enabled' : 'disabled'}`}>
                 {exam.shuffleQuestions ? '✓' : '✗'}
               </span>
               Shuffle Questions
             </div>
             <div className="option-item">
-              <span className={exam.shuffleAnswers ? 'enabled' : 'disabled'}>
+              <span className={`opt-mark ${exam.shuffleAnswers ? 'enabled' : 'disabled'}`}>
                 {exam.shuffleAnswers ? '✓' : '✗'}
               </span>
               Shuffle Answer Choices
             </div>
             <div className="option-item">
-              <span className={exam.showResults ? 'enabled' : 'disabled'}>
+              <span className={`opt-mark ${exam.showResults ? 'enabled' : 'disabled'}`}>
                 {exam.showResults ? '✓' : '✗'}
               </span>
               Show Results to Students
             </div>
             <div className="option-item">
-              <span className={exam.allowReview ? 'enabled' : 'disabled'}>
+              <span className={`opt-mark ${exam.allowReview ? 'enabled' : 'disabled'}`}>
                 {exam.allowReview ? '✓' : '✗'}
               </span>
               Allow Review After Submission
@@ -333,6 +313,7 @@ export function ExamPreviewPage() {
 
           {questions.length === 0 ? (
             <div className="empty-state">
+              <div className="empty-stamp">Nothing filed</div>
               <p>No questions added yet</p>
               <Link to={`/exams/${examId}/questions`}>
                 <Button variant="primary">Add Questions</Button>
@@ -342,16 +323,16 @@ export function ExamPreviewPage() {
             <div className="questions-preview-list">
               {questions.map((question, index) => (
                 <div key={question.id} className="question-preview-card">
+                  <div className="points-seal">{question.points}<span>pt</span></div>
                   <div className="question-preview-header">
                     <span className="question-number">#{index + 1}</span>
                     <div className="question-badges">
-                      <span className={`type-badge type-${question.type}`}>
+                      <span className="stamp stamp-type">
                         {question.type.replace('_', ' ')}
                       </span>
-                      <span className={`difficulty-badge difficulty-${question.difficulty}`}>
+                      <span className={`stamp stamp-${question.difficulty}`}>
                         {question.difficulty}
                       </span>
-                      <span className="points-badge">{question.points} pts</span>
                     </div>
                   </div>
                   <p className="question-text">{question.text}</p>
@@ -359,16 +340,13 @@ export function ExamPreviewPage() {
                     <div className="choices-preview">
                       {question.choices.map((choice, i) => {
                         const choiceText = typeof choice === 'object' ? choice.text : choice;
-                        const isCorrect = typeof choice === 'object' 
-                          ? choice.isCorrect 
+                        const isCorrect = typeof choice === 'object'
+                          ? choice.isCorrect
                           : choice === question.correctAnswer;
                         return (
-                          <div
-                            key={i}
-                            className={`choice-preview ${isCorrect ? 'correct' : ''}`}
-                          >
-                            {String.fromCharCode(65 + i)}. {choiceText}
-                            {isCorrect && <span className="correct-mark">✓</span>}
+                          <div key={i} className={`choice-preview ${isCorrect ? 'correct' : ''}`}>
+                            <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
+                            <span className="choice-text">{choiceText}</span>
                           </div>
                         );
                       })}
