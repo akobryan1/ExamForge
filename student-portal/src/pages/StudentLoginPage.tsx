@@ -72,6 +72,11 @@ export function StudentLoginPage() {
               <label>Password</label>
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" className="input" />
             </div>
+            <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
+              <a href="/forgot-password" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ledger-ink-blue, #3b5e8a)', textDecoration: 'none' }}>
+                Forgot password?
+              </a>
+            </div>
             <button type="submit" className="btn btn-primary auth-submit" disabled={loading}>
               {loading ? 'Signing in...' : 'Sign in'}
             </button>

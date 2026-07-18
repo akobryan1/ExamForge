@@ -97,6 +97,18 @@
   font-weight: var(--font-medium);
 }
 
+/* Success Message */
+.auth-success {
+  background: rgba(22,163,74,0.07);
+  border: 1px solid var(--ledger-green, #2e7d32);
+  color: var(--ledger-green, #2e7d32);
+  padding: var(--spacing-4);
+  border-radius: 4px;
+  margin-bottom: var(--spacing-6);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+}
+
 /* Form */
 .auth-submit {
   width: 100%;

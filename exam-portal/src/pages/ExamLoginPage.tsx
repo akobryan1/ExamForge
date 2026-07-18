@@ -102,6 +102,11 @@ export function ExamLoginPage() {
               <label>Password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter your password" className="input" disabled={loading || success} />
             </div>
+            <div style={{ textAlign: 'right', marginTop: -8, marginBottom: 16 }}>
+              <a href="/forgot-password" style={{ fontSize: 13, fontWeight: 600, color: 'var(--ledger-ink-blue, #3b5e8a)', textDecoration: 'none' }}>
+                Forgot password?
+              </a>
+            </div>
             {success ? (
               <div className="auth-success" style={{ padding: 'var(--spacing-3)', background: 'rgba(22, 163, 74, 0.1)', color: 'var(--color-success-700)', borderRadius: 'var(--radius-md)', textAlign: 'center', fontSize: 14, fontWeight: 500 }}>
                 ✓ Login successful! Redirecting...

@@ -16,6 +16,7 @@ import { AnalyticsPage } from './pages/AnalyticsPage'
 import { IncidentReportsPage } from './pages/IncidentReportsPage'
 import { StudentRegistrationPage } from './pages/StudentRegistrationPage';
 import { AIQuestionGeneratorPage } from './pages/AIQuestionGeneratorPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { StudentManagementPage } from './pages/StudentManagementPage';
 import { ExamineeRegistrationPage } from './pages/ExamineeRegistrationPage';
@@ -37,6 +38,7 @@ function App() {
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register/student" element={<StudentRegistrationPage />} />
             
             {/* Protected routes */}
