@@ -23,21 +23,8 @@ const TAB_LABELS: Record<TabType, string> = {
 
 const TAB_ORDER: TabType[] = ['basic', 'access', 'timing', 'questions', 'proctoring', 'advanced', 'instructions'];
 
-/** Collapsible form section */
-function FormSection({ title, defaultOpen = true, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="form-section">
-      <div className="form-section-header" onClick={() => setOpen(!open)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setOpen(!open)} aria-expanded={open}>
-        <h3 className="form-section-title">{title}</h3>
-        <span className={`form-section-chevron${open ? ' open' : ''}`} aria-hidden="true">{open ? '▾' : '▸'}</span>
-      </div>
-      <div className={`form-section-content${open ? '' : ' collapsed'}`}>
-        {children}
-      </div>
-    </div>
-  );
-}
+const STEP_LABELS = ['Basics', 'Rules & Access', 'Questions'];
+const STEP_ORDER = [1, 2, 3] as const;
 
 /** Toggle switch */
 function Toggle({ name, checked, onChange, label, hint }: { name: string; checked: boolean; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; label: string; hint?: string }) {
@@ -84,6 +71,8 @@ export function CreateExamPageEnhanced() {
   const { examId } = useParams<{ examId?: string }>();
   const isEditing = !!examId;
   const [activeTab, setActiveTab] = useState<TabType>('basic');
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -382,86 +371,89 @@ export function CreateExamPageEnhanced() {
     setFormData(prev => ({ ...prev, sections: prev.sections.filter(s => s !== section) }));
   };
 
-  const validate = useCallback((): boolean => {
+  const validate = useCallback((step?: 1 | 2 | 3): boolean => {
+    const stepNum = step || currentStep;
     const errors: Record<string, string> = {};
-    if (!formData.title.trim()) errors.title = 'Enter an exam title';
-    if (!formData.description.trim()) errors.description = 'Enter a description';
-    if (!formData.startDate) errors.startDate = 'Exam schedule is required';
-    if (!formData.endDate) errors.endDate = 'Exam schedule is required';
-    if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
-      errors.endDate = 'End date must be after start date';
+    if (stepNum === 1) {
+      if (!formData.title.trim()) errors.title = 'Enter an exam title';
+      if (!formData.description.trim()) errors.description = 'Enter a description';
+    }
+    if (stepNum === 2) {
+      if (!formData.startDate) errors.startDate = 'Exam schedule is required';
+      if (!formData.endDate) errors.endDate = 'Exam schedule is required';
+      if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
+        errors.endDate = 'End date must be after start date';
+      }
     }
     setFieldErrors(errors);
-    if (Object.keys(errors).length > 0) {
-      // Switch to the tab containing the first error
-      if (errors.title || errors.description) setActiveTab('basic');
-      else if (errors.startDate || errors.endDate) setActiveTab('timing');
-      return false;
-    }
-    return true;
+    return Object.keys(errors).length === 0;
+  }, [formData, currentStep]);
+
+  const buildExamData = useCallback(() => {
+    const retakeConfig: RetakeConfiguration | undefined = formData.retakeEnabled ? {
+      enabled: true,
+      maxRetakes: formData.retakeMaxRetakes,
+      requireApproval: formData.retakeRequireApproval,
+      scoringMethod: formData.retakeScoringMethod,
+    } : undefined;
+
+    const lateSubmissionConfig: LateSubmissionConfiguration | undefined =
+      formData.lateSubmissionPolicy !== 'disabled' ? {
+        policy: formData.lateSubmissionPolicy,
+        gracePeriodMinutes: formData.lateGracePeriodMinutes || undefined,
+        penaltyPoints: formData.latePenaltyPoints || undefined,
+        penaltyInterval: formData.latePenaltyInterval,
+      } : undefined;
+
+    const proctorConfig: ProctorConfiguration | undefined = formData.proctorEnabled ? {
+      enabled: true,
+      enforceFullscreen: formData.proctorEnforceFullscreen,
+      detectTabSwitch: formData.proctorDetectTabSwitch,
+      detectCopyPaste: formData.proctorDetectCopyPaste,
+      disableRightClick: formData.proctorDisableRightClick,
+      pointDeductions: {
+        tabSwitch: formData.proctorPointDeductionTabSwitch || undefined,
+        copyPaste: formData.proctorPointDeductionCopyPaste || undefined,
+        rightClick: formData.proctorPointDeductionRightClick || undefined,
+        exitFullscreen: formData.proctorPointDeductionExitFullscreen || undefined,
+        generalViolation: formData.proctorPointDeductionGeneral || undefined,
+      },
+      customRules: formData.proctorCustomRules || undefined,
+    } : undefined;
+
+    return {
+      title: formData.title,
+      description: formData.description,
+      subject: formData.subject || undefined,
+      grade: formData.grade || undefined,
+      passingScore: formData.passingScore,
+      timeLimit: formData.timeLimit || undefined,
+      shuffleQuestions: formData.shuffleQuestions,
+      shuffleAnswers: formData.shuffleAnswers,
+      showResults: formData.showResults,
+      allowReview: formData.allowReview,
+      accessMethod: formData.accessMethod,
+      sections: formData.sections.length > 0 ? formData.sections : undefined,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      retakeConfig,
+      lateSubmissionConfig,
+      proctorConfig,
+      customInstructions: formData.customInstructions || undefined,
+      showRulesBeforeExam: formData.showRulesBeforeExam,
+    };
   }, [formData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate(currentStep)) return;
     
     try {
       setLoading(true);
       setError(null);
       
-      const retakeConfig: RetakeConfiguration | undefined = formData.retakeEnabled ? {
-        enabled: true,
-        maxRetakes: formData.retakeMaxRetakes,
-        requireApproval: formData.retakeRequireApproval,
-        scoringMethod: formData.retakeScoringMethod,
-      } : undefined;
-      
-      const lateSubmissionConfig: LateSubmissionConfiguration | undefined = 
-        formData.lateSubmissionPolicy !== 'disabled' ? {
-          policy: formData.lateSubmissionPolicy,
-          gracePeriodMinutes: formData.lateGracePeriodMinutes || undefined,
-          penaltyPoints: formData.latePenaltyPoints || undefined,
-          penaltyInterval: formData.latePenaltyInterval,
-        } : undefined;
-      
-      const proctorConfig: ProctorConfiguration | undefined = formData.proctorEnabled ? {
-        enabled: true,
-        enforceFullscreen: formData.proctorEnforceFullscreen,
-        detectTabSwitch: formData.proctorDetectTabSwitch,
-        detectCopyPaste: formData.proctorDetectCopyPaste,
-        disableRightClick: formData.proctorDisableRightClick,
-        pointDeductions: {
-          tabSwitch: formData.proctorPointDeductionTabSwitch || undefined,
-          copyPaste: formData.proctorPointDeductionCopyPaste || undefined,
-          rightClick: formData.proctorPointDeductionRightClick || undefined,
-          exitFullscreen: formData.proctorPointDeductionExitFullscreen || undefined,
-          generalViolation: formData.proctorPointDeductionGeneral || undefined,
-        },
-        customRules: formData.proctorCustomRules || undefined,
-      } : undefined;
-      
-      const examData = {
-        title: formData.title,
-        description: formData.description,
-        subject: formData.subject || undefined,
-        grade: formData.grade || undefined,
-        passingScore: formData.passingScore,
-        timeLimit: formData.timeLimit || undefined,
-        shuffleQuestions: formData.shuffleQuestions,
-        shuffleAnswers: formData.shuffleAnswers,
-        showResults: formData.showResults,
-        allowReview: formData.allowReview,
-        accessMethod: formData.accessMethod,
-        sections: formData.sections.length > 0 ? formData.sections : undefined,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
-        retakeConfig,
-        lateSubmissionConfig,
-        proctorConfig,
-        customInstructions: formData.customInstructions || undefined,
-        showRulesBeforeExam: formData.showRulesBeforeExam,
-      };
-      
+      const examData = buildExamData();
+
       const exam = isEditing
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
@@ -515,6 +507,27 @@ export function CreateExamPageEnhanced() {
 
   const tabIndex = TAB_ORDER.indexOf(activeTab) + 1;
 
+  const canProceedToStep2 = formData.title.trim().length > 0 && formData.description.trim().length > 0;
+
+  const handleNextStep = () => {
+    if (currentStep === 1 && !canProceedToStep2) {
+      validate(1);
+      return;
+    }
+    if (currentStep === 2) {
+      // Validate schedule fields before proceeding
+      if (formData.startDate && formData.endDate && new Date(formData.endDate) <= new Date(formData.startDate)) {
+        setFieldErrors({ endDate: 'End date must be after start date' });
+        return;
+      }
+    }
+    setCurrentStep(prev => (prev + 1) as 1 | 2 | 3);
+  };
+
+  const handlePrevStep = () => {
+    setCurrentStep(prev => (prev - 1) as 1 | 2 | 3);
+  };
+
   const difficultyStampClass = (d: string | undefined) => {
     const map: Record<string, string> = { easy: 'stamp-easy', medium: 'stamp-medium', hard: 'stamp-hard' };
     return map[d || 'medium'] || 'stamp-medium';
@@ -529,9 +542,23 @@ export function CreateExamPageEnhanced() {
         transition={{ duration: 0.3 }}
       >
         <div className="form-header">
-          <div className="step-chip"><b>{String(tabIndex).padStart(2, '0')}</b> / 07 &mdash; {TAB_LABELS[activeTab]}</div>
           <h1>{isEditing ? 'Edit exam' : 'Create new exam'}</h1>
-          <p className="form-subtitle">Set up exam details, questions, access control, and proctoring rules — all in one place</p>
+          <p className="form-subtitle">Three steps — set the basics, choose your rules, add questions.</p>
+        </div>
+
+        {/* Stepper */}
+        <div className="progress-steps" style={{ marginBottom: 24, padding: '16px 0' }}>
+          {STEP_ORDER.map((stepNum, idx) => {
+            const els = [];
+            if (idx > 0) els.push(<div key={`line-${stepNum}`} className={`step-line${stepNum <= currentStep ? ' active' : ''}`} />);
+            els.push(
+              <div key={`step-${stepNum}`} className={`step${stepNum === currentStep ? ' active' : ''}${stepNum < currentStep ? ' complete' : ''}`}>
+                <div className="step-number">{stepNum < currentStep ? '✓' : stepNum}</div>
+                <div className="step-label">{STEP_LABELS[idx]}</div>
+              </div>
+            );
+            return els;
+          })}
         </div>
 
         {error && (
@@ -541,57 +568,55 @@ export function CreateExamPageEnhanced() {
           </div>
         )}
 
-        {/* Tab Navigation */}
-        <div className="tab-navigation">
-          {TAB_ORDER.map(tab => (
-            <button
-              key={tab}
-              type="button"
-              className={`tab-button ${activeTab === tab ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab)}
-            >
-              <span className="tab-index">{String(TAB_ORDER.indexOf(tab) + 1).padStart(2, '0')}</span>
-              <span className="tab-label">{TAB_LABELS[tab]}</span>
-            </button>
-          ))}
-        </div>
-
         <form onSubmit={handleSubmit} className="exam-form" ref={formRef}>
-          {/* ========== Basic Info Tab ========== */}
-          {activeTab === 'basic' && (
+          {/* ========== STEP 1: BASICS ========== */}
+          {currentStep === 1 && (
             <AnimatePresence mode="wait">
-            <motion.div key="basic" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            <motion.div key="step1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <h2 className="step-panel-title">Exam basics</h2>
+              <p className="step-panel-desc">Title, subject, and description for your exam.</p>
 
-              <FormSection title="Exam details" defaultOpen={true}>
-                <Field label="Exam title" required error={fieldErrors.title}>
-                  <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="e.g., Midterm Exam 2024" className={fieldErrors.title ? 'error' : ''} />
+              <Field label="Exam title" required error={fieldErrors.title}>
+                <input type="text" name="title" value={formData.title} onChange={handleChange} placeholder="e.g., Midterm Exam 2024" className={fieldErrors.title ? 'error' : ''} />
+              </Field>
+              <Field label="Description" required error={fieldErrors.description}>
+                <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Describe the exam content and objectives..." rows={4} className={fieldErrors.description ? 'error' : ''} />
+              </Field>
+              <div className="form-row">
+                <Field label="Subject" help="Course or subject area">
+                  <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="e.g., Biology, World History, Calculus" />
                 </Field>
-                <Field label="Description" required error={fieldErrors.description}>
-                  <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Describe the exam content and objectives..." rows={4} className={fieldErrors.description ? 'error' : ''} />
-                </Field>
-                <div className="form-row">
-                  <Field label="Subject" help="Course or subject area">
-                    <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="e.g., Biology, World History, Calculus" />
-                  </Field>
-                </div>
-              </FormSection>
-
-              <FormSection title="Assessment" defaultOpen={true}>
-                <Field label="Passing score (%)" help="Minimum percentage required to pass">
-                  <input type="number" name="passingScore" value={formData.passingScore} onChange={handleChange} min="0" max="100" />
-                </Field>
-              </FormSection>
+              </div>
 
             </motion.div>
             </AnimatePresence>
           )}
 
-          {/* ========== Access Control Tab ========== */}
-          {activeTab === 'access' && (
+          {/* ========== STEP 2: RULES & ACCESS ========== */}
+          {currentStep === 2 && (
             <AnimatePresence mode="wait">
-            <motion.div key="access" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            <motion.div key="step2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <h2 className="step-panel-title">Rules & access</h2>
+              <p className="step-panel-desc">Everyday settings only — proctoring and other advanced rules are tucked away below.</p>
 
-              <FormSection title="Who can take this exam" defaultOpen={true}>
+              <div className="form-section">
+                <h3 className="form-section-title" style={{ marginBottom: 12 }}>Passing score</h3>
+                <div className="score-control">
+                  <div className="score-slider">
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={formData.passingScore}
+                      onChange={(e) => setFormData(prev => ({ ...prev, passingScore: parseInt(e.target.value) || 60 }))}
+                    />
+                  </div>
+                  <div className="score-value">{formData.passingScore}%</div>
+                </div>
+              </div>
+
+              <div className="form-section" style={{ marginTop: 24 }}>
+                <h3 className="form-section-title" style={{ marginBottom: 12 }}>Who can take this exam</h3>
                 <div className="option-group">
                   <label className={`option-label ${formData.accessMethod === 'student_login' ? 'selected' : ''}`}>
                     <input
@@ -624,9 +649,28 @@ export function CreateExamPageEnhanced() {
                     </div>
                   </label>
                 </div>
-              </FormSection>
+              </div>
 
-              <FormSection title="Restrict to sections or classes" defaultOpen={false}>
+              <div className="form-row" style={{ marginTop: 24 }}>
+                <Field label="Duration (minutes)" help="Leave blank for untimed">
+                  <input type="number" name="timeLimit" value={formData.timeLimit || ''} onChange={handleChange} min="1" placeholder="e.g., 60" />
+                </Field>
+                <Field label="Retakes allowed" help="0 = no retakes, blank = unlimited">
+                  <input type="number" name="retakeMaxRetakes" value={formData.retakeMaxRetakes || ''} onChange={handleChange} min="0" placeholder="0" />
+                </Field>
+              </div>
+              <Toggle name="retakeEnabled" checked={formData.retakeEnabled} onChange={handleChange} label="Allow retakes" hint="Let students retake this exam" />
+
+              <div className="form-section" style={{ marginTop: 8 }}>
+                <h3 className="form-section-title" style={{ marginBottom: 12 }}>Display & review</h3>
+                <Toggle name="shuffleQuestions" checked={formData.shuffleQuestions} onChange={handleChange} label="Shuffle question order" hint="Randomize question order for each student" />
+                <Toggle name="shuffleAnswers" checked={formData.shuffleAnswers} onChange={handleChange} label="Shuffle answer choices" hint="Randomize answer order for multiple choice questions" />
+                <Toggle name="showResults" checked={formData.showResults} onChange={handleChange} label="Show results to students after submission" hint="Allow students to see their answers after submission" />
+                <Toggle name="allowReview" checked={formData.allowReview} onChange={handleChange} label="Allow students to review their answers" hint="Students can retake after first submission if retakes are enabled" />
+              </div>
+
+              <div className="form-section" style={{ marginTop: 8 }}>
+                <h3 className="form-section-title" style={{ marginBottom: 12 }}>Restrict to sections</h3>
                 <Field label="Allowed sections" help="Leave empty to allow all students">
                   <div className="section-input-group">
                     <input type="text" value={sectionInput} onChange={(e) => setSectionInput(e.target.value)} placeholder="e.g., Section A, Class 10-B" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSection())} />
@@ -640,272 +684,307 @@ export function CreateExamPageEnhanced() {
                     </div>
                   )}
                 </Field>
-              </FormSection>
-
-            </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* ========== Timing & Deadline Tab ========== */}
-          {activeTab === 'timing' && (
-            <AnimatePresence mode="wait">
-            <motion.div key="timing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-
-              <FormSection title="Exam schedule" defaultOpen={true}>
-                <div className="form-row">
-                  <Field label="Start date & time" help="When students can start taking the exam" error={fieldErrors.startDate}>
-                    <input type="datetime-local" name="startDate" value={formData.startDate} onChange={handleChange} className={fieldErrors.startDate ? 'error' : ''} />
-                  </Field>
-                  <Field label="End date & time" help="When the exam becomes unavailable" error={fieldErrors.endDate}>
-                    <input type="datetime-local" name="endDate" value={formData.endDate} onChange={handleChange} className={fieldErrors.endDate ? 'error' : ''} />
-                  </Field>
-                </div>
-                <Field label="Duration limit (minutes)" help="Leave blank for untimed exam">
-                  <input type="number" name="timeLimit" value={formData.timeLimit || ''} onChange={handleChange} min="1" placeholder="e.g., 60" />
-                </Field>
-              </FormSection>
-
-            </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* ========== Questions & Display Tab ========== */}
-          {activeTab === 'questions' && (
-            <AnimatePresence mode="wait">
-            <motion.div key="questions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-
-              <FormSection title="Question display" defaultOpen={true}>
-                <Toggle name="shuffleQuestions" checked={formData.shuffleQuestions} onChange={handleChange} label="Shuffle question order" hint="Randomize question order for each student" />
-                <Toggle name="shuffleAnswers" checked={formData.shuffleAnswers} onChange={handleChange} label="Shuffle answer options" hint="Randomize answer order for multiple choice questions" />
-              </FormSection>
-
-              <FormSection title="Review settings" defaultOpen={true}>
-                <Toggle name="showResults" checked={formData.showResults} onChange={handleChange} label="Show results to students" hint="Allow students to see their answers after submission" />
-                <Toggle name="allowReview" checked={formData.allowReview} onChange={handleChange} label="Allow review" hint="Students can retake after first submission if retakes are enabled" />
-              </FormSection>
-
-              <FormSection title={`Questions (${questions.length})`} defaultOpen={true}>
-                {questions.length === 0 ? (
-                  <div className="empty-state" style={{ marginTop: 8 }}>
-                    <h3>No questions yet</h3>
-                    <p>Add your first question to get started.</p>
-                    <Button onClick={openAddQuestion}>Add Question</Button>
-                  </div>
-                ) : (
-                  <div className="questions-list" style={{ marginTop: 8 }}>
-                    {questions.map((question, index) => (
-                      <div key={question.id} className="question-card">
-                        <div className="points-seal">{question.points || 1}<span>pt</span></div>
-                        <div className="question-header">
-                          <span className="question-number">Q{index + 1}</span>
-                          <div className="question-meta">
-                            <span className={`stamp stamp-type`}>
-                              {question.type.replace('_', ' ')}
-                            </span>
-                            <span className={`stamp ${difficultyStampClass(question.difficulty)}`}>
-                              {question.difficulty || 'medium'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="question-text">{question.text}</div>
-                        {question.description && (
-                          <div className="question-description">{question.description}</div>
-                        )}
-                        {question.type === 'multiple_choice' && question.choices && (
-                          <div className="choices-preview">
-                            {question.choices.map((choice, i) => (
-                              <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
-                                <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
-                                <span className="choice-text">{choice.text}</span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <div className="question-actions">
-                          <Button variant="outline" size="sm" onClick={() => openEditQuestion(question)}>Edit</Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteQuestion(question.id)}>Delete</Button>
-                        </div>
-                      </div>
-                    ))}
-                    <Button onClick={openAddQuestion} style={{ alignSelf: 'flex-start', marginTop: 8 }}>Add Question</Button>
-                  </div>
-                )}
-              </FormSection>
-
-            </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* ========== Proctoring & Anti-Cheat Tab ========== */}
-          {activeTab === 'proctoring' && (
-            <AnimatePresence mode="wait">
-            <motion.div key="proctoring" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-
-              <div className="form-section" style={{ marginBottom: 16 }}>
-                <Toggle name="proctorEnabled" checked={formData.proctorEnabled} onChange={handleChange} label="Enable proctoring" hint="Activate anti-cheat measures during the exam" />
               </div>
 
-              <Reveal open={formData.proctorEnabled}>
-                <div className="form-subsection">
-                  <h3>Behavioral monitoring</h3>
-                  <div className="option-group">
-                    <label className={`option-label ${formData.proctorDetectTabSwitch ? 'selected' : ''}`}>
-                      <input type="checkbox" name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} />
-                      <div>
-                        <div className="option-title">Detect tab switching</div>
-                        <div className="option-desc">Record when students switch browser tabs</div>
+              <div className="form-row" style={{ marginTop: 8 }}>
+                <Field label="Start date & time" help="When students can start" error={fieldErrors.startDate}>
+                  <input type="datetime-local" name="startDate" value={formData.startDate} onChange={handleChange} className={fieldErrors.startDate ? 'error' : ''} />
+                </Field>
+                <Field label="End date & time" help="When the exam becomes unavailable" error={fieldErrors.endDate}>
+                  <input type="datetime-local" name="endDate" value={formData.endDate} onChange={handleChange} className={fieldErrors.endDate ? 'error' : ''} />
+                </Field>
+              </div>
+
+              {/* Advanced Settings Disclosure */}
+              <div className="advanced-toggle" onClick={() => setAdvancedOpen(!advancedOpen)}>
+                <span className="advanced-toggle-label">Advanced settings <span className="advanced-toggle-hint">— proctoring, late submissions, custom instructions</span></span>
+                <span className={`advanced-chevron${advancedOpen ? ' open' : ''}`}>▾</span>
+              </div>
+              <div className={`advanced-panel${advancedOpen ? ' open' : ''}`}>
+                <div className="advanced-panel-inner">
+
+                  <div>
+                    <h3 className="advanced-section-title" style={{ marginBottom: 12 }}>Proctoring & anti-cheat</h3>
+                    <Toggle name="proctorEnabled" checked={formData.proctorEnabled} onChange={handleChange} label="Enable proctoring" hint="Activate anti-cheat measures during the exam" />
+                    <Reveal open={formData.proctorEnabled}>
+                      <div className="form-subsection">
+                        <h3>Behavioral monitoring</h3>
+                        <div className="option-group">
+                          <label className={`option-label ${formData.proctorDetectTabSwitch ? 'selected' : ''}`}>
+                            <input type="checkbox" name="proctorDetectTabSwitch" checked={formData.proctorDetectTabSwitch} onChange={handleChange} />
+                            <div>
+                              <div className="option-title">Detect tab switching</div>
+                              <div className="option-desc">Record when students switch browser tabs</div>
+                            </div>
+                          </label>
+                          <Reveal open={formData.proctorDetectTabSwitch}>
+                            <Field label="Points to deduct per tab switch">
+                              <input type="number" name="proctorPointDeductionTabSwitch" value={formData.proctorPointDeductionTabSwitch} onChange={handleChange} min="0" placeholder="0" />
+                            </Field>
+                          </Reveal>
+                          <label className={`option-label ${formData.proctorDetectCopyPaste ? 'selected' : ''}`}>
+                            <input type="checkbox" name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} />
+                            <div>
+                              <div className="option-title">Detect copy/paste</div>
+                              <div className="option-desc">Record copy and paste attempts</div>
+                            </div>
+                          </label>
+                          <Reveal open={formData.proctorDetectCopyPaste}>
+                            <Field label="Points to deduct per copy/paste">
+                              <input type="number" name="proctorPointDeductionCopyPaste" value={formData.proctorPointDeductionCopyPaste} onChange={handleChange} min="0" placeholder="0" />
+                            </Field>
+                          </Reveal>
+                          <label className={`option-label ${formData.proctorDisableRightClick ? 'selected' : ''}`}>
+                            <input type="checkbox" name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} />
+                            <div>
+                              <div className="option-title">Disable right-click</div>
+                              <div className="option-desc">Prevent right-click context menu</div>
+                            </div>
+                          </label>
+                          <Reveal open={formData.proctorDisableRightClick}>
+                            <Field label="Points to deduct per right-click">
+                              <input type="number" name="proctorPointDeductionRightClick" value={formData.proctorPointDeductionRightClick} onChange={handleChange} min="0" placeholder="0" />
+                            </Field>
+                          </Reveal>
+                          <label className={`option-label ${formData.proctorEnforceFullscreen ? 'selected' : ''}`}>
+                            <input type="checkbox" name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} />
+                            <div>
+                              <div className="option-title">Enforce full-screen mode</div>
+                              <div className="option-desc">Students must stay in fullscreen mode</div>
+                            </div>
+                          </label>
+                          <Reveal open={formData.proctorEnforceFullscreen}>
+                            <Field label="Points to deduct for exiting fullscreen">
+                              <input type="number" name="proctorPointDeductionExitFullscreen" value={formData.proctorPointDeductionExitFullscreen} onChange={handleChange} min="0" placeholder="0" />
+                            </Field>
+                          </Reveal>
+                        </div>
+                        <Field label="General violation penalty (fallback)" help="Applied when a specific deduction is not set">
+                          <input type="number" name="proctorPointDeductionGeneral" value={formData.proctorPointDeductionGeneral} onChange={handleChange} min="0" placeholder="0" />
+                        </Field>
+                        <Field label="Custom proctoring rules" help="Additional instructions for proctors">
+                          <textarea name="proctorCustomRules" value={formData.proctorCustomRules} onChange={handleChange} placeholder="Add any custom rules or instructions for proctoring..." rows={3} />
+                        </Field>
                       </div>
-                    </label>
-                    <Reveal open={formData.proctorDetectTabSwitch}>
-                      <Field label="Points to deduct per tab switch">
-                        <input type="number" name="proctorPointDeductionTabSwitch" value={formData.proctorPointDeductionTabSwitch} onChange={handleChange} min="0" placeholder="0" />
-                      </Field>
                     </Reveal>
-                    <label className={`option-label ${formData.proctorDetectCopyPaste ? 'selected' : ''}`}>
-                      <input type="checkbox" name="proctorDetectCopyPaste" checked={formData.proctorDetectCopyPaste} onChange={handleChange} />
-                      <div>
-                        <div className="option-title">Detect copy/paste</div>
-                        <div className="option-desc">Record copy and paste attempts</div>
-                      </div>
-                    </label>
-                    <Reveal open={formData.proctorDetectCopyPaste}>
-                      <Field label="Points to deduct per copy/paste">
-                        <input type="number" name="proctorPointDeductionCopyPaste" value={formData.proctorPointDeductionCopyPaste} onChange={handleChange} min="0" placeholder="0" />
-                      </Field>
-                    </Reveal>
-                    <label className={`option-label ${formData.proctorDisableRightClick ? 'selected' : ''}`}>
-                      <input type="checkbox" name="proctorDisableRightClick" checked={formData.proctorDisableRightClick} onChange={handleChange} />
-                      <div>
-                        <div className="option-title">Disable right-click</div>
-                        <div className="option-desc">Prevent right-click context menu</div>
-                      </div>
-                    </label>
-                    <Reveal open={formData.proctorDisableRightClick}>
-                      <Field label="Points to deduct per right-click">
-                        <input type="number" name="proctorPointDeductionRightClick" value={formData.proctorPointDeductionRightClick} onChange={handleChange} min="0" placeholder="0" />
-                      </Field>
-                    </Reveal>
-                    <label className={`option-label ${formData.proctorEnforceFullscreen ? 'selected' : ''}`}>
-                      <input type="checkbox" name="proctorEnforceFullscreen" checked={formData.proctorEnforceFullscreen} onChange={handleChange} />
-                      <div>
-                        <div className="option-title">Enforce full-screen mode</div>
-                        <div className="option-desc">Students must stay in fullscreen mode</div>
-                      </div>
-                    </label>
-                    <Reveal open={formData.proctorEnforceFullscreen}>
-                      <Field label="Points to deduct for exiting fullscreen">
-                        <input type="number" name="proctorPointDeductionExitFullscreen" value={formData.proctorPointDeductionExitFullscreen} onChange={handleChange} min="0" placeholder="0" />
+                  </div>
+
+                  <div>
+                    <h3 className="advanced-section-title" style={{ marginBottom: 12 }}>Retake configuration</h3>
+                    <Reveal open={formData.retakeEnabled}>
+                      <Toggle name="retakeRequireApproval" checked={formData.retakeRequireApproval} onChange={handleChange} label="Require instructor approval" hint="Students must request permission to retake" />
+                      <Field label="Scoring method" help="Which attempt score to use for the final grade">
+                        <select name="retakeScoringMethod" value={formData.retakeScoringMethod} onChange={handleChange}>
+                          <option value="best">Best score</option>
+                          <option value="latest">Latest score</option>
+                          <option value="average">Average score</option>
+                        </select>
                       </Field>
                     </Reveal>
                   </div>
-                </div>
 
-                <Field label="General violation penalty (fallback)" help="Applied when a specific deduction is not set">
-                  <input type="number" name="proctorPointDeductionGeneral" value={formData.proctorPointDeductionGeneral} onChange={handleChange} min="0" placeholder="0" />
-                </Field>
-
-                <Field label="Custom proctoring rules" help="Additional instructions for proctors">
-                  <textarea name="proctorCustomRules" value={formData.proctorCustomRules} onChange={handleChange} placeholder="Add any custom rules or instructions for proctoring..." rows={3} />
-                </Field>
-              </Reveal>
-
-            </motion.div>
-            </AnimatePresence>
-          )}
-
-          {/* ========== Retakes & Late Submission Tab ========== */}
-          {activeTab === 'advanced' && (
-            <AnimatePresence mode="wait">
-            <motion.div key="advanced" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
-
-              <FormSection title="Exam retakes" defaultOpen={true}>
-                <Toggle name="retakeEnabled" checked={formData.retakeEnabled} onChange={handleChange} label="Allow students to retake this exam" />
-                <Reveal open={formData.retakeEnabled}>
-                  <Field label="Maximum retakes" help="0 = no retakes, leave blank for unlimited">
-                    <input type="number" name="retakeMaxRetakes" value={formData.retakeMaxRetakes || ''} onChange={handleChange} min="0" placeholder="Leave blank for unlimited" />
-                  </Field>
-                  <Toggle name="retakeRequireApproval" checked={formData.retakeRequireApproval} onChange={handleChange} label="Require instructor approval" hint="Students must request permission to retake" />
-                  <Field label="Scoring method" help="Which attempt score to use for the final grade">
-                    <select name="retakeScoringMethod" value={formData.retakeScoringMethod} onChange={handleChange}>
-                      <option value="best">Best score</option>
-                      <option value="latest">Latest score</option>
-                      <option value="average">Average score</option>
-                    </select>
-                  </Field>
-                </Reveal>
-              </FormSection>
-
-              <FormSection title="Late submission policy" defaultOpen={false}>
-                <Field label="Late submission" help="Define how late submissions are handled">
-                  <select name="lateSubmissionPolicy" value={formData.lateSubmissionPolicy} onChange={handleChange}>
-                    <option value="disabled">Disabled (hard deadline)</option>
-                    <option value="allowed">Allowed (with penalty)</option>
-                    <option value="request_permission">Require permission</option>
-                  </select>
-                </Field>
-                <Reveal open={formData.lateSubmissionPolicy !== 'disabled'}>
-                  <Field label="Grace period (minutes)" help="Time after deadline with no penalty">
-                    <input type="number" name="lateGracePeriodMinutes" value={formData.lateGracePeriodMinutes} onChange={handleChange} min="0" placeholder="0" />
-                  </Field>
-                </Reveal>
-                <Reveal open={formData.lateSubmissionPolicy === 'allowed'}>
-                  <div className="form-row">
-                    <Field label="Penalty (points)" help="Points deducted for each interval late">
-                      <input type="number" name="latePenaltyPoints" value={formData.latePenaltyPoints} onChange={handleChange} min="0" placeholder="0" />
-                    </Field>
-                    <Field label="Penalty interval" help="Time interval for penalty accrual">
-                      <select name="latePenaltyInterval" value={formData.latePenaltyInterval} onChange={handleChange}>
-                        <option value="minute">Per minute</option>
-                        <option value="hour">Per hour</option>
-                        <option value="day">Per day</option>
+                  <div>
+                    <h3 className="advanced-section-title" style={{ marginBottom: 12 }}>Late submissions</h3>
+                    <Field label="Late submission policy" help="Define how late submissions are handled">
+                      <select name="lateSubmissionPolicy" value={formData.lateSubmissionPolicy} onChange={handleChange}>
+                        <option value="disabled">Disabled (hard deadline)</option>
+                        <option value="allowed">Allowed (with penalty)</option>
+                        <option value="request_permission">Require permission</option>
                       </select>
                     </Field>
+                    <Reveal open={formData.lateSubmissionPolicy !== 'disabled'}>
+                      <Field label="Grace period (minutes)" help="Time after deadline with no penalty">
+                        <input type="number" name="lateGracePeriodMinutes" value={formData.lateGracePeriodMinutes} onChange={handleChange} min="0" placeholder="0" />
+                      </Field>
+                    </Reveal>
+                    <Reveal open={formData.lateSubmissionPolicy === 'allowed'}>
+                      <div className="form-row">
+                        <Field label="Penalty (points)" help="Points deducted for each interval late">
+                          <input type="number" name="latePenaltyPoints" value={formData.latePenaltyPoints} onChange={handleChange} min="0" placeholder="0" />
+                        </Field>
+                        <Field label="Penalty interval" help="Time interval for penalty accrual">
+                          <select name="latePenaltyInterval" value={formData.latePenaltyInterval} onChange={handleChange}>
+                            <option value="minute">Per minute</option>
+                            <option value="hour">Per hour</option>
+                            <option value="day">Per day</option>
+                          </select>
+                        </Field>
+                      </div>
+                    </Reveal>
                   </div>
-                </Reveal>
-              </FormSection>
+
+                  <div>
+                    <h3 className="advanced-section-title" style={{ marginBottom: 12 }}>Custom instructions</h3>
+                    <Field label="Exam instructions" help="These instructions will be displayed to students before they begin the exam">
+                      <textarea name="customInstructions" value={formData.customInstructions} onChange={handleChange} placeholder="Enter custom instructions, rules, or guidelines for students taking this exam..." rows={8} />
+                    </Field>
+                    <Toggle name="showRulesBeforeExam" checked={formData.showRulesBeforeExam} onChange={handleChange} label="Show rules before exam" hint="Display all exam settings and anti-cheat rules before students start" />
+                  </div>
+
+                </div>
+              </div>
 
             </motion.div>
             </AnimatePresence>
           )}
 
-          {/* ========== Custom Instructions Tab ========== */}
-          {activeTab === 'instructions' && (
+          {/* ========== STEP 3: QUESTIONS ========== */}
+          {currentStep === 3 && (
             <AnimatePresence mode="wait">
-            <motion.div key="instructions" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+            <motion.div key="step3" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+              <h2 className="step-panel-title">Questions</h2>
+              <p className="step-panel-desc">{questions.length === 0 ? 'Choose how to add questions to your exam.' : `${questions.length} question${questions.length !== 1 ? 's' : ''} added.`}</p>
 
-              <FormSection title="Instructions for students" defaultOpen={true}>
-                <Field label="Exam instructions" help="These instructions will be displayed to students before they begin the exam">
-                  <textarea name="customInstructions" value={formData.customInstructions} onChange={handleChange} placeholder="Enter custom instructions, rules, or guidelines for students taking this exam..." rows={8} />
-                </Field>
-              </FormSection>
-
-              <FormSection title="Pre-exam display" defaultOpen={true}>
-                <Toggle name="showRulesBeforeExam" checked={formData.showRulesBeforeExam} onChange={handleChange} label="Show rules before exam" hint="Display all exam settings and anti-cheat rules before students start" />
-              </FormSection>
+              {questions.length === 0 ? (
+                <>
+                  <div className="path-cards">
+                    <div className="path-card" onClick={openAddQuestion}>
+                      <div className="path-icon">📝</div>
+                      <div className="path-title">Add manually</div>
+                      <div className="path-desc">Write questions one by one with the question editor.</div>
+                    </div>
+                    <div className="path-card" onClick={async () => {
+                      // Save exam first, then navigate to AI generator
+                      if (!validate(1)) return;
+                      try {
+                        setLoading(true);
+                        const examData = buildExamData();
+                        const exam = isEditing
+                          ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
+                          : await createMutation.mutateAsync(examData as any);
+                        const savedId = exam.id || examId!;
+                        navigate(`/exams/${savedId}/generate-questions`);
+                      } catch (err) {
+                        const msg = err instanceof Error ? err.message : 'Failed to create exam';
+                        setError(msg);
+                        setLoading(false);
+                      }
+                    }}>
+                      <div className="path-icon">🤖</div>
+                      <div className="path-title">Generate with AI</div>
+                      <div className="path-desc">Describe your exam and let AI create questions automatically.</div>
+                    </div>
+                    <div className="path-card" onClick={() => {
+                      // Proceed directly to submit
+                    }}>
+                      <div className="path-icon">⏭</div>
+                      <div className="path-title">Finish without questions</div>
+                      <div className="path-desc">Create the exam now and add questions later from the Questions page.</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="questions-list" style={{ marginTop: 8 }}>
+                  <Button onClick={openAddQuestion} style={{ marginBottom: 12 }}>Add Question</Button>
+                  {questions.map((question, index) => (
+                    <div key={question.id} className="question-card">
+                      <div className="points-seal">{question.points || 1}<span>pt</span></div>
+                      <div className="question-header">
+                        <span className="question-number">Q{index + 1}</span>
+                        <div className="question-meta">
+                          <span className="stamp stamp-type">
+                            {question.type.replace('_', ' ')}
+                          </span>
+                          <span className={`stamp ${difficultyStampClass(question.difficulty)}`}>
+                            {question.difficulty || 'medium'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="question-text">{question.text}</div>
+                      {question.description && (
+                        <div className="question-description">{question.description}</div>
+                      )}
+                      {question.type === 'multiple_choice' && question.choices && (
+                        <div className="choices-preview">
+                          {question.choices.map((choice, i) => (
+                            <div key={i} className={`choice-item ${choice.isCorrect ? 'correct' : ''}`}>
+                              <span className="choice-bubble">{String.fromCharCode(65 + i)}</span>
+                              <span className="choice-text">{choice.text}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="question-actions">
+                        <Button variant="outline" size="sm" onClick={() => openEditQuestion(question)}>Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => deleteQuestion(question.id)}>Delete</Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
             </motion.div>
             </AnimatePresence>
           )}
 
-          <div className="form-actions">
-            <span className="form-actions-legend"><span className="required-ast">*</span> required fields</span>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => navigate('/exams')}
-              disabled={loading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={loading}
-            >
-              {loading ? (
-                <><span className="spinner spinner-sm" /> Saving...</>
-              ) : isEditing ? 'Update Exam' : 'Create Exam & Add Questions'}
-            </button>
+          {/* Step Actions Footer */}
+          <div className="step-actions">
+            {currentStep === 1 ? (
+              <>
+                <span className="skip-note" style={{ fontFamily: 'var(--font-mono-ledger)', fontSize: '10.5px', color: 'var(--ledger-ink-soft)' }}>
+                  <span className="required" style={{ color: 'var(--ledger-red)' }}>*</span> required fields
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/exams')}
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleNextStep}
+                  disabled={!canProceedToStep2}
+                  style={{ width: 'auto' }}
+                >
+                  Next →
+                </button>
+              </>
+            ) : currentStep === 2 ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handlePrevStep}
+                  style={{ width: 'auto' }}
+                >
+                  ← Back
+                </button>
+                <div style={{ flex: 1 }} />
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleNextStep}
+                  style={{ width: 'auto' }}
+                >
+                  Continue to Questions →
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handlePrevStep}
+                  style={{ width: 'auto' }}
+                >
+                  ← Back
+                </button>
+                <div style={{ flex: 1 }} />
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                  style={{ width: 'auto' }}
+                >
+                  {loading ? (
+                    <><span className="spinner spinner-sm" /> Saving...</>
+                  ) : questions.length > 0 ? 'Create Exam' : 'Create Exam — Add Questions Later'}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </motion.div>
@@ -1001,7 +1080,7 @@ export function CreateExamPageEnhanced() {
                       <input type="text" value={choice.text} onChange={(e) => updateChoice(index, e.target.value)}
                         placeholder={`Choice ${String.fromCharCode(65 + index)}`} required style={{ flex: 1 }} />
                       {questionForm.choices.length > 2 && (
-                        <button type="button" onClick={() => removeChoice(index)} className="remove-btn" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-error-600)' }}>×</button>
+                        <button type="button" onClick={() => removeChoice(index)} className="remove-btn" style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ledger-red)' }}>×</button>
                       )}
                     </div>
                   ))}
@@ -1027,7 +1106,7 @@ export function CreateExamPageEnhanced() {
                   <label>Correct Answer</label>
                   <textarea value={questionForm.correctAnswer} onChange={(e) => setQuestionForm(prev => ({ ...prev, correctAnswer: e.target.value }))}
                     placeholder="Enter 'True' or 'False'. If false, provide the correct answer." rows={2} required />
-                  <small style={{ fontSize: 11, color: 'var(--color-gray-3)' }}>Format: "False. The correct answer is..." or "True"</small>
+                  <small style={{ fontSize: 11, color: 'var(--ledger-ink-soft)' }}>Format: "False. The correct answer is..." or "True"</small>
                 </div>
               )}
 
@@ -1050,7 +1129,7 @@ export function CreateExamPageEnhanced() {
                       <input type="text" value={item} onChange={(e) => updateEnumerationItem(index, e.target.value)}
                         placeholder={`Item ${index + 1}`} required style={{ flex: 1 }} />
                       {questionForm.enumerationItems.length > 1 && (
-                        <button type="button" onClick={() => removeEnumerationItem(index)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--color-error-600)' }}>×</button>
+                        <button type="button" onClick={() => removeEnumerationItem(index)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: 'var(--ledger-red)' }}>×</button>
                       )}
                     </div>
                   ))}
@@ -1058,7 +1137,7 @@ export function CreateExamPageEnhanced() {
                 </div>
               )}
 
-              <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--color-border)' }}>
+              <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--ledger-line)' }}>
                 <Button type="button" variant="outline" onClick={() => setShowAddModal(false)}>Cancel</Button>
                 <Button type="submit">{editingQuestion ? 'Update Question' : 'Add Question'}</Button>
               </div>
