@@ -61,10 +61,11 @@ router.post(
     body('count').isInt({ min: 1, max: 20 }).withMessage('Count must be between 1 and 20'),
     body('difficulty').optional().isIn(['easy', 'medium', 'hard']),
     body('topic').optional().trim(),
+    body('customPrompt').optional().trim(),
   ],
   async (req: Request, res: Response) => {
     try {
-      const { material, questionType, count, difficulty, topic } = req.body;
+      const { material, questionType, count, difficulty, topic, customPrompt } = req.body;
 
       const questions = await AIQuestionGeneratorService.generateQuestionsFromMaterial({
         material,
@@ -72,6 +73,7 @@ router.post(
         count,
         difficulty,
         topic,
+        customPrompt,
       });
 
       return res.json({
@@ -98,7 +100,7 @@ router.post(
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      const { questionType, count, difficulty, topic } = req.body;
+      const { questionType, count, difficulty, topic, customPrompt } = req.body;
       const filePath = req.file.path;
 
       // Read file content
@@ -127,6 +129,7 @@ router.post(
         count: Math.min(20, Math.max(1, parseInt(count) || 5)),
         difficulty: difficulty || 'medium',
         topic: topic || undefined,
+        customPrompt: customPrompt || undefined,
       });
 
       return res.json({

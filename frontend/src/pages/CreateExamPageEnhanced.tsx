@@ -124,9 +124,15 @@ export function CreateExamPageEnhanced() {
   // ── Inline question management ──
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'manual' | 'ai'>('manual');
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
 
-  // ── AI generation state ──
+  // ── Modal AI generation state ──
+  const [modalAiFile, setModalAiFile] = useState<File | null>(null);
+  const [modalAiMaterial, setModalAiMaterial] = useState('');
+  const [modalAiConfig, setModalAiConfig] = useState('');
+
+  // ── AI generation state (Step 3 panel) ──
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiMaterial, setAiMaterial] = useState('');
   const [aiFile, setAiFile] = useState<File | null>(null);
@@ -170,6 +176,10 @@ export function CreateExamPageEnhanced() {
 
   const openAddQuestion = () => {
     setEditingQuestion(null);
+    setModalMode('manual');
+    setModalAiFile(null);
+    setModalAiMaterial('');
+    setModalAiConfig('');
     setQuestionForm({
       type: 'multiple_choice',
       text: '',
@@ -512,7 +522,10 @@ export function CreateExamPageEnhanced() {
       }
       
       setSuccessToast(isEditing ? 'Exam updated successfully' : 'Exam created successfully');
-      setTimeout(() => navigate(`/exams/${savedExamId}`), 600);
+      // Update examId so subsequent operations use the real ID
+      if (!examId && exam?.id) {
+        window.history.replaceState(null, '', `/exams/${exam.id}/edit`);
+      }
     } catch (err) {
       const errWithResp = err as { response?: { data?: { error?: string } }; message?: string };
       const serverError = errWithResp.response?.data?.error;
@@ -552,6 +565,66 @@ export function CreateExamPageEnhanced() {
     return map[d || 'medium'] || 'stamp-medium';
   };
 
+  const addGeneratedQuestions = (generated: any[]) => {
+    const tempQuestions = generated.map((q: any, i: number) => ({
+      id: `temp_${Date.now()}_${i}`,
+      examId: examId || '',
+      type: q.type,
+      text: q.text,
+      description: q.description || '',
+      points: q.points || 1,
+      difficulty: q.difficulty || 'medium',
+      choices: q.choices?.map((c: string) => ({ text: c, isCorrect: false })) || [],
+      correctAnswer: q.correctAnswer,
+      createdAt: new Date(),
+      order: questions.length + i + 1,
+    })) as Question[];
+    setQuestions(prev => [...prev, ...tempQuestions]);
+  };
+
+  const handleModalGenerateWithAI = async () => {
+    try {
+      setLoading(true);
+      if (!modalAiMaterial.trim() && !modalAiFile) {
+        setError('Upload a file or paste your material.');
+        setLoading(false);
+        return;
+      }
+
+      const configText = modalAiConfig.trim() || '5 multiple choice questions worth 1 point each';
+
+      if (modalAiFile) {
+        const formData = new FormData();
+        formData.append('file', modalAiFile);
+        formData.append('customPrompt', configText);
+        formData.append('count', '20');
+
+        const response = await apiClient.post('/api/ai/generate-from-file', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        addGeneratedQuestions(response.data.questions || []);
+      } else {
+        const response = await apiClient.post('/api/ai/generate-questions', {
+          material: modalAiMaterial,
+          customPrompt: configText,
+          questionType: 'multiple_choice',
+          count: 20,
+        });
+        addGeneratedQuestions(response.data.questions || []);
+      }
+
+      setModalMode('manual');
+      setModalAiFile(null);
+      setModalAiMaterial('');
+      setModalAiConfig('');
+      setShowAddModal(false);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to generate questions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGenerateWithAI = async () => {
     setAiError(null);
     setAiGenerating(true);
@@ -570,22 +643,7 @@ export function CreateExamPageEnhanced() {
         const response = await apiClient.post('/api/ai/generate-from-file', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
-        const result = response.data;
-        const generated = result.questions || [];
-        const tempQuestions = generated.map((q: any, i: number) => ({
-          id: `temp_${Date.now()}_${i}`,
-          examId: examId || '',
-          type: q.type,
-          text: q.text,
-          description: q.description || '',
-          points: q.points || 1,
-          difficulty: aiDifficulty,
-          choices: q.choices?.map((c: string) => ({ text: c, isCorrect: false })) || [],
-          correctAnswer: q.correctAnswer,
-          createdAt: new Date(),
-          order: questions.length + i + 1,
-        })) as Question[];
-        setQuestions(prev => [...prev, ...tempQuestions]);
+        addGeneratedQuestions(response.data.questions || []);
         setShowAIPanel(false);
         setAiFile(null);
         setAiMaterial('');
@@ -606,23 +664,7 @@ export function CreateExamPageEnhanced() {
         difficulty: aiDifficulty,
         topic: aiTopic || undefined,
       });
-      const result = response.data;
-      const generated = result.questions || [];
-
-      const tempQuestions = generated.map((q: any, i: number) => ({
-        id: `temp_${Date.now()}_${i}`,
-        examId: examId || '',
-        type: q.type,
-        text: q.text,
-        description: q.description || '',
-        points: q.points || 1,
-        difficulty: aiDifficulty,
-        choices: q.choices?.map((c: string) => ({ text: c, isCorrect: false })) || [],
-        correctAnswer: q.correctAnswer,
-        createdAt: new Date(),
-        order: questions.length + i + 1,
-      })) as Question[];
-      setQuestions(prev => [...prev, ...tempQuestions]);
+      addGeneratedQuestions(response.data.questions || []);
       setShowAIPanel(false);
       setAiMaterial('');
     } catch (err: any) {
@@ -1170,6 +1212,78 @@ export function CreateExamPageEnhanced() {
               <button className="close-btn" onClick={() => setShowAddModal(false)}>×</button>
             </div>
 
+            {!editingQuestion && (
+              <div style={{ display: 'flex', gap: 0, margin: '0 24px', border: '1px solid var(--ledger-line)', borderRadius: 5, overflow: 'hidden' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalMode('manual')}
+                  style={{
+                    flex: 1, padding: '9px 12px', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono-ledger)',
+                    letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer',
+                    border: 'none', background: modalMode === 'manual' ? 'var(--ledger-ink-blue)' : 'transparent',
+                    color: modalMode === 'manual' ? 'white' : 'var(--ledger-ink-soft)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  ✏️ Manual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalMode('ai')}
+                  style={{
+                    flex: 1, padding: '9px 12px', fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono-ledger)',
+                    letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer',
+                    border: 'none', background: modalMode === 'ai' ? 'var(--ledger-ink-blue)' : 'transparent',
+                    color: modalMode === 'ai' ? 'white' : 'var(--ledger-ink-soft)',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  🤖 Generate with AI
+                </button>
+              </div>
+            )}
+
+            {modalMode === 'ai' && !editingQuestion ? (
+              <div className="question-form" style={{ padding: 'var(--spacing-6)' }}>
+                <div className="form-group">
+                  <label>Upload file (.pdf, .docx, .txt)</label>
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt"
+                    onChange={(e) => setModalAiFile(e.target.files?.[0] || null)}
+                    style={{ fontSize: 13, padding: 8, border: '1px solid var(--ledger-line)', borderRadius: 4, width: '100%' }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Or paste your material</label>
+                  <textarea
+                    value={modalAiMaterial}
+                    onChange={(e) => setModalAiMaterial(e.target.value)}
+                    placeholder="Paste lecture notes, textbook excerpts..."
+                    rows={4}
+                    style={{ fontSize: 13, padding: 10 }}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Question configuration</label>
+                  <textarea
+                    value={modalAiConfig}
+                    onChange={(e) => setModalAiConfig(e.target.value)}
+                    placeholder={'e.g., 30 True/False worth 1pt each, 10 Multiple Choice worth 2pts each, 1 Essay worth 10pts'}
+                    rows={3}
+                    style={{ fontSize: 13, padding: 10 }}
+                  />
+                  <p className="form-help">Describe the mix of questions, their types, point values, and how many of each.</p>
+                </div>
+                <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--ledger-line)' }}>
+                  <Button type="button" variant="outline" onClick={() => { setModalMode('manual'); setModalAiFile(null); setModalAiMaterial(''); setModalAiConfig(''); }}>Back</Button>
+                  <Button onClick={handleModalGenerateWithAI} disabled={loading || (!modalAiMaterial.trim() && !modalAiFile)}>
+                    {loading ? 'Generating...' : 'Generate Questions'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+
             <form onSubmit={handleSaveQuestion} className="question-form" style={{ padding: 'var(--spacing-6)' }}>
               <div className="form-row">
                 <div className="form-group">
@@ -1299,6 +1413,7 @@ export function CreateExamPageEnhanced() {
                 <Button type="submit">{editingQuestion ? 'Update Question' : 'Add Question'}</Button>
               </div>
             </form>
+            )}
           </motion.div>
         </motion.div>
       )}

@@ -6,6 +6,7 @@ interface GenerateQuestionsRequest {
   count: number;
   difficulty?: 'easy' | 'medium' | 'hard';
   topic?: string;
+  customPrompt?: string;
 }
 
 interface GeneratedQuestion {
@@ -79,7 +80,11 @@ export class AIQuestionGeneratorService {
    * Build prompt for AI question generation
    */
   private static buildPrompt(request: GenerateQuestionsRequest): string {
-    const { material, questionType, count, difficulty = 'medium', topic } = request;
+    const { material, questionType, count, difficulty = 'medium', topic, customPrompt } = request;
+
+    if (customPrompt) {
+      return `Generate questions based on the following material, following these specifications:\n${customPrompt}\n\nThe questions should be based on this material:\n\n${material}\n\nReturn a JSON array of question objects. Each object must have: "type" (one of: multiple_choice, true_false, modified_true_false, essay, identification, enumeration), "text" (the question), "points" (number), and for multiple choice include "choices" (array of strings) and "correctAnswer" (string), for true/false include "correctAnswer" ("true" or "false"), for essay include "correctAnswer" (rubric text), for identification/enumeration include "correctAnswer" (string or array of strings). Also include an "explanation" field for each question.`;
+    }
 
     let prompt = `Generate ${count} ${difficulty} difficulty ${questionType.replace('_', ' ')} questions`;
     
