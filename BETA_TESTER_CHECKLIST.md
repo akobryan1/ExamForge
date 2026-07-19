@@ -55,7 +55,7 @@
 - [X] **To grade count:** Matches number of completed exams requiring grading
 - [X] **Draft count:** Matches number of exams in draft status
 - [X] **Total count:** Matches total exams across all statuses
-- [] Verify all stat cards update when exams are created/modified
+- [X] Verify all stat cards update when exams are created/modified
 
 ### Recent Exams List
 - [ ] Shows up to 5 most recent exams

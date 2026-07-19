@@ -858,7 +858,7 @@ export function CreateExamPageEnhanced() {
                           ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
                           : await createMutation.mutateAsync(examData as any);
                         const savedId = exam.id || examId!;
-                        navigate(`/exams/${savedId}/generate-questions`);
+                        navigate(`/exams/${savedId}/ai-generate`);
                       } catch (err) {
                         const msg = err instanceof Error ? err.message : 'Failed to create exam';
                         setError(msg);
@@ -870,7 +870,7 @@ export function CreateExamPageEnhanced() {
                       <div className="path-desc">Describe your exam and let AI create questions automatically.</div>
                     </div>
                     <div className="path-card" onClick={() => {
-                      // Proceed directly to submit
+                      formRef.current?.requestSubmit();
                     }}>
                       <div className="path-icon">⏭</div>
                       <div className="path-title">Finish without questions</div>
