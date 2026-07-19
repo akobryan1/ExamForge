@@ -450,6 +450,8 @@ export function CreateExamPageEnhanced() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Only allow submission from Step 3 (explicit user action)
+    if (currentStep !== 3) return;
     if (!validate(currentStep)) return;
     
     try {
@@ -870,7 +872,7 @@ export function CreateExamPageEnhanced() {
                       <div className="path-desc">Describe your exam and let AI create questions automatically.</div>
                     </div>
                     <div className="path-card" onClick={() => {
-                      formRef.current?.requestSubmit();
+                      /* Intentional no-op — user submits via the button below */
                     }}>
                       <div className="path-icon">⏭</div>
                       <div className="path-title">Finish without questions</div>
