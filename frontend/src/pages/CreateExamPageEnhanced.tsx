@@ -4,7 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { ExamService } from '../services/ExamService';
+import { StudentService } from '../services/StudentService';
 import { useCreateExam, useUpdateExam } from '../hooks/useExamQueries';
+import { useAuth } from '../contexts/AuthContext';
 import type { RetakeConfiguration, LateSubmissionConfiguration, ProctorConfiguration, Question, QuestionType, DifficultyLevel } from '../types/exam';
 import '../styles/pages/exam-form.css';
 import '../styles/pages/questions.css';
@@ -73,6 +75,8 @@ export function CreateExamPageEnhanced() {
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [availableSections, setAvailableSections] = useState<string[]>([]);
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successToast, setSuccessToast] = useState<string | null>(null);
@@ -94,8 +98,7 @@ export function CreateExamPageEnhanced() {
     sections: [] as string[],
     startDate: '' as string,
     endDate: '' as string,
-    retakeEnabled: false,
-    retakeMaxRetakes: undefined as number | undefined,
+    retakeMaxRetakes: 0,
     retakeRequireApproval: false,
     retakeScoringMethod: 'best' as 'best' | 'latest' | 'average',
     lateSubmissionPolicy: 'disabled' as 'allowed' | 'disabled' | 'request_permission',
@@ -117,7 +120,6 @@ export function CreateExamPageEnhanced() {
     showRulesBeforeExam: true,
   });
 
-  const [sectionInput, setSectionInput] = useState('');
   // ── Inline question management ──
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -143,6 +145,15 @@ export function CreateExamPageEnhanced() {
         .catch(() => {});
     }
   }, [examId]);
+
+  // Fetch available sections for dropdown
+  useEffect(() => {
+    if (user?.id) {
+      StudentService.getRegistrationFields(user.id)
+        .then(fields => setAvailableSections(fields.sections || []))
+        .catch(() => {});
+    }
+  }, [user]);
 
   const openAddQuestion = () => {
     setEditingQuestion(null);
@@ -311,7 +322,6 @@ export function CreateExamPageEnhanced() {
             sections: exam.sections || [],
             startDate: exam.startDate ? new Date(exam.startDate).toISOString().slice(0, 16) : '',
             endDate: exam.endDate ? new Date(exam.endDate).toISOString().slice(0, 16) : '',
-            retakeEnabled: exam.retakeConfig?.enabled ?? false,
             retakeMaxRetakes: exam.retakeConfig?.maxRetakes || 0,
             retakeRequireApproval: exam.retakeConfig?.requireApproval ?? false,
             retakeScoringMethod: exam.retakeConfig?.scoringMethod || 'latest',
@@ -360,15 +370,9 @@ export function CreateExamPageEnhanced() {
     }
   };
 
-  const addSection = () => {
-    if (sectionInput.trim() && !formData.sections.includes(sectionInput.trim())) {
-      setFormData(prev => ({ ...prev, sections: [...prev.sections, sectionInput.trim()] }));
-      setSectionInput('');
-    }
-  };
-
-  const removeSection = (section: string) => {
-    setFormData(prev => ({ ...prev, sections: prev.sections.filter(s => s !== section) }));
+  const handleSectionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(e.target.selectedOptions, opt => opt.value);
+    setFormData(prev => ({ ...prev, sections: selected }));
   };
 
   const validate = useCallback((step?: 1 | 2 | 3): boolean => {
@@ -390,7 +394,7 @@ export function CreateExamPageEnhanced() {
   }, [formData, currentStep]);
 
   const buildExamData = useCallback(() => {
-    const retakeConfig: RetakeConfiguration | undefined = formData.retakeEnabled ? {
+    const retakeConfig: RetakeConfiguration | undefined = formData.retakeMaxRetakes > 0 ? {
       enabled: true,
       maxRetakes: formData.retakeMaxRetakes,
       requireApproval: formData.retakeRequireApproval,
@@ -655,11 +659,10 @@ export function CreateExamPageEnhanced() {
                 <Field label="Duration (minutes)" help="Leave blank for untimed">
                   <input type="number" name="timeLimit" value={formData.timeLimit || ''} onChange={handleChange} min="1" placeholder="e.g., 60" />
                 </Field>
-                <Field label="Retakes allowed" help="0 = no retakes, blank = unlimited">
-                  <input type="number" name="retakeMaxRetakes" value={formData.retakeMaxRetakes || ''} onChange={handleChange} min="0" placeholder="0" />
+                <Field label="Retakes allowed" help="0 = no retakes">
+                  <input type="number" name="retakeMaxRetakes" value={formData.retakeMaxRetakes} onChange={(e) => setFormData(prev => ({ ...prev, retakeMaxRetakes: parseInt(e.target.value) || 0 }))} min="0" placeholder="0" />
                 </Field>
               </div>
-              <Toggle name="retakeEnabled" checked={formData.retakeEnabled} onChange={handleChange} label="Allow retakes" hint="Let students retake this exam" />
 
               <div className="form-section" style={{ marginTop: 8 }}>
                 <h3 className="form-section-title" style={{ marginBottom: 12 }}>Display & review</h3>
@@ -671,19 +674,21 @@ export function CreateExamPageEnhanced() {
 
               <div className="form-section" style={{ marginTop: 8 }}>
                 <h3 className="form-section-title" style={{ marginBottom: 12 }}>Restrict to sections</h3>
-                <Field label="Allowed sections" help="Leave empty to allow all students">
-                  <div className="section-input-group">
-                    <input type="text" value={sectionInput} onChange={(e) => setSectionInput(e.target.value)} placeholder="e.g., Section A, Class 10-B" onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addSection())} />
-                    <button type="button" onClick={addSection} className="btn-add">Add</button>
-                  </div>
-                  {formData.sections.length > 0 && (
-                    <div className="section-tags">
-                      {formData.sections.map(s => (
-                        <span key={s} className="section-tag">{s} <button type="button" onClick={() => removeSection(s)}>×</button></span>
-                      ))}
-                    </div>
-                  )}
+                <Field label="Allowed sections" help="Leave blank to allow all sections">
+                  <select multiple value={formData.sections} onChange={handleSectionChange} style={{ minHeight: 90 }}>
+                    {availableSections.length === 0 && <option disabled>No sections registered yet</option>}
+                    {availableSections.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
                 </Field>
+                {formData.sections.length > 0 && (
+                  <div className="section-tags">
+                    {formData.sections.map(s => (
+                      <span key={s} className="section-tag">{s}</span>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="form-row" style={{ marginTop: 8 }}>
@@ -771,7 +776,7 @@ export function CreateExamPageEnhanced() {
 
                   <div>
                     <h3 className="advanced-section-title" style={{ marginBottom: 12 }}>Retake configuration</h3>
-                    <Reveal open={formData.retakeEnabled}>
+                    <Reveal open={formData.retakeMaxRetakes > 0}>
                       <Toggle name="retakeRequireApproval" checked={formData.retakeRequireApproval} onChange={handleChange} label="Require instructor approval" hint="Students must request permission to retake" />
                       <Field label="Scoring method" help="Which attempt score to use for the final grade">
                         <select name="retakeScoringMethod" value={formData.retakeScoringMethod} onChange={handleChange}>

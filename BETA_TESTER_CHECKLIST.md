@@ -13,49 +13,49 @@
 ## 👤 AUTHENTICATION & ACCOUNT MANAGEMENT
 
 ### Email/Password Registration
-- [ ] **STUDENT:** Navigate to `/signup` and create an account with email/password
-- [ ] **STUDENT:** Verify username validation (min 3 chars, alphanumeric + underscores only)
-- [ ] **STUDENT:** Verify password validation (min 8 characters on frontend)
-- [ ] **STUDENT:** Confirm password mismatch error is shown
-- [ ] **STUDENT:** After successful signup, auto-redirect to `/dashboard`
-- [ ] **INSTRUCTOR:** Create an instructor account (role assignment)
-- [ ] **ALL:** Verify error messages appear for duplicate email registration
+- [X] **STUDENT:** Navigate to `/signup` and create an account with email/password
+- [X] **STUDENT:** Verify username validation (min 3 chars, alphanumeric + underscores only)
+- [X] **STUDENT:** Verify password validation (min 8 characters on frontend)
+- [X] **STUDENT:** Confirm password mismatch error is shown
+- [X] **STUDENT:** After successful signup, auto-redirect to `/dashboard`
+- [X] **INSTRUCTOR:** Create an instructor account (role assignment)
+- [X] **ALL:** Verify error messages appear for duplicate email registration
 
 ### Login / Logout
-- [ ] **ALL:** Log in with valid email/password
-- [ ] **ALL:** Verify error message for wrong credentials ("Invalid email or password")
-- [ ] **ALL:** Verify error message for empty fields
-- [ ] **ALL:** After login, verify redirect to original requested page (if redirected from a protected route)
-- [ ] **ALL:** Log out and verify redirect to login page
-- [ ] **ALL:** Verify that protected routes are inaccessible when logged out (redirect to login)
-- [ ] **ALL:** Verify "Remember me" session persists across page refreshes
+- [X] **ALL:** Log in with valid email/password
+- [X] **ALL:** Verify error message for wrong credentials ("Invalid email or password")
+- [X] **ALL:** Verify error message for empty fields
+- [X] **ALL:** After login, verify redirect to original requested page (if redirected from a protected route)
+- [X] **ALL:** Log out and verify redirect to login page
+- [X] **ALL:** Verify that protected routes are inaccessible when logged out (redirect to login)
+- [X] **ALL:** Verify "Remember me" session persists across page refreshes
 
 ### Google OAuth
-- [ ] **ALL:** Click "Sign in with Google" button
-- [ ] **ALL:** Complete Google OAuth flow
-- [ ] **ALL:** Verify successful login and redirect to dashboard
-- [ ] **ALL:** Google signup (new account creation via Google)
+- [X] **ALL:** Click "Sign in with Google" button
+- [X] **ALL:** Complete Google OAuth flow
+- [X] **ALL:** Verify successful login and redirect to dashboard
+- [X] **ALL:** Google signup (new account creation via Google)
 
 ### Token Management
-- [ ] **ALL:** Verify token refresh works (session stays alive)
-- [ ] **ALL:** After token expiry, verify user is redirected to login (not a crash/white screen)
-- [ ] **ALL:** Clear localStorage tokens manually → verify app handles gracefully (redirect to login)
+- [X] **ALL:** Verify token refresh works (session stays alive)
+- [X] **ALL:** After token expiry, verify user is redirected to login (not a crash/white screen)
+- [X] **ALL:** Clear localStorage tokens manually → verify app handles gracefully (redirect to login)
 
 ---
 
 ## 📊 DASHBOARD (Instructor)
 
 ### Header / Greeting
-- [ ] Verify time-of-day greeting works (Good morning/afternoon/evening)
-- [ ] Verify current date display is correct
-- [ ] Verify user's name is displayed correctly
+- [X] Verify time-of-day greeting works (Good morning/afternoon/evening)
+- [X] Verify current date display is correct
+- [X] Verify user's name is displayed correctly
 
 ### Stats Cards
-- [ ] **Active count:** Matches number of published/active exams
-- [ ] **To grade count:** Matches number of completed exams requiring grading
-- [ ] **Draft count:** Matches number of exams in draft status
-- [ ] **Total count:** Matches total exams across all statuses
-- [ ] Verify all stat cards update when exams are created/modified
+- [X] **Active count:** Matches number of published/active exams
+- [X] **To grade count:** Matches number of completed exams requiring grading
+- [X] **Draft count:** Matches number of exams in draft status
+- [X] **Total count:** Matches total exams across all statuses
+- [] Verify all stat cards update when exams are created/modified
 
 ### Recent Exams List
 - [ ] Shows up to 5 most recent exams
