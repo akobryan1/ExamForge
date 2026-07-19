@@ -5,6 +5,7 @@ import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { ExamService } from '../services/ExamService';
 import { StudentService } from '../services/StudentService';
+import { apiClient } from '../services/apiClient';
 import { useCreateExam, useUpdateExam } from '../hooks/useExamQueries';
 import { useAuth } from '../contexts/AuthContext';
 import type { RetakeConfiguration, LateSubmissionConfiguration, ProctorConfiguration, Question, QuestionType, DifficultyLevel } from '../types/exam';
@@ -124,6 +125,18 @@ export function CreateExamPageEnhanced() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+
+  // ── AI generation state ──
+  const [showAIPanel, setShowAIPanel] = useState(false);
+  const [aiMaterial, setAiMaterial] = useState('');
+  const [aiFile, setAiFile] = useState<File | null>(null);
+  const [aiTopic, setAiTopic] = useState('');
+  const [aiQuestionType, setAiQuestionType] = useState('multiple_choice');
+  const [aiCount, setAiCount] = useState(5);
+  const [aiDifficulty, setAiDifficulty] = useState('medium');
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
   const [questionForm, setQuestionForm] = useState({
     type: 'multiple_choice' as QuestionType | string,
     text: '',
@@ -539,6 +552,86 @@ export function CreateExamPageEnhanced() {
     return map[d || 'medium'] || 'stamp-medium';
   };
 
+  const handleGenerateWithAI = async () => {
+    setAiError(null);
+    setAiGenerating(true);
+    try {
+      let material = aiMaterial;
+
+      // If a file was selected, upload it to the backend for text extraction
+      if (aiFile) {
+        const formData = new FormData();
+        formData.append('file', aiFile);
+        formData.append('questionType', aiQuestionType);
+        formData.append('count', String(aiCount));
+        formData.append('difficulty', aiDifficulty);
+        formData.append('topic', aiTopic);
+
+        const response = await apiClient.post('/api/ai/generate-from-file', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        const result = response.data;
+        const generated = result.questions || [];
+        const tempQuestions = generated.map((q: any, i: number) => ({
+          id: `temp_${Date.now()}_${i}`,
+          examId: examId || '',
+          type: q.type,
+          text: q.text,
+          description: q.description || '',
+          points: q.points || 1,
+          difficulty: aiDifficulty,
+          choices: q.choices?.map((c: string) => ({ text: c, isCorrect: false })) || [],
+          correctAnswer: q.correctAnswer,
+          createdAt: new Date(),
+          order: questions.length + i + 1,
+        })) as Question[];
+        setQuestions(prev => [...prev, ...tempQuestions]);
+        setShowAIPanel(false);
+        setAiFile(null);
+        setAiMaterial('');
+        return;
+      }
+
+      // Text-based generation
+      if (!material.trim()) {
+        setAiError('Paste your material text or upload a file.');
+        setAiGenerating(false);
+        return;
+      }
+
+      const response = await apiClient.post('/api/ai/generate-questions', {
+        material,
+        questionType: aiQuestionType,
+        count: aiCount,
+        difficulty: aiDifficulty,
+        topic: aiTopic || undefined,
+      });
+      const result = response.data;
+      const generated = result.questions || [];
+
+      const tempQuestions = generated.map((q: any, i: number) => ({
+        id: `temp_${Date.now()}_${i}`,
+        examId: examId || '',
+        type: q.type,
+        text: q.text,
+        description: q.description || '',
+        points: q.points || 1,
+        difficulty: aiDifficulty,
+        choices: q.choices?.map((c: string) => ({ text: c, isCorrect: false })) || [],
+        correctAnswer: q.correctAnswer,
+        createdAt: new Date(),
+        order: questions.length + i + 1,
+      })) as Question[];
+      setQuestions(prev => [...prev, ...tempQuestions]);
+      setShowAIPanel(false);
+      setAiMaterial('');
+    } catch (err: any) {
+      setAiError(err.response?.data?.error || err.message || 'Failed to generate questions');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   return (
     <MainLayout>
     <div className="exam-form-page">
@@ -850,23 +943,7 @@ export function CreateExamPageEnhanced() {
                       <div className="path-title">Add manually</div>
                       <div className="path-desc">Write questions one by one with the question editor.</div>
                     </div>
-                    <div className="path-card" onClick={async () => {
-                      // Save exam first, then navigate to AI generator
-                      if (!validate(1)) return;
-                      try {
-                        setLoading(true);
-                        const examData = buildExamData();
-                        const exam = isEditing
-                          ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
-                          : await createMutation.mutateAsync(examData as any);
-                        const savedId = exam.id || examId!;
-                        navigate(`/exams/${savedId}/ai-generate`);
-                      } catch (err) {
-                        const msg = err instanceof Error ? err.message : 'Failed to create exam';
-                        setError(msg);
-                        setLoading(false);
-                      }
-                    }}>
+                    <div className="path-card" onClick={() => setShowAIPanel(true)}>
                       <div className="path-icon">🤖</div>
                       <div className="path-title">Generate with AI</div>
                       <div className="path-desc">Describe your exam and let AI create questions automatically.</div>
@@ -879,6 +956,79 @@ export function CreateExamPageEnhanced() {
                       <div className="path-desc">Create the exam now and add questions later from the Questions page.</div>
                     </div>
                   </div>
+
+                  {showAIPanel && (
+                    <div className="ai-panel" style={{ marginTop: 20, padding: 20, background: 'var(--ledger-card-lift)', border: '1px solid var(--ledger-line)', borderRadius: 8 }}>
+                      <h3 style={{ fontFamily: 'var(--font-display-ledger)', fontSize: 16, margin: '0 0 4px', color: 'var(--ledger-ink-blue)' }}>Generate with AI</h3>
+                      <p style={{ fontSize: 12.5, color: 'var(--ledger-ink-soft)', margin: '0 0 16px' }}>Upload a file (.pdf, .docx, .txt) or paste your material below.</p>
+
+                      <div className="form-group" style={{ marginBottom: 12 }}>
+                        <label>Upload file</label>
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.txt"
+                          onChange={(e) => setAiFile(e.target.files?.[0] || null)}
+                          style={{ fontSize: 13, padding: 8, border: '1px solid var(--ledger-line)', borderRadius: 4, width: '100%' }}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 12 }}>
+                        <label>Or paste your material</label>
+                        <textarea
+                          value={aiMaterial}
+                          onChange={(e) => setAiMaterial(e.target.value)}
+                          placeholder="Paste lecture notes, textbook excerpts, or any educational content..."
+                          rows={4}
+                          style={{ fontSize: 13, padding: 10 }}
+                        />
+                      </div>
+
+                      <div className="form-group" style={{ marginBottom: 12 }}>
+                        <label>Topic (optional)</label>
+                        <input
+                          type="text"
+                          value={aiTopic}
+                          onChange={(e) => setAiTopic(e.target.value)}
+                          placeholder="e.g., Cell Biology, World War II"
+                          style={{ fontSize: 13, padding: 8 }}
+                        />
+                      </div>
+
+                      <div className="form-row" style={{ marginBottom: 12 }}>
+                        <div className="form-group">
+                          <label>Question type</label>
+                          <select value={aiQuestionType} onChange={(e) => setAiQuestionType(e.target.value)} style={{ fontSize: 13, padding: 8 }}>
+                            <option value="multiple_choice">Multiple Choice</option>
+                            <option value="true_false">True/False</option>
+                            <option value="identification">Identification</option>
+                            <option value="essay">Essay</option>
+                            <option value="enumeration">Enumeration</option>
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <label>Count</label>
+                          <input type="number" value={aiCount} onChange={(e) => setAiCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))} min="1" max="20" style={{ fontSize: 13, padding: 8 }} />
+                        </div>
+                        <div className="form-group">
+                          <label>Difficulty</label>
+                          <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} style={{ fontSize: 13, padding: 8 }}>
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {aiError && <p style={{ color: 'var(--ledger-red)', fontSize: 12.5, marginBottom: 10 }}>{aiError}</p>}
+
+                      <div style={{ display: 'flex', gap: 10 }}>
+                        <Button variant="outline" onClick={() => { setShowAIPanel(false); setAiFile(null); setAiMaterial(''); setAiError(null); }}>Cancel</Button>
+                        <Button onClick={handleGenerateWithAI} disabled={aiGenerating || (!aiMaterial.trim() && !aiFile)}>
+                          {aiGenerating ? 'Generating...' : 'Generate Questions'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="questions-list" style={{ marginTop: 8 }}>
