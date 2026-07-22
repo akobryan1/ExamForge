@@ -35,8 +35,8 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const db = getFirestore();
 
     const settings: Record<string, unknown> = {};
-    // Only save apiKey if it's a real key (not the masked placeholder from a stale client)
-    if (apiKey !== undefined && typeof apiKey === 'string' && !apiKey.includes('••••')) {
+    // Only save apiKey if it's a real key (not the masked placeholder length)
+    if (apiKey !== undefined && typeof apiKey === 'string' && apiKey.length > 10) {
       settings.apiKey = apiKey;
     }
     if (model !== undefined) settings.model = model;
@@ -48,6 +48,8 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
 
     res.json({ success: true });
   } catch (error) {
+    console.error('[Settings] PUT error:', error instanceof Error ? error.message : error);
+    console.error('[Settings] PUT error stack:', error instanceof Error ? error.stack : '');
     res.status(500).json({ error: 'Failed to save settings' });
   }
 });
