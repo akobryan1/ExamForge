@@ -10,6 +10,7 @@ import '../styles/pages/grading-queue.css';
 
 const AI_MODELS = [
   { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
+  { value: 'openai/gpt-oss-20b:free', label: 'OpenRouter — openai/gpt-oss-20b:free' },
 ];
 
 interface GradingItem {
