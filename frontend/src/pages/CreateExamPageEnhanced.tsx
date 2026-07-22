@@ -353,8 +353,16 @@ export function CreateExamPageEnhanced() {
             allowReview: exam.allowReview ?? true,
             accessMethod: exam.accessMethod || 'student_login',
             sections: exam.sections || [],
-            startDate: exam.startDate ? new Date(exam.startDate).toISOString().slice(0, 16) : '',
-            endDate: exam.endDate ? new Date(exam.endDate).toISOString().slice(0, 16) : '',
+            startDate: exam.startDate ? (() => {
+              const d = new Date(exam.startDate);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            })() : '',
+            endDate: exam.endDate ? (() => {
+              const d = new Date(exam.endDate);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            })() : '',
             retakeMaxRetakes: exam.retakeConfig?.maxRetakes || 0,
             retakeRequireApproval: exam.retakeConfig?.requireApproval ?? false,
             retakeScoringMethod: exam.retakeConfig?.scoringMethod || 'latest',
