@@ -141,6 +141,7 @@ app.listen(PORT, () => {
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
   console.log(`📋 Allowed origins list:`, JSON.stringify(allowedOrigins, null, 2));
+  console.log(`[AI-DEBUG] Server v2 started — api key env present:`, !!process.env.OPENAI_API_KEY, 'is_placeholder:', process.env.OPENAI_API_KEY === 'sk-placeholder-key-replace-in-production');
 });
 
 export default app;
