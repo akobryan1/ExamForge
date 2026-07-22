@@ -130,6 +130,9 @@ router.post(
         return res.status(400).json({ error: 'No API key configured. Please save your API key in Settings first.' });
       }
 
+      console.log('[AIGrade] Using saved API key:', apiKey.slice(0, 8) + '...');
+      console.log('[AIGrade] Sending to OpenRouter with model:', model);
+
       // Build system prompt with grading criteria
       let systemPrompt = `You are an expert essay grader. Your role is to evaluate the student's essay based on clarity and content in relevance to the essay question.`;
       systemPrompt += `\nThe essay has a maximum of ${maxPoints} points. You must assign a score between 0 and ${maxPoints}, without exceeding the maximum.`;
@@ -157,6 +160,7 @@ Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
           'HTTP-Referer': 'https://examforge-app.com',
+          'X-Title': 'ExamForge',
         },
         body: JSON.stringify({
           model,
@@ -172,7 +176,12 @@ Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
       if (!response.ok) {
         const errBody = await response.text();
         console.error('[AIGrade] API error:', response.status, errBody);
-        return res.status(502).json({ error: `AI API error: ${response.statusText}` });
+        let detail = response.statusText;
+        try {
+          const parsed = JSON.parse(errBody);
+          detail = parsed.error?.message || parsed.error || detail;
+        } catch { /* use statusText */ }
+        return res.status(502).json({ error: `AI grading failed: ${detail}` });
       }
 
       const data = await response.json() as { choices?: { message?: { content?: string } }[] };
