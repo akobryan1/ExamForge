@@ -101,7 +101,7 @@ app.get('/health', (req: Request, res: Response) => {
 import authRoutes from './routes/auth.js';
 import examRoutes from './routes/exams.js';
 import fileRoutes from './routes/files.js';
-import aiQuestionRoutes from './routes/ai-questions.js';
+// import aiQuestionRoutes from './routes/ai-questions.js'; // [AI REMOVED — see git history]
 import notificationRoutes from './routes/notifications.js';
 import studentRoutes from './routes/students.js';
 import settingsRoutes from './routes/settings.js';
@@ -109,7 +109,7 @@ import settingsRoutes from './routes/settings.js';
 app.use('/api/auth', authRoutes);
 app.use('/api/exams', examRoutes);
 app.use('/api/files', fileRoutes);
-app.use('/api/ai', aiQuestionRoutes);
+// app.use('/api/ai', aiQuestionRoutes); // [AI REMOVED — see git history]
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/settings', settingsRoutes);
