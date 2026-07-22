@@ -14,7 +14,6 @@ export function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek/deepseek-chat');
   const [hasSavedKey, setHasSavedKey] = useState(false);
-  const [keyModified, setKeyModified] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -36,15 +35,16 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const payload: Record<string, string> = { model };
-      // Only send apiKey if user actually typed a new value (not the masked placeholder)
-      if (keyModified && apiKey.trim() && !apiKey.includes('••••')) {
+      // Send key if it doesn't look like the masked placeholder
+      if (apiKey.trim() && !apiKey.includes('••••')) {
         payload.apiKey = apiKey;
       }
-      await apiClient.put('/api/settings', payload);
+      const res = await apiClient.put('/api/settings', payload);
+      console.log('[Settings] Save response:', res.status, res.data);
       setHasSavedKey(!!apiKey);
-      setKeyModified(false);
       setMessage({ type: 'success', text: 'Settings saved successfully' });
-    } catch {
+    } catch (err: any) {
+      console.error('[Settings] Save error:', err.response?.status, err.response?.data || err.message);
       setMessage({ type: 'error', text: 'Failed to save settings' });
     } finally {
       setSaving(false);
@@ -94,7 +94,8 @@ export function SettingsPage() {
                 type="password"
                 id="apiKey"
                 value={apiKey}
-                onChange={(e) => { setApiKey(e.target.value); setKeyModified(true); }}
+                onFocus={() => { if (hasSavedKey) setApiKey(''); }}
+                onChange={(e) => setApiKey(e.target.value)}
                 placeholder={hasSavedKey ? 'Enter new key to replace the saved one' : 'sk-or-v1-...'}
               />
               {hasSavedKey && (
