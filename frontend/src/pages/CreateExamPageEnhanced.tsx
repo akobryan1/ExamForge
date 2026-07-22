@@ -435,6 +435,12 @@ export function CreateExamPageEnhanced() {
   }, [formData, currentStep]);
 
   const buildExamData = useCallback(() => {
+    // Convert local datetime-local strings to UTC ISO strings for the backend
+    const localToUTC = (localStr: string): string => {
+      if (!localStr) return '';
+      return new Date(localStr).toISOString();
+    };
+
     const retakeConfig: RetakeConfiguration | undefined = formData.retakeMaxRetakes > 0 ? {
       enabled: true,
       maxRetakes: formData.retakeMaxRetakes,
@@ -479,8 +485,8 @@ export function CreateExamPageEnhanced() {
       allowReview: formData.allowReview,
       accessMethod: formData.accessMethod,
       sections: formData.sections.length > 0 ? formData.sections : undefined,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
+      startDate: localToUTC(formData.startDate) || undefined,
+      endDate: localToUTC(formData.endDate) || undefined,
       retakeConfig,
       lateSubmissionConfig,
       proctorConfig,
