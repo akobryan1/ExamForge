@@ -1091,14 +1091,14 @@ export class ExamService {
         const sessionsSnapshot = await db
           .collectionGroup('exam_sessions')
           .where('examId', '==', examDoc.id)
-          .where('status', '==', 'completed')
+          .where('status', 'in', ['submitted', 'completed'])
           .get()
           .catch(() => null);
 
         let sessions: { doc: any; data: any; studentId: string }[] = [];
 
         if (!sessionsSnapshot || sessionsSnapshot.empty) {
-          // Fallback: iterate all users to find completed sessions for this exam
+          // Fallback: iterate all users to find submitted/completed sessions for this exam
           const userDocs = await db.collection('examforge_users')
             .select()
             .get();
@@ -1108,7 +1108,7 @@ export class ExamService {
               .doc(userDoc.id)
               .collection('exam_sessions')
               .where('examId', '==', examDoc.id)
-              .where('status', '==', 'completed')
+              .where('status', 'in', ['submitted', 'completed'])
               .get();
             userSessions.docs.forEach(doc => {
               sessions.push({ doc, data: doc.data(), studentId: userDoc.id });
