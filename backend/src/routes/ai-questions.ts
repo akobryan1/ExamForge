@@ -32,14 +32,12 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const allowed = [
       'application/pdf',
-      'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'text/plain',
     ];
     if (allowed.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF, Word (.doc/.docx), and text files are allowed.'));
+      cb(new Error('Only PDF and DOCX files are allowed.'));
     }
   },
   limits: { fileSize: 25 * 1024 * 1024 },
@@ -60,40 +58,58 @@ async function getUserApiKey(userId: string): Promise<string | undefined> {
   }
 }
 
+/** Detect actual file type from magic bytes — returns 'pdf', 'docx', or null */
+function detectFileType(buffer: Buffer): 'pdf' | 'docx' | null {
+  // PDF: starts with %PDF
+  if (buffer[0] === 0x25 && buffer[1] === 0x50 && buffer[2] === 0x44 && buffer[3] === 0x46) {
+    return 'pdf';
+  }
+  // DOCX (ZIP): starts with PK\x03\x04
+  if (buffer[0] === 0x50 && buffer[1] === 0x4B && buffer[2] === 0x03 && buffer[3] === 0x04) {
+    return 'docx';
+  }
+  return null;
+}
+
+/** Max chars to send to the AI (50k chars ≈ 12k tokens) */
+const MAX_MATERIAL_LENGTH = 50000;
+/** Max file size: 25 MB (already enforced by multer) */
+
 /** Helper that reads uploaded file content, then deletes it */
-async function readAndCleanUp(filePath: string, ext: string, originalName: string): Promise<string> {
+async function readAndCleanUp(filePath: string, _ext: string, originalName: string): Promise<string> {
   let content = '';
   try {
-    if (ext === '.txt') {
-      content = fs.readFileSync(filePath, 'utf-8');
-    } else if (ext === '.pdf') {
-      try {
-        const buffer = fs.readFileSync(filePath);
-        const pdfData = await pdfParse(buffer);
-        content = pdfData.text || '';
-      } catch (pdfErr) {
-        console.error('[AI-DEBUG] pdf-parse failed:', pdfErr);
-        content = `[Could not extract text from ${originalName}. Please paste the content directly as text.]`;
-      }
-    } else {
-      // docx/doc — read as buffer and strip non-text bytes
-      const buffer = fs.readFileSync(filePath);
-      content = buffer.toString('utf-8')
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-        .replace(/[^\x20-\x7E\x0A\x0D\x80-\xFF\u00A0-\uFFFF]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-      if (content.length < 50) {
-        content = `[Could not extract text from ${originalName}. Please paste the content directly as text for best results.]`;
-      }
+    const buffer = fs.readFileSync(filePath);
+    const fileType = detectFileType(buffer);
+
+    if (!fileType) {
+      fs.unlink(filePath, () => {});
+      throw new Error(`Unrecognized file type. Only PDF and DOCX files are supported.`);
+    }
+
+    if (fileType === 'pdf') {
+      const pdfData = await pdfParse(buffer);
+      content = pdfData.text || '';
+    } else if (fileType === 'docx') {
+      const mammoth = require('mammoth');
+      const result = await mammoth.extractRawText({ buffer });
+      content = result.value || '';
+    }
+
+    // Clean up whitespace
+    content = content.replace(/\r\n?/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+    if (!content) {
+      console.warn('[AI-DEBUG] No text extracted from', originalName, 'type:', fileType);
+      content = `[No extractable text found in ${originalName}. The file may contain only images or scanned pages.]`;
     }
   } catch (err) {
     console.error('[AI-DEBUG] readAndCleanUp error:', err);
-    content = '[Error reading file content]';
+    content = `[Could not process ${originalName}: ${err instanceof Error ? err.message : 'Unknown error'}. Please paste the content directly as text.]`;
   }
   fs.unlink(filePath, () => {});
-  console.log('[AI-DEBUG] readAndCleanUp ext:', ext, 'content_length:', content.length);
-  return content.slice(0, 50000);
+  console.log('[AI-DEBUG] readAndCleanUp file:', originalName, 'content_length:', content.length);
+  return content.slice(0, MAX_MATERIAL_LENGTH);
 }
 
 /** Build the response body for generated questions */

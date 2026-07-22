@@ -1041,13 +1041,13 @@ export function CreateExamPageEnhanced() {
                   {showAIPanel && (
                     <div className="ai-panel" style={{ marginTop: 20, padding: 20, background: 'var(--ledger-card-lift)', border: '1px solid var(--ledger-line)', borderRadius: 8 }}>
                       <h3 style={{ fontFamily: 'var(--font-display-ledger)', fontSize: 16, margin: '0 0 4px', color: 'var(--ledger-ink-blue)' }}>Generate with AI</h3>
-                      <p style={{ fontSize: 12.5, color: 'var(--ledger-ink-soft)', margin: '0 0 16px' }}>Upload a file (.pdf, .docx, .txt) or paste your material below.</p>
+                      <p style={{ fontSize: 12.5, color: 'var(--ledger-ink-soft)', margin: '0 0 16px' }}>Upload a PDF or DOCX file, or paste your material below.</p>
 
                       <div className="form-group" style={{ marginBottom: 12 }}>
                         <label>Upload file</label>
                         <input
                           type="file"
-                          accept=".pdf,.doc,.docx,.txt"
+                          accept=".pdf,.docx"
                           onChange={(e) => setAiFile(e.target.files?.[0] || null)}
                           style={{ fontSize: 13, padding: 8, border: '1px solid var(--ledger-line)', borderRadius: 4, width: '100%' }}
                         />
@@ -1314,10 +1314,10 @@ export function CreateExamPageEnhanced() {
             {modalMode === 'ai' && !editingQuestion ? (
               <div className="question-form" style={{ padding: 'var(--spacing-6)' }}>
                 <div className="form-group">
-                  <label>Upload file (.pdf, .docx, .txt)</label>
+                  <label>Upload PDF or DOCX</label>
                   <input
                     type="file"
-                    accept=".pdf,.doc,.docx,.txt"
+                    accept=".pdf,.docx"
                     onChange={(e) => setModalAiFile(e.target.files?.[0] || null)}
                     style={{ fontSize: 13, padding: 8, border: '1px solid var(--ledger-line)', borderRadius: 4, width: '100%' }}
                   />
