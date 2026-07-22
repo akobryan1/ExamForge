@@ -12,15 +12,20 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     const db = getFirestore();
     const userId = req.user!.userId;
     console.log(`[Settings GET] userId=${userId}`);
+
+    // Prevent any caching of settings response
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const doc = await db.collection('examforge_users').doc(userId).get();
     const rawData = doc.data();
     const settings = rawData?.settings;
     const rawKey = settings?.apiKey || '';
-    console.log(`[Settings GET] keyFound=${!!rawKey} keyLength=${rawKey.length}`);
+    console.log(`[Settings GET] keyFound=${!!rawKey} keyLength=${rawKey.length}, first 8: "${rawKey.slice(0, 8)}"`);
     const masked = rawKey
       ? rawKey.slice(0, 8) + '••••' + rawKey.slice(-4)
       : '';
-    console.log(`[Settings GET] returning masked=${!!masked}`);
     res.json({ apiKey: masked, model: settings?.model || 'deepseek/deepseek-chat' });
   } catch (error) {
     console.error('[Settings GET] Error:', error);
@@ -39,19 +44,29 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
     console.log(`[Settings PUT] userId=${userId} apiKeyReceived=${!!apiKey} apiKeyLength=${apiKey?.length || 0} model=${model}`);
+    if (apiKey) {
+      console.log(`[Settings PUT] first 8 chars: "${apiKey.slice(0, 8)}"`);
+    }
 
-    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    const settingsData: Record<string, unknown> = {};
     if (apiKey !== undefined && typeof apiKey === 'string') {
-      updateData['settings.apiKey'] = apiKey;
-      console.log(`[Settings PUT] Saving apiKey, first 8 chars: ${apiKey.slice(0, 8)}`);
+      settingsData.apiKey = apiKey;
     }
     if (model !== undefined) {
-      updateData['settings.model'] = model;
+      settingsData.model = model;
     }
 
-    await db.collection('examforge_users').doc(userId).update(updateData);
+    await db.collection('examforge_users').doc(userId).set(
+      { settings: settingsData, updatedAt: new Date() },
+      { merge: true }
+    );
 
     console.log('[Settings PUT] Save successful');
+    // Verify by reading back immediately
+    const verify = await db.collection('examforge_users').doc(userId).get();
+    const savedKey = verify.data()?.settings?.apiKey || '';
+    console.log(`[Settings PUT] Verification read: keyLength=${savedKey.length}, first 8: "${savedKey.slice(0, 8)}"`);
+
     res.json({ success: true });
   } catch (error) {
     console.error('[Settings PUT] Error:', error);
