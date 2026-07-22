@@ -71,8 +71,10 @@ function Reveal({ open, children }: { open: boolean; children: React.ReactNode }
 
 export function CreateExamPageEnhanced() {
   const navigate = useNavigate();
-  const { examId } = useParams<{ examId?: string }>();
-  const isEditing = !!examId;
+  const { examId: urlExamId } = useParams<{ examId?: string }>();
+  const [savedExamId, setSavedExamId] = useState<string | undefined>(undefined);
+  const effectiveExamId = urlExamId || savedExamId;
+  const isEditing = !!effectiveExamId;
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -165,12 +167,12 @@ export function CreateExamPageEnhanced() {
 
   // Load existing questions when editing
   useEffect(() => {
-    if (examId) {
-      ExamService.getExamQuestions(examId)
+    if (effectiveExamId) {
+      ExamService.getExamQuestions(effectiveExamId)
         .then(setQuestions)
         .catch(() => {});
     }
-  }, [examId]);
+  }, [effectiveExamId]);
 
   // Fetch available sections for dropdown
   useEffect(() => {
@@ -220,14 +222,13 @@ export function CreateExamPageEnhanced() {
   };
 
   const deleteQuestion = async (questionId: string) => {
-    if (!examId) {
-      // Not yet saved — remove from local state
+    if (!effectiveExamId) {
       setQuestions(prev => prev.filter(q => q.id !== questionId));
       return;
     }
     if (!confirm('Are you sure you want to delete this question?')) return;
     try {
-      await ExamService.deleteQuestion(questionId, examId);
+      await ExamService.deleteQuestion(questionId, effectiveExamId);
       setQuestions(prev => prev.filter(q => q.id !== questionId));
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to delete question';
@@ -312,14 +313,14 @@ export function CreateExamPageEnhanced() {
         questionData.correctAnswer = questionForm.enumerationItems.filter(item => item.trim());
       }
 
-      if (editingQuestion && examId) {
-        const updated = await ExamService.updateQuestion(editingQuestion.id, examId, questionData);
+      if (editingQuestion && effectiveExamId) {
+        const updated = await ExamService.updateQuestion(editingQuestion.id, effectiveExamId, questionData);
         setQuestions(prev => prev.map(q => q.id === editingQuestion.id ? { ...q, ...updated } : q));
       } else if (editingQuestion) {
         setQuestions(prev => prev.map(q => q.id === editingQuestion.id ? { ...q, ...questionData, id: q.id } : q));
-      } else if (examId) {
+      } else if (effectiveExamId) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const created = await ExamService.createQuestion(examId, questionData as any);
+        const created = await ExamService.createQuestion(effectiveExamId, questionData as any);
         setQuestions(prev => [...prev, created]);
       } else {
         const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -335,9 +336,9 @@ export function CreateExamPageEnhanced() {
 
   // Load existing exam data for editing
   useEffect(() => {
-    if (examId) {
+    if (effectiveExamId) {
       setLoading(true);
-      ExamService.getExamById(examId)
+      ExamService.getExamById(effectiveExamId)
         .then(exam => {
           setFormData({
             title: exam.title || '',
@@ -379,7 +380,7 @@ export function CreateExamPageEnhanced() {
         .catch(err => setError(err.message || 'Failed to load exam'))
         .finally(() => setLoading(false));
     }
-  }, [examId]);
+  }, [effectiveExamId]);
 
   const createMutation = useCreateExam();
   const updateMutation = useUpdateExam();
@@ -494,11 +495,11 @@ export function CreateExamPageEnhanced() {
 
       const exam = isEditing
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ? await updateMutation.mutateAsync({ examId: examId!, data: examData as any })
+        ? await updateMutation.mutateAsync({ examId: effectiveExamId!, data: examData as any })
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : await createMutation.mutateAsync(examData as any);
       
-      const savedExamId = exam.id || examId!;
+      const newExamId = exam.id || effectiveExamId!;
       
       // Save any unsaved (temp) questions
       const unsavedQuestions = questions.filter(q => q.id.startsWith('temp_'));
@@ -525,14 +526,14 @@ export function CreateExamPageEnhanced() {
               qData.correctAnswer = Array.isArray(q.correctAnswer) ? q.correctAnswer : [q.correctAnswer];
             }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            return ExamService.createQuestion(savedExamId, qData as any);
+            return ExamService.createQuestion(newExamId, qData as any);
           })
         );
       }
       
       setSuccessToast(isEditing ? 'Exam updated successfully' : 'Exam created successfully');
       // Update examId so subsequent operations use the real ID
-      if (!examId && exam?.id) {
+      if (!effectiveExamId && exam?.id) {
         window.history.replaceState(null, '', `/exams/${exam.id}/edit`);
       }
     } catch (err) {
@@ -577,7 +578,7 @@ export function CreateExamPageEnhanced() {
   const addGeneratedQuestions = (generated: any[]) => {
     const tempQuestions = generated.map((q: any, i: number) => ({
       id: `temp_${Date.now()}_${i}`,
-      examId: examId || '',
+      examId: effectiveExamId || '',
       type: q.type,
       text: q.text,
       description: q.description || '',
