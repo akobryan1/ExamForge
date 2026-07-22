@@ -1129,11 +1129,6 @@ export function CreateExamPageEnhanced() {
                         Total: {aiTypeConfigs.reduce((s, c) => s + (c.count || 0), 0)} items · {aiTypeConfigs.reduce((s, c) => s + (c.count || 0) * (c.points || 0), 0)} points
                       </p>
 
-                      <div style={{ background: 'var(--ledger-paper)', border: '1px dashed var(--ledger-line)', borderRadius: 5, padding: '10px 13px', marginBottom: 12, fontSize: 11.5, color: 'var(--ledger-ink-soft)', lineHeight: 1.5 }}>
-                        <strong style={{ fontFamily: 'var(--font-mono-ledger)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ledger-kraft-dark)' }}>Prompt sent to AI:</strong><br />
-                        Based on the provided material, generate: {buildAICustomPrompt(aiTypeConfigs) || 'No types configured'}
-                      </div>
-
                       {aiError && <p style={{ color: 'var(--ledger-red)', fontSize: 12.5, marginBottom: 10 }}>{aiError}</p>}
 
                       <div style={{ display: 'flex', gap: 10 }}>
@@ -1391,11 +1386,6 @@ export function CreateExamPageEnhanced() {
                 <p style={{ fontSize: 11.5, color: 'var(--ledger-ink-soft)', marginTop: -4, marginBottom: 12 }}>
                   Total: {modalAiTypeConfigs.reduce((s, c) => s + (c.count || 0), 0)} items · {modalAiTypeConfigs.reduce((s, c) => s + (c.count || 0) * (c.points || 0), 0)} points
                 </p>
-
-                <div style={{ background: 'var(--ledger-paper)', border: '1px dashed var(--ledger-line)', borderRadius: 5, padding: '10px 13px', marginBottom: 12, fontSize: 11.5, color: 'var(--ledger-ink-soft)', lineHeight: 1.5 }}>
-                  <strong style={{ fontFamily: 'var(--font-mono-ledger)', fontSize: 10, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ledger-kraft-dark)' }}>Prompt sent to AI:</strong><br />
-                  Based on the provided material, generate: {buildAICustomPrompt(modalAiTypeConfigs) || 'No types configured'}
-                </div>
 
                 <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--ledger-line)' }}>
                   <Button type="button" variant="outline" onClick={() => { setModalMode('manual'); setModalAiFile(null); setModalAiMaterial(''); setModalAiTotalItems(10); setModalAiTypeCount(1); setModalAiTypeConfigs([{ type: 'multiple_choice', count: 5, points: 1 }]); }}>Back</Button>

@@ -3,6 +3,8 @@ import { body } from 'express-validator';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+// @ts-ignore - pdf-parse v1 is CommonJS, no types
+import pdfParse from 'pdf-parse';
 import { AIQuestionGeneratorService } from '../services/AIQuestionGeneratorService';
 import { authenticate, authorize } from '../middleware/auth';
 import { QuestionType } from '../types/exam';
@@ -59,22 +61,30 @@ async function getUserApiKey(userId: string): Promise<string | undefined> {
 }
 
 /** Helper that reads uploaded file content, then deletes it */
-function readAndCleanUp(filePath: string, ext: string, originalName: string): string {
+async function readAndCleanUp(filePath: string, ext: string, originalName: string): Promise<string> {
   let content = '';
   try {
     if (ext === '.txt') {
       content = fs.readFileSync(filePath, 'utf-8');
+    } else if (ext === '.pdf') {
+      try {
+        const buffer = fs.readFileSync(filePath);
+        const pdfData = await pdfParse(buffer);
+        content = pdfData.text || '';
+      } catch (pdfErr) {
+        console.error('[AI-DEBUG] pdf-parse failed:', pdfErr);
+        content = `[Could not extract text from ${originalName}. Please paste the content directly as text.]`;
+      }
     } else {
-      // For PDF/docx, read as buffer and strip non-text bytes
+      // docx/doc — read as buffer and strip non-text bytes
       const buffer = fs.readFileSync(filePath);
       content = buffer.toString('utf-8')
-        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // strip control chars
-        .replace(/[^\x20-\x7E\x0A\x0D\x80-\xFF\u00A0-\uFFFF]/g, ' ') // keep printable + extended ascii + unicode
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
+        .replace(/[^\x20-\x7E\x0A\x0D\x80-\xFF\u00A0-\uFFFF]/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
-      // If the result is too short or looks like binary, return a descriptive message
       if (content.length < 50) {
-        content = `[Content extracted from ${originalName}. Text extraction from ${ext} files is limited. Please paste the content directly as text for best results.]`;
+        content = `[Could not extract text from ${originalName}. Please paste the content directly as text for best results.]`;
       }
     }
   } catch (err) {
@@ -168,7 +178,7 @@ router.post(
       const { questionType, count, difficulty, topic, customPrompt } = req.body;
       const filePath = req.file.path;
       const ext = path.extname(req.file.originalname).toLowerCase();
-      const material = readAndCleanUp(filePath, ext, req.file.originalname);
+      const material = await readAndCleanUp(filePath, ext, req.file.originalname);
 
       if (!material.trim()) {
         return res.status(400).json({ error: 'Could not extract text from the uploaded file' });
