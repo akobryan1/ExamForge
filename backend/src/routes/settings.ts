@@ -10,17 +10,20 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
   try {
     const { getFirestore } = await import('firebase-admin/firestore');
     const db = getFirestore();
-    const doc = await db.collection('examforge_users').doc(req.user!.userId).get();
-    const settings = doc.data()?.settings || {
-      apiKey: '',
-      model: 'openai/gpt-oss-120b:free',
-    };
-    // Never send the full key back — mask it
-    const masked = settings.apiKey
-      ? settings.apiKey.slice(0, 8) + '••••' + settings.apiKey.slice(-4)
+    const userId = req.user!.userId;
+    console.log(`[Settings GET] userId=${userId}`);
+    const doc = await db.collection('examforge_users').doc(userId).get();
+    const rawData = doc.data();
+    const settings = rawData?.settings;
+    const rawKey = settings?.apiKey || '';
+    console.log(`[Settings GET] keyFound=${!!rawKey} keyLength=${rawKey.length}`);
+    const masked = rawKey
+      ? rawKey.slice(0, 8) + '••••' + rawKey.slice(-4)
       : '';
-    res.json({ apiKey: masked, model: settings.model || 'openai/gpt-oss-120b:free' });
+    console.log(`[Settings GET] returning masked=${!!masked}`);
+    res.json({ apiKey: masked, model: settings?.model || 'deepseek/deepseek-chat' });
   } catch (error) {
+    console.error('[Settings GET] Error:', error);
     res.status(500).json({ error: 'Failed to load settings' });
   }
 });
@@ -33,23 +36,25 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const { apiKey, model } = req.body;
     const { getFirestore } = await import('firebase-admin/firestore');
     const db = getFirestore();
+    const userId = req.user!.userId;
 
-    const settings: Record<string, unknown> = {};
-    // Only save apiKey if it's a real key (not the masked placeholder length)
-    if (apiKey !== undefined && typeof apiKey === 'string' && apiKey.length > 10) {
-      settings.apiKey = apiKey;
+    console.log(`[Settings PUT] userId=${userId} apiKeyReceived=${!!apiKey} apiKeyLength=${apiKey?.length || 0} model=${model}`);
+
+    const updateData: Record<string, unknown> = { updatedAt: new Date() };
+    if (apiKey !== undefined && typeof apiKey === 'string') {
+      updateData['settings.apiKey'] = apiKey;
+      console.log(`[Settings PUT] Saving apiKey, first 8 chars: ${apiKey.slice(0, 8)}`);
     }
-    if (model !== undefined) settings.model = model;
+    if (model !== undefined) {
+      updateData['settings.model'] = model;
+    }
 
-    await db.collection('examforge_users').doc(req.user!.userId).set(
-      { settings, updatedAt: new Date() },
-      { merge: true }
-    );
+    await db.collection('examforge_users').doc(userId).update(updateData);
 
+    console.log('[Settings PUT] Save successful');
     res.json({ success: true });
   } catch (error) {
-    console.error('[Settings] PUT error:', error instanceof Error ? error.message : error);
-    console.error('[Settings] PUT error stack:', error instanceof Error ? error.stack : '');
+    console.error('[Settings PUT] Error:', error);
     res.status(500).json({ error: 'Failed to save settings' });
   }
 });

@@ -11,9 +11,8 @@ const AI_MODELS = [
 ];
 
 export function SettingsPage() {
-  const [newApiKey, setNewApiKey] = useState('');
+  const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek/deepseek-chat');
-  const [hasSavedKey, setHasSavedKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -21,7 +20,7 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        setHasSavedKey(!!data.apiKey);
+        setApiKey(data.apiKey || '');
         setModel(data.model || 'deepseek/deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
@@ -32,19 +31,11 @@ export function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const payload: Record<string, string> = { model };
-      if (newApiKey.trim()) {
-        payload.apiKey = newApiKey;
-      }
-      const res = await apiClient.put('/api/settings', payload);
-      console.log('[Settings] Save response:', res.status, res.data);
-      if (newApiKey.trim()) {
-        setHasSavedKey(true);
-      }
-      setNewApiKey('');
+      console.log('[Settings] Sending apiKey length:', apiKey.length, 'first 10:', apiKey.slice(0, 10));
+      await apiClient.put('/api/settings', { apiKey, model });
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
-      console.error('[Settings] Save error:', err.response?.status, err.response?.data || err.message);
+      console.error('[Settings] Save error:', err);
       setMessage({ type: 'error', text: 'Failed to save settings' });
     } finally {
       setSaving(false);
@@ -89,24 +80,14 @@ export function SettingsPage() {
             </div>
 
             <div className="form-group">
-              <label>API Key</label>
-              <div className="api-key-status">
-                {hasSavedKey ? (
-                  <span className="key-saved">✓ A key is saved</span>
-                ) : (
-                  <span className="key-missing">✗ No key saved</span>
-                )}
-              </div>
+              <label htmlFor="apiKey">API Key</label>
               <input
-                type="password"
+                type="text"
                 id="apiKey"
-                value={newApiKey}
-                onChange={(e) => setNewApiKey(e.target.value)}
-                placeholder="Paste your OpenRouter API key here..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="sk-or-v1-..."
               />
-              {hasSavedKey && (
-                <p className="form-hint">Leave blank and save to keep the existing key.</p>
-              )}
             </div>
 
             {message && (
