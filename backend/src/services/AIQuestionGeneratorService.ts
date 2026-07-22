@@ -31,6 +31,7 @@ export class AIQuestionGeneratorService {
     userApiKey?: string
   ): Promise<GeneratedQuestion[]> {
     const apiKey = userApiKey || this.OPENAI_API_KEY;
+    console.log('[AI-DEBUG] generateQuestionsFromMaterial apiKey_present:', !!apiKey, 'length:', apiKey?.length, 'is_placeholder:', apiKey === 'sk-placeholder-key-replace-in-production', 'first10:', apiKey?.slice(0, 10));
 
     // If using placeholder key, return mock questions
     if (apiKey === 'sk-placeholder-key-replace-in-production') {

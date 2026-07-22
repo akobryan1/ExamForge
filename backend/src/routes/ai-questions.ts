@@ -49,8 +49,11 @@ async function getUserApiKey(userId: string): Promise<string | undefined> {
     const { getFirestore } = await import('firebase-admin/firestore');
     const db = getFirestore();
     const doc = await db.collection('examforge_users').doc(userId).get();
-    return doc.data()?.settings?.apiKey || undefined;
-  } catch {
+    const apiKey = doc.data()?.settings?.apiKey || undefined;
+    console.log('[AI-DEBUG] getUserApiKey for', userId, '-> found:', !!apiKey, 'starts_with:', apiKey?.slice(0, 10));
+    return apiKey;
+  } catch (err) {
+    console.error('[AI-DEBUG] getUserApiKey error:', err);
     return undefined;
   }
 }
@@ -90,6 +93,7 @@ async function generateWithUserKey(
   }
 ) {
   const apiKey = await getUserApiKey(userId);
+  console.log('[AI-DEBUG] generateWithUserKey apiKey length:', apiKey?.length, 'is_placeholder:', apiKey === 'sk-placeholder-key-replace-in-production');
   const questions = await AIQuestionGeneratorService.generateQuestionsFromMaterial(params as any, apiKey);
   return { questions, apiKey };
 }
