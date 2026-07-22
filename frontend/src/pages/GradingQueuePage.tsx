@@ -9,8 +9,7 @@ import type { Question } from '../types/exam';
 import '../styles/pages/grading-queue.css';
 
 const AI_MODELS = [
-  { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
-  { value: 'openai/gpt-oss-20b:free', label: 'OpenRouter — openai/gpt-oss-20b:free' },
+  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
 
 interface GradingItem {
@@ -35,7 +34,7 @@ export function GradingQueuePage() {
   const [feedbackText, setFeedbackText] = useState('');
 
   // AI grading state
-  const [aiModel, setAiModel] = useState('openai/gpt-oss-120b:free');
+  const [aiModel, setAiModel] = useState('deepseek/deepseek-chat');
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiGrading, setAiGrading] = useState(false);
   const [aiResult, setAiResult] = useState<{ score: number; feedback: string; justification: string } | null>(null);

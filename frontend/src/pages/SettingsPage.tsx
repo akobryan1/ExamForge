@@ -7,13 +7,12 @@ import { pageTransition, fadeIn } from '../utils/animations';
 import '../styles/pages/settings.css';
 
 const AI_MODELS = [
-  { value: 'openai/gpt-oss-120b:free', label: 'OpenRouter — openai/gpt-oss-120b:free' },
-  { value: 'openai/gpt-oss-20b:free', label: 'OpenRouter — openai/gpt-oss-20b:free' },
+  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
 
 export function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('openai/gpt-oss-120b:free');
+  const [model, setModel] = useState('deepseek/deepseek-chat');
   const [originalKey, setOriginalKey] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -24,7 +23,7 @@ export function SettingsPage() {
       .then(({ data }) => {
         setApiKey(data.apiKey);
         setOriginalKey(data.apiKey);
-        setModel(data.model || 'openai/gpt-oss-120b:free');
+        setModel(data.model || 'deepseek/deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
       .finally(() => setLoading(false));
