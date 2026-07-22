@@ -376,6 +376,7 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     
     // Instructors can view any exam; non-owners can only view published/active
     if (!isInstructor && exam.instructorId !== userId && !['published', 'active'].includes(exam.status)) {
+      console.log(`[ExamAccess] 403 — status=${exam.status} isInstructor=${isInstructor} userId=${userId} instructorId=${exam.instructorId}`);
       return res.status(403).json({ error: 'Unauthorized access to exam' });
     }
 
