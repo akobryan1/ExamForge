@@ -127,3 +127,20 @@
   justify-content: flex-end;
   padding-top: 8px;
 }
+
+/* API Key status indicator */
+.api-key-status {
+  margin-bottom: 6px;
+}
+
+.api-key-status .key-saved {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ledger-green);
+}
+
+.api-key-status .key-missing {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ledger-red);
+}

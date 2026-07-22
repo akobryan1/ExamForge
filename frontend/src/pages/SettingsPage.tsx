@@ -11,7 +11,7 @@ const AI_MODELS = [
 ];
 
 export function SettingsPage() {
-  const [apiKey, setApiKey] = useState('');
+  const [newApiKey, setNewApiKey] = useState('');
   const [model, setModel] = useState('deepseek/deepseek-chat');
   const [hasSavedKey, setHasSavedKey] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,8 +21,6 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        // Show the masked key so user knows a key is saved
-        setApiKey(data.apiKey || '');
         setHasSavedKey(!!data.apiKey);
         setModel(data.model || 'deepseek/deepseek-chat');
       })
@@ -35,13 +33,15 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const payload: Record<string, string> = { model };
-      // Send key if it doesn't look like the masked placeholder
-      if (apiKey.trim() && !apiKey.includes('••••')) {
-        payload.apiKey = apiKey;
+      if (newApiKey.trim()) {
+        payload.apiKey = newApiKey;
       }
       const res = await apiClient.put('/api/settings', payload);
       console.log('[Settings] Save response:', res.status, res.data);
-      setHasSavedKey(!!apiKey);
+      if (newApiKey.trim()) {
+        setHasSavedKey(true);
+      }
+      setNewApiKey('');
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
       console.error('[Settings] Save error:', err.response?.status, err.response?.data || err.message);
@@ -89,17 +89,23 @@ export function SettingsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="apiKey">API Key</label>
+              <label>API Key</label>
+              <div className="api-key-status">
+                {hasSavedKey ? (
+                  <span className="key-saved">✓ A key is saved</span>
+                ) : (
+                  <span className="key-missing">✗ No key saved</span>
+                )}
+              </div>
               <input
                 type="password"
                 id="apiKey"
-                value={apiKey}
-                onFocus={() => { if (hasSavedKey) setApiKey(''); }}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={hasSavedKey ? 'Enter new key to replace the saved one' : 'sk-or-v1-...'}
+                value={newApiKey}
+                onChange={(e) => setNewApiKey(e.target.value)}
+                placeholder="Paste your OpenRouter API key here..."
               />
               {hasSavedKey && (
-                <p className="form-hint">A key is already saved. Type a new value to change it.</p>
+                <p className="form-hint">Leave blank and save to keep the existing key.</p>
               )}
             </div>
 
