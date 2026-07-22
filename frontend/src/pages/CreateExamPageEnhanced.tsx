@@ -130,16 +130,22 @@ export function CreateExamPageEnhanced() {
   // ── Modal AI generation state ──
   const [modalAiFile, setModalAiFile] = useState<File | null>(null);
   const [modalAiMaterial, setModalAiMaterial] = useState('');
-  const [modalAiConfig, setModalAiConfig] = useState('');
+  const [modalAiTotalItems, setModalAiTotalItems] = useState(10);
+  const [modalAiTypeCount, setModalAiTypeCount] = useState(1);
+  const [modalAiTypeConfigs, setModalAiTypeConfigs] = useState<Array<{ type: string; count: number; points: number }>>([
+    { type: 'multiple_choice', count: 5, points: 1 },
+  ]);
 
   // ── AI generation state (Step 3 panel) ──
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [aiMaterial, setAiMaterial] = useState('');
   const [aiFile, setAiFile] = useState<File | null>(null);
   const [aiTopic, setAiTopic] = useState('');
-  const [aiQuestionType, setAiQuestionType] = useState('multiple_choice');
-  const [aiCount, setAiCount] = useState(5);
-  const [aiDifficulty, setAiDifficulty] = useState('medium');
+  const [aiTotalItems, setAiTotalItems] = useState(10);
+  const [aiTypeCount, setAiTypeCount] = useState(1);
+  const [aiTypeConfigs, setAiTypeConfigs] = useState<Array<{ type: string; count: number; points: number }>>([
+    { type: 'multiple_choice', count: 5, points: 1 },
+  ]);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
@@ -179,7 +185,9 @@ export function CreateExamPageEnhanced() {
     setModalMode('manual');
     setModalAiFile(null);
     setModalAiMaterial('');
-    setModalAiConfig('');
+    setModalAiTotalItems(10);
+    setModalAiTypeCount(1);
+    setModalAiTypeConfigs([{ type: 'multiple_choice', count: 5, points: 1 }]);
     setQuestionForm({
       type: 'multiple_choice',
       text: '',
@@ -582,6 +590,13 @@ export function CreateExamPageEnhanced() {
     setQuestions(prev => [...prev, ...tempQuestions]);
   };
 
+  const buildAICustomPrompt = (configs: Array<{ type: string; count: number; points: number }>) => {
+    return configs
+      .filter(c => c.count > 0)
+      .map(c => `${c.count} ${c.type.replace('_', ' ')} question${c.count > 1 ? 's' : ''} worth ${c.points} point${c.points > 1 ? 's' : ''} each`)
+      .join(', ');
+  };
+
   const handleModalGenerateWithAI = async () => {
     try {
       setLoading(true);
@@ -591,13 +606,20 @@ export function CreateExamPageEnhanced() {
         return;
       }
 
-      const configText = modalAiConfig.trim() || '5 multiple choice questions worth 1 point each';
+      const totalConfigured = modalAiTypeConfigs.reduce((sum, c) => sum + c.count, 0);
+      if (totalConfigured === 0) {
+        setError('Set at least one question type with a count > 0.');
+        setLoading(false);
+        return;
+      }
+
+      const customPrompt = buildAICustomPrompt(modalAiTypeConfigs);
 
       if (modalAiFile) {
         const formData = new FormData();
         formData.append('file', modalAiFile);
-        formData.append('customPrompt', configText);
-        formData.append('count', '20');
+        formData.append('customPrompt', customPrompt);
+        formData.append('count', String(totalConfigured));
 
         const response = await apiClient.post('/api/ai/generate-from-file', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -606,9 +628,9 @@ export function CreateExamPageEnhanced() {
       } else {
         const response = await apiClient.post('/api/ai/generate-questions', {
           material: modalAiMaterial,
-          customPrompt: configText,
+          customPrompt,
           questionType: 'multiple_choice',
-          count: 20,
+          count: totalConfigured,
         });
         addGeneratedQuestions(response.data.questions || []);
       }
@@ -616,7 +638,6 @@ export function CreateExamPageEnhanced() {
       setModalMode('manual');
       setModalAiFile(null);
       setModalAiMaterial('');
-      setModalAiConfig('');
       setShowAddModal(false);
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to generate questions');
@@ -631,14 +652,21 @@ export function CreateExamPageEnhanced() {
     try {
       let material = aiMaterial;
 
+      const totalConfigured = aiTypeConfigs.reduce((sum, c) => sum + c.count, 0);
+      if (totalConfigured === 0) {
+        setAiError('Set at least one question type with a count > 0.');
+        setAiGenerating(false);
+        return;
+      }
+
+      const customPrompt = buildAICustomPrompt(aiTypeConfigs);
+
       // If a file was selected, upload it to the backend for text extraction
       if (aiFile) {
         const formData = new FormData();
         formData.append('file', aiFile);
-        formData.append('questionType', aiQuestionType);
-        formData.append('count', String(aiCount));
-        formData.append('difficulty', aiDifficulty);
-        formData.append('topic', aiTopic);
+        formData.append('customPrompt', customPrompt);
+        formData.append('count', String(totalConfigured));
 
         const response = await apiClient.post('/api/ai/generate-from-file', formData, {
           headers: { 'Content-Type': 'multipart/form-data' },
@@ -659,10 +687,9 @@ export function CreateExamPageEnhanced() {
 
       const response = await apiClient.post('/api/ai/generate-questions', {
         material,
-        questionType: aiQuestionType,
-        count: aiCount,
-        difficulty: aiDifficulty,
-        topic: aiTopic || undefined,
+        customPrompt,
+        questionType: 'multiple_choice',
+        count: totalConfigured,
       });
       addGeneratedQuestions(response.data.questions || []);
       setShowAIPanel(false);
@@ -1038,28 +1065,66 @@ export function CreateExamPageEnhanced() {
 
                       <div className="form-row" style={{ marginBottom: 12 }}>
                         <div className="form-group">
-                          <label>Question type</label>
-                          <select value={aiQuestionType} onChange={(e) => setAiQuestionType(e.target.value)} style={{ fontSize: 13, padding: 8 }}>
-                            <option value="multiple_choice">Multiple Choice</option>
-                            <option value="true_false">True/False</option>
-                            <option value="identification">Identification</option>
-                            <option value="essay">Essay</option>
-                            <option value="enumeration">Enumeration</option>
-                          </select>
+                          <label>Total items</label>
+                          <input type="number" value={aiTotalItems} onChange={(e) => {
+                            const val = Math.max(1, parseInt(e.target.value) || 1);
+                            setAiTotalItems(val);
+                          }} min="1" style={{ fontSize: 13, padding: 8 }} />
                         </div>
                         <div className="form-group">
-                          <label>Count</label>
-                          <input type="number" value={aiCount} onChange={(e) => setAiCount(Math.min(20, Math.max(1, parseInt(e.target.value) || 1)))} min="1" max="20" style={{ fontSize: 13, padding: 8 }} />
-                        </div>
-                        <div className="form-group">
-                          <label>Difficulty</label>
-                          <select value={aiDifficulty} onChange={(e) => setAiDifficulty(e.target.value)} style={{ fontSize: 13, padding: 8 }}>
-                            <option value="easy">Easy</option>
-                            <option value="medium">Medium</option>
-                            <option value="hard">Hard</option>
-                          </select>
+                          <label>Number of question types</label>
+                          <input type="number" value={aiTypeCount} onChange={(e) => {
+                            const count = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
+                            setAiTypeCount(count);
+                            setAiTypeConfigs(prev => {
+                              const updated = [...prev];
+                              while (updated.length < count) updated.push({ type: 'multiple_choice', count: 1, points: 1 });
+                              return updated.slice(0, count);
+                            });
+                          }} min="1" max="5" style={{ fontSize: 13, padding: 8 }} />
                         </div>
                       </div>
+
+                      {Array.from({ length: aiTypeCount }).map((_, idx) => (
+                        <div key={idx} className="form-row" style={{ marginBottom: 10, padding: 12, background: 'var(--ledger-paper)', borderRadius: 6, border: '1px solid var(--ledger-line-soft)' }}>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Type {idx + 1}</label>
+                            <select value={aiTypeConfigs[idx]?.type || 'multiple_choice'} onChange={(e) => {
+                              const updated = [...aiTypeConfigs];
+                              if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                              updated[idx] = { ...updated[idx], type: e.target.value };
+                              setAiTypeConfigs(updated);
+                            }} style={{ fontSize: 13, padding: 8 }}>
+                              <option value="multiple_choice">Multiple Choice</option>
+                              <option value="true_false">True/False</option>
+                              <option value="identification">Identification</option>
+                              <option value="essay">Essay</option>
+                              <option value="enumeration">Enumeration</option>
+                            </select>
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>How many</label>
+                            <input type="number" value={aiTypeConfigs[idx]?.count || 1} min="1" onChange={(e) => {
+                              const updated = [...aiTypeConfigs];
+                              if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                              updated[idx] = { ...updated[idx], count: Math.max(1, parseInt(e.target.value) || 1) };
+                              setAiTypeConfigs(updated);
+                            }} style={{ fontSize: 13, padding: 8 }} />
+                          </div>
+                          <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label>Points each</label>
+                            <input type="number" value={aiTypeConfigs[idx]?.points || 1} min="1" onChange={(e) => {
+                              const updated = [...aiTypeConfigs];
+                              if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                              updated[idx] = { ...updated[idx], points: Math.max(1, parseInt(e.target.value) || 1) };
+                              setAiTypeConfigs(updated);
+                            }} style={{ fontSize: 13, padding: 8 }} />
+                          </div>
+                        </div>
+                      ))}
+                      <p style={{ fontSize: 11.5, color: 'var(--ledger-ink-soft)', marginTop: -4, marginBottom: 10 }}>
+                        Total: {aiTypeConfigs.reduce((s, c) => s + (c.count || 0), 0)} items · {aiTypeConfigs.reduce((s, c) => s + (c.count || 0) * (c.points || 0), 0)} points
+                      </p>
 
                       {aiError && <p style={{ color: 'var(--ledger-red)', fontSize: 12.5, marginBottom: 10 }}>{aiError}</p>}
 
@@ -1264,19 +1329,71 @@ export function CreateExamPageEnhanced() {
                     style={{ fontSize: 13, padding: 10 }}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Question configuration</label>
-                  <textarea
-                    value={modalAiConfig}
-                    onChange={(e) => setModalAiConfig(e.target.value)}
-                    placeholder={'e.g., 30 True/False worth 1pt each, 10 Multiple Choice worth 2pts each, 1 Essay worth 10pts'}
-                    rows={3}
-                    style={{ fontSize: 13, padding: 10 }}
-                  />
-                  <p className="form-help">Describe the mix of questions, their types, point values, and how many of each.</p>
+
+                <div className="form-row" style={{ marginBottom: 12 }}>
+                  <div className="form-group">
+                    <label>Total items</label>
+                    <input type="number" value={modalAiTotalItems} onChange={(e) => {
+                      setModalAiTotalItems(Math.max(1, parseInt(e.target.value) || 1));
+                    }} min="1" style={{ fontSize: 13, padding: 8 }} />
+                  </div>
+                  <div className="form-group">
+                    <label>Number of question types</label>
+                    <input type="number" value={modalAiTypeCount} onChange={(e) => {
+                      const count = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
+                      setModalAiTypeCount(count);
+                      setModalAiTypeConfigs(prev => {
+                        const updated = [...prev];
+                        while (updated.length < count) updated.push({ type: 'multiple_choice', count: 1, points: 1 });
+                        return updated.slice(0, count);
+                      });
+                    }} min="1" max="5" style={{ fontSize: 13, padding: 8 }} />
+                  </div>
                 </div>
+
+                {Array.from({ length: modalAiTypeCount }).map((_, idx) => (
+                  <div key={idx} className="form-row" style={{ marginBottom: 10, padding: 12, background: 'var(--ledger-paper)', borderRadius: 6, border: '1px solid var(--ledger-line-soft)' }}>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Type {idx + 1}</label>
+                      <select value={modalAiTypeConfigs[idx]?.type || 'multiple_choice'} onChange={(e) => {
+                        const updated = [...modalAiTypeConfigs];
+                        if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                        updated[idx] = { ...updated[idx], type: e.target.value };
+                        setModalAiTypeConfigs(updated);
+                      }} style={{ fontSize: 13, padding: 8 }}>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="true_false">True/False</option>
+                        <option value="identification">Identification</option>
+                        <option value="essay">Essay</option>
+                        <option value="enumeration">Enumeration</option>
+                      </select>
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>How many</label>
+                      <input type="number" value={modalAiTypeConfigs[idx]?.count || 1} min="1" onChange={(e) => {
+                        const updated = [...modalAiTypeConfigs];
+                        if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                        updated[idx] = { ...updated[idx], count: Math.max(1, parseInt(e.target.value) || 1) };
+                        setModalAiTypeConfigs(updated);
+                      }} style={{ fontSize: 13, padding: 8 }} />
+                    </div>
+                    <div className="form-group" style={{ marginBottom: 0 }}>
+                      <label>Points each</label>
+                      <input type="number" value={modalAiTypeConfigs[idx]?.points || 1} min="1" onChange={(e) => {
+                        const updated = [...modalAiTypeConfigs];
+                        if (!updated[idx]) updated[idx] = { type: 'multiple_choice', count: 1, points: 1 };
+                        updated[idx] = { ...updated[idx], points: Math.max(1, parseInt(e.target.value) || 1) };
+                        setModalAiTypeConfigs(updated);
+                      }} style={{ fontSize: 13, padding: 8 }} />
+                    </div>
+                  </div>
+                ))}
+                <p style={{ fontSize: 11.5, color: 'var(--ledger-ink-soft)', marginTop: -4, marginBottom: 12 }}>
+                  Total: {modalAiTypeConfigs.reduce((s, c) => s + (c.count || 0), 0)} items · {modalAiTypeConfigs.reduce((s, c) => s + (c.count || 0) * (c.points || 0), 0)} points
+                </p>
+
                 <div className="modal-actions" style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--ledger-line)' }}>
-                  <Button type="button" variant="outline" onClick={() => { setModalMode('manual'); setModalAiFile(null); setModalAiMaterial(''); setModalAiConfig(''); }}>Back</Button>
+                  <Button type="button" variant="outline" onClick={() => { setModalMode('manual'); setModalAiFile(null); setModalAiMaterial(''); setModalAiTotalItems(10); setModalAiTypeCount(1); setModalAiTypeConfigs([{ type: 'multiple_choice', count: 5, points: 1 }]); }}>Back</Button>
                   <Button onClick={handleModalGenerateWithAI} disabled={loading || (!modalAiMaterial.trim() && !modalAiFile)}>
                     {loading ? 'Generating...' : 'Generate Questions'}
                   </Button>
