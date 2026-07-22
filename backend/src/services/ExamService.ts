@@ -1098,10 +1098,9 @@ export class ExamService {
         let sessions: { doc: any; data: any; studentId: string }[] = [];
 
         if (!sessionsSnapshot || sessionsSnapshot.empty) {
-          // Fallback: find attempts via the exam's attempt count and session events
+          // Fallback: iterate all users to find completed sessions for this exam
           const userDocs = await db.collection('examforge_users')
-            .orderBy('createdAt', 'desc')
-            .limit(50)
+            .select()
             .get();
           for (const userDoc of userDocs.docs) {
             const userSessions = await db
