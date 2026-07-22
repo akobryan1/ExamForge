@@ -32,6 +32,8 @@ export function QuestionsPage() {
     enumerationItems: [''],
     imageUrl: '',
     timeLimit: 0,
+    modelAnswer: '',
+    keyPoints: '',
   });
 
   const loading = examLoading || questionsLoading;
@@ -50,6 +52,8 @@ export function QuestionsPage() {
       enumerationItems: [''],
       imageUrl: '',
       timeLimit: 0,
+      modelAnswer: '',
+      keyPoints: '',
     });
     setShowAddModal(true);
   };
@@ -67,6 +71,8 @@ export function QuestionsPage() {
       enumerationItems: Array.isArray(question.correctAnswer) ? question.correctAnswer : [''],
       imageUrl: question.imageUrl || '',
       timeLimit: question.timeLimit || 0,
+      modelAnswer: question.modelAnswer || '',
+      keyPoints: question.keyPoints || '',
     });
     setShowAddModal(true);
   };
@@ -314,18 +320,6 @@ export function QuestionsPage() {
                       required
                     />
                   </div>
-
-                  <div className="form-group">
-                    <label>Difficulty</label>
-                    <select
-                      value={formData.difficulty}
-                      onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as DifficultyLevel }))}
-                    >
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                    </select>
-                  </div>
                 </div>
 
                 <div className="form-group">
@@ -394,7 +388,31 @@ export function QuestionsPage() {
                     </select>
                   </div>
                 )}
-
+              {/* Essay */}
+              {formData.type === 'essay' && (
+                <div className="form-group">
+                  <label>Model Answer (optional)</label>
+                  <textarea
+                    value={formData.modelAnswer}
+                    onChange={(e) => setFormData(prev => ({ ...prev, modelAnswer: e.target.value }))}
+                    placeholder="Provide a model or reference answer that the AI will use for grading..."
+                    rows={4}
+                  />
+                  <p className="form-help">The AI will compare student answers against this model answer during auto-evaluation.</p>
+                </div>
+              )}
+              {formData.type === 'essay' && (
+                <div className="form-group">
+                  <label>Key Points (optional)</label>
+                  <textarea
+                    value={formData.keyPoints}
+                    onChange={(e) => setFormData(prev => ({ ...prev, keyPoints: e.target.value }))}
+                    placeholder="List the key points or criteria that should be covered in the answer..."
+                    rows={3}
+                  />
+                  <p className="form-help">The AI will check if the student answer covers these key points.</p>
+                </div>
+              )}
                 {/* Modified True/False */}
                 {formData.type === 'modified_true_false' && (
                   <div className="form-group">

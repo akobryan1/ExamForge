@@ -277,6 +277,8 @@ export interface CreateQuestionDto {
   tags?: string[];
   imageUrl?: string;
   timeLimit?: number;
+  modelAnswer?: string;
+  keyPoints?: string;
 }
 
 export interface UpdateQuestionDto extends Partial<Omit<CreateQuestionDto, 'examId'>> {}

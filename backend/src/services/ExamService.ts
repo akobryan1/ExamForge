@@ -349,6 +349,8 @@ export class ExamService {
       tags: data.tags || [],
       imageUrl: data.imageUrl || null,
       timeLimit: data.timeLimit || null,
+      modelAnswer: data.modelAnswer || null,
+      keyPoints: data.keyPoints || null,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };

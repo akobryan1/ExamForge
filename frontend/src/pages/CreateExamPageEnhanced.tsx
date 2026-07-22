@@ -159,6 +159,8 @@ export function CreateExamPageEnhanced() {
     enumerationItems: [''],
     imageUrl: '',
     timeLimit: 0,
+    modelAnswer: '',
+    keyPoints: '',
   });
 
   // Load existing questions when editing
@@ -192,6 +194,8 @@ export function CreateExamPageEnhanced() {
       enumerationItems: [''],
       imageUrl: '',
       timeLimit: 0,
+      modelAnswer: '',
+      keyPoints: '',
     });
     setShowAddModal(true);
   };
@@ -209,6 +213,8 @@ export function CreateExamPageEnhanced() {
       enumerationItems: Array.isArray(question.correctAnswer) ? question.correctAnswer as string[] : [''],
       imageUrl: question.imageUrl || '',
       timeLimit: question.timeLimit || 0,
+      modelAnswer: question.modelAnswer || '',
+      keyPoints: question.keyPoints || '',
     });
     setShowAddModal(true);
   };
@@ -289,6 +295,8 @@ export function CreateExamPageEnhanced() {
         difficulty: questionForm.difficulty,
         imageUrl: questionForm.imageUrl || undefined,
         timeLimit: questionForm.timeLimit || undefined,
+        modelAnswer: questionForm.type === 'essay' ? questionForm.modelAnswer || undefined : undefined,
+        keyPoints: questionForm.type === 'essay' ? questionForm.keyPoints || undefined : undefined,
       };
 
       if (questionForm.type === 'multiple_choice') {
@@ -1199,17 +1207,6 @@ export function CreateExamPageEnhanced() {
                     required
                   />
                 </div>
-                <div className="form-group">
-                  <label>Difficulty</label>
-                  <select
-                    value={questionForm.difficulty}
-                    onChange={(e) => setQuestionForm(prev => ({ ...prev, difficulty: e.target.value }))}
-                  >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
-                  </select>
-                </div>
               </div>
 
               <div className="form-group">
@@ -1257,6 +1254,32 @@ export function CreateExamPageEnhanced() {
                     <option value="true">True</option>
                     <option value="false">False</option>
                   </select>
+                </div>
+              )}
+
+              {/* Essay */}
+              {questionForm.type === 'essay' && (
+                <div className="form-group">
+                  <label>Model Answer (optional)</label>
+                  <textarea
+                    value={questionForm.modelAnswer}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, modelAnswer: e.target.value }))}
+                    placeholder="Provide a model or reference answer that the AI will use for grading..."
+                    rows={4}
+                  />
+                  <p className="form-help">The AI will compare student answers against this model answer during auto-evaluation.</p>
+                </div>
+              )}
+              {questionForm.type === 'essay' && (
+                <div className="form-group">
+                  <label>Key Points (optional)</label>
+                  <textarea
+                    value={questionForm.keyPoints}
+                    onChange={(e) => setQuestionForm(prev => ({ ...prev, keyPoints: e.target.value }))}
+                    placeholder="List the key points or criteria that should be covered in the answer..."
+                    rows={3}
+                  />
+                  <p className="form-help">The AI will check if the student answer covers these key points.</p>
                 </div>
               )}
 

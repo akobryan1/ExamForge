@@ -86,7 +86,22 @@ export function useDeleteExam() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (examId: string) => ExamService.deleteExam(examId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: examKeys.lists() }),
+    onMutate: async (examId) => {
+      await qc.cancelQueries({ queryKey: examKeys.lists() });
+      const previous = qc.getQueryData(examKeys.lists());
+      qc.setQueryData(examKeys.lists(), (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.filter((e: any) => e.id !== examId);
+        return old;
+      });
+      return { previous };
+    },
+    onError: (err, examId, context) => {
+      if (context?.previous) {
+        qc.setQueryData(examKeys.lists(), context.previous);
+      }
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: examKeys.lists(), refetchType: 'all' }),
   });
 }
 

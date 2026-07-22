@@ -47,6 +47,8 @@ export interface Question {
   tags?: string[];
   imageUrl?: string;
   timeLimit?: number;
+  modelAnswer?: string;
+  keyPoints?: string;
   createdAt: Date;
   updatedAt: Date;
 }
