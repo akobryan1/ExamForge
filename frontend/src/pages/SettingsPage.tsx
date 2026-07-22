@@ -21,8 +21,9 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        setApiKey(data.apiKey);
-        setOriginalKey(data.apiKey);
+        // Don't pre-fill apiKey with masked value — user must type it fresh
+        setApiKey('');
+        setOriginalKey(data.apiKey || '');
         setModel(data.model || 'deepseek/deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
@@ -34,12 +35,11 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const payload: Record<string, string> = { model };
-      // Only send the key if the user changed it (masked values match)
-      if (apiKey !== originalKey && apiKey.trim()) {
+      if (apiKey.trim()) {
         payload.apiKey = apiKey;
       }
       await apiClient.put('/api/settings', payload);
-      setOriginalKey(apiKey);
+      setOriginalKey(apiKey || originalKey);
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch {
       setMessage({ type: 'error', text: 'Failed to save settings' });

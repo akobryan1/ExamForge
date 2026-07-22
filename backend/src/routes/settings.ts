@@ -35,7 +35,10 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const db = getFirestore();
 
     const settings: Record<string, unknown> = {};
-    if (apiKey !== undefined) settings.apiKey = apiKey;
+    // Only save apiKey if it's a real key (not the masked placeholder from a stale client)
+    if (apiKey !== undefined && typeof apiKey === 'string' && !apiKey.includes('••••')) {
+      settings.apiKey = apiKey;
+    }
     if (model !== undefined) settings.model = model;
 
     await db.collection('examforge_users').doc(req.user!.userId).set(
