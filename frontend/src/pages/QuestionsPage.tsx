@@ -75,8 +75,9 @@ export function QuestionsPage() {
     if (!examId || !confirm('Are you sure you want to delete this question?')) return;
     try {
       await deleteMutation.mutateAsync({ questionId, examId });
-    } catch {
-      alert('Failed to delete question');
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Failed to delete question';
+      alert(`Delete failed: ${msg}`);
     }
   };
 
