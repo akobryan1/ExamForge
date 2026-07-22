@@ -43,6 +43,57 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 },
 });
 
+/** Look up the user's saved API key from Firestore settings */
+async function getUserApiKey(userId: string): Promise<string | undefined> {
+  try {
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const db = getFirestore();
+    const doc = await db.collection('examforge_users').doc(userId).get();
+    return doc.data()?.settings?.apiKey || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Helper that reads uploaded file content, then deletes it */
+function readAndCleanUp(filePath: string, ext: string): string {
+  let content = '';
+  if (ext === '.txt') {
+    content = fs.readFileSync(filePath, 'utf-8');
+  } else {
+    content = `[Content extracted from uploaded file]\n\n`;
+    content += fs.readFileSync(filePath, 'utf-8');
+  }
+  fs.unlink(filePath, () => {});
+  return content.slice(0, 50000);
+}
+
+/** Build the response body for generated questions */
+function questionResponse(questions: unknown[], apiKey?: string) {
+  return {
+    success: true,
+    questions,
+    usingPlaceholder: !apiKey || apiKey === 'sk-placeholder-key-replace-in-production',
+  };
+}
+
+/** Common handler for both text and file-based generation */
+async function generateWithUserKey(
+  userId: string,
+  params: {
+    material: string;
+    questionType: QuestionType;
+    count: number;
+    difficulty?: string;
+    topic?: string;
+    customPrompt?: string;
+  }
+) {
+  const apiKey = await getUserApiKey(userId);
+  const questions = await AIQuestionGeneratorService.generateQuestionsFromMaterial(params as any, apiKey);
+  return { questions, apiKey };
+}
+
 /**
  * POST /api/ai/generate-questions - Generate questions from material
  */
@@ -67,7 +118,7 @@ router.post(
     try {
       const { material, questionType, count, difficulty, topic, customPrompt } = req.body;
 
-      const questions = await AIQuestionGeneratorService.generateQuestionsFromMaterial({
+      const { questions, apiKey } = await generateWithUserKey(req.user!.userId, {
         material,
         questionType: questionType as QuestionType,
         count,
@@ -76,12 +127,7 @@ router.post(
         customPrompt,
       });
 
-      return res.json({
-        success: true,
-        questions,
-        usingPlaceholder: process.env.OPENAI_API_KEY === undefined || 
-                         process.env.OPENAI_API_KEY === 'sk-placeholder-key-replace-in-production',
-      });
+      return res.json(questionResponse(questions, apiKey));
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
@@ -102,29 +148,15 @@ router.post(
 
       const { questionType, count, difficulty, topic, customPrompt } = req.body;
       const filePath = req.file.path;
-
-      // Read file content
-      let material = '';
       const ext = path.extname(req.file.originalname).toLowerCase();
-
-      if (ext === '.txt') {
-        material = fs.readFileSync(filePath, 'utf-8');
-      } else {
-        // For PDF/DOCX, return a hint that text extraction needs a package
-        // In production, use pdf-parse or mammoth
-        material = `[Content extracted from ${req.file.originalname}]\n\n`;
-        material += fs.readFileSync(filePath, 'utf-8');
-      }
-
-      // Clean up: remove uploaded file after reading
-      fs.unlink(filePath, () => {});
+      const material = readAndCleanUp(filePath, ext);
 
       if (!material.trim()) {
         return res.status(400).json({ error: 'Could not extract text from the uploaded file' });
       }
 
-      const questions = await AIQuestionGeneratorService.generateQuestionsFromMaterial({
-        material: material.slice(0, 50000), // limit to 50k chars
+      const { questions, apiKey } = await generateWithUserKey(req.user!.userId, {
+        material,
         questionType: (questionType as QuestionType) || QuestionType.MULTIPLE_CHOICE,
         count: Math.min(20, Math.max(1, parseInt(count) || 5)),
         difficulty: difficulty || 'medium',
@@ -132,12 +164,7 @@ router.post(
         customPrompt: customPrompt || undefined,
       });
 
-      return res.json({
-        success: true,
-        questions,
-        usingPlaceholder: process.env.OPENAI_API_KEY === undefined || 
-                         process.env.OPENAI_API_KEY === 'sk-placeholder-key-replace-in-production',
-      });
+      return res.json(questionResponse(questions, apiKey));
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

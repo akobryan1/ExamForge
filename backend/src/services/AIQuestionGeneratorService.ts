@@ -27,10 +27,13 @@ export class AIQuestionGeneratorService {
    * Generate questions from material using AI
    */
   static async generateQuestionsFromMaterial(
-    request: GenerateQuestionsRequest
+    request: GenerateQuestionsRequest,
+    userApiKey?: string
   ): Promise<GeneratedQuestion[]> {
+    const apiKey = userApiKey || this.OPENAI_API_KEY;
+
     // If using placeholder key, return mock questions
-    if (this.OPENAI_API_KEY === 'sk-placeholder-key-replace-in-production') {
+    if (apiKey === 'sk-placeholder-key-replace-in-production') {
       return this.generateMockQuestions(request);
     }
 
@@ -41,7 +44,7 @@ export class AIQuestionGeneratorService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'gpt-4',
