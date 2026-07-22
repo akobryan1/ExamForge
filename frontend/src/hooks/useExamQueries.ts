@@ -25,6 +25,8 @@ export function useExamQuestions(examId: string | undefined) {
     queryKey: examKeys.questions(examId!),
     queryFn: () => ExamService.getExamQuestions(examId!),
     enabled: !!examId,
+    staleTime: 0,
+    gcTime: 0,
   });
 }
 
@@ -161,7 +163,24 @@ export function useDeleteQuestion() {
   return useMutation({
     mutationFn: ({ questionId, examId }: { questionId: string; examId: string }) =>
       ExamService.deleteQuestion(questionId, examId),
-    onSuccess: (_, vars) => {
+    onMutate: async ({ questionId, examId }) => {
+      // Cancel outgoing refetches so they don't overwrite our optimistic update
+      await qc.cancelQueries({ queryKey: examKeys.questions(examId) });
+      // Snapshot previous value
+      const previous = qc.getQueryData(examKeys.questions(examId));
+      // Optimistically remove the question from the cache
+      qc.setQueryData(examKeys.questions(examId), (old: any[]) =>
+        Array.isArray(old) ? old.filter((q: any) => q.id !== questionId) : old
+      );
+      return { previous };
+    },
+    onError: (err, vars, context) => {
+      // Rollback on error
+      if (context?.previous) {
+        qc.setQueryData(examKeys.questions(vars.examId), context.previous);
+      }
+    },
+    onSettled: (_, __, vars) => {
       qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId), refetchType: 'all' });
     },
   });
