@@ -1063,16 +1063,8 @@ export function CreateExamPageEnhanced() {
                         />
                       </div>
 
-                      <div className="form-row" style={{ marginBottom: 12 }}>
-                        <div className="form-group">
-                          <label>Total items</label>
-                          <input type="number" value={aiTotalItems} onChange={(e) => {
-                            const val = Math.max(1, parseInt(e.target.value) || 1);
-                            setAiTotalItems(val);
-                          }} min="1" style={{ fontSize: 13, padding: 8 }} />
-                        </div>
-                        <div className="form-group">
-                          <label>Number of question types</label>
+                      <div className="form-group" style={{ marginBottom: 12 }}>
+                        <label>Number of question types</label>
                           <input type="number" value={aiTypeCount} onChange={(e) => {
                             const count = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
                             setAiTypeCount(count);
@@ -1083,7 +1075,6 @@ export function CreateExamPageEnhanced() {
                             });
                           }} min="1" max="5" style={{ fontSize: 13, padding: 8 }} />
                         </div>
-                      </div>
 
                       {Array.from({ length: aiTypeCount }).map((_, idx) => (
                         <div key={idx} className="form-row" style={{ marginBottom: 10, padding: 12, background: 'var(--ledger-paper)', borderRadius: 6, border: '1px solid var(--ledger-line-soft)' }}>
@@ -1330,15 +1321,8 @@ export function CreateExamPageEnhanced() {
                   />
                 </div>
 
-                <div className="form-row" style={{ marginBottom: 12 }}>
-                  <div className="form-group">
-                    <label>Total items</label>
-                    <input type="number" value={modalAiTotalItems} onChange={(e) => {
-                      setModalAiTotalItems(Math.max(1, parseInt(e.target.value) || 1));
-                    }} min="1" style={{ fontSize: 13, padding: 8 }} />
-                  </div>
-                  <div className="form-group">
-                    <label>Number of question types</label>
+                <div className="form-group" style={{ marginBottom: 12 }}>
+                  <label>Number of question types</label>
                     <input type="number" value={modalAiTypeCount} onChange={(e) => {
                       const count = Math.max(1, Math.min(5, parseInt(e.target.value) || 1));
                       setModalAiTypeCount(count);
@@ -1349,7 +1333,6 @@ export function CreateExamPageEnhanced() {
                       });
                     }} min="1" max="5" style={{ fontSize: 13, padding: 8 }} />
                   </div>
-                </div>
 
                 {Array.from({ length: modalAiTypeCount }).map((_, idx) => (
                   <div key={idx} className="form-row" style={{ marginBottom: 10, padding: 12, background: 'var(--ledger-paper)', borderRadius: 6, border: '1px solid var(--ledger-line-soft)' }}>
