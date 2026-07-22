@@ -380,28 +380,38 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
     // For students/guests: must be published or active
     if (!['published', 'active'].includes(exam.status)) {
-      console.log(`[ExamAccess] 403 — exam=${req.params.id} status=${exam.status} not accessible to non-instructor`);
+      console.log(`[ExamGET] 403 status_check fail: exam.status="${exam.status}"`);
       return res.status(403).json({ error: 'This exam is not currently available' });
     }
 
     // Check date range
     const now = new Date();
-    if (exam.startDate && new Date(exam.startDate) > now) {
-      return res.status(403).json({ error: 'This exam has not started yet' });
+    if (exam.startDate) {
+      const start = new Date(exam.startDate);
+      console.log(`[ExamGET] startDate="${exam.startDate}" parsed="${start}" now="${now}"`);
+      if (start > now) {
+        console.log(`[ExamGET] 403 startDate future: start=${start.toISOString()} now=${now.toISOString()}`);
+        return res.status(403).json({ error: 'This exam has not started yet' });
+      }
     }
-    if (exam.endDate && new Date(exam.endDate) < now) {
-      // Auto-mark as completed
-      try {
-        const db = (await import('../config/firebase')).getFirestore();
-        await db
-          .collection('examforge_users')
-          .doc(exam.instructorId)
-          .collection('published_exams')
-          .doc(req.params.id)
-          .update({ status: 'completed' });
-        await db.collection('exams').doc(req.params.id).update({ status: 'completed' });
-      } catch { /* best-effort */ }
-      return res.status(403).json({ error: 'This exam has already ended' });
+    if (exam.endDate) {
+      const end = new Date(exam.endDate);
+      console.log(`[ExamGET] endDate="${exam.endDate}" parsed="${end}" now="${now}"`);
+      if (end < now) {
+        console.log(`[ExamGET] 403 endDate past: end=${end.toISOString()} now=${now.toISOString()}`);
+        // Auto-mark as completed
+        try {
+          const db = (await import('../config/firebase')).getFirestore();
+          await db
+            .collection('examforge_users')
+            .doc(exam.instructorId)
+            .collection('published_exams')
+            .doc(req.params.id)
+            .update({ status: 'completed' });
+          await db.collection('exams').doc(req.params.id).update({ status: 'completed' });
+        } catch { /* best-effort */ }
+        return res.status(403).json({ error: 'This exam has already ended' });
+      }
     }
 
     return res.json(exam);

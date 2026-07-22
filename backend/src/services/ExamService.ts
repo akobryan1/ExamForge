@@ -251,7 +251,9 @@ export class ExamService {
     if (data.grade !== undefined) updateData.grade = data.grade;
     if (data.status) updateData.status = data.status;
     if (data.startDate) updateData.startDate = Timestamp.fromDate(new Date(data.startDate));
+    else if (data.startDate === '') updateData.startDate = null;
     if (data.endDate) updateData.endDate = Timestamp.fromDate(new Date(data.endDate));
+    else if (data.endDate === '') updateData.endDate = null;
     if (data.timeLimit !== undefined) updateData.timeLimit = data.timeLimit;
     if (data.passingScore !== undefined) updateData.passingScore = data.passingScore;
     if (data.shuffleQuestions !== undefined) updateData.shuffleQuestions = data.shuffleQuestions;
