@@ -625,6 +625,9 @@ export function CreateExamPageEnhanced() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         addGeneratedQuestions(response.data.questions || []);
+        if (response.data.usingPlaceholder) {
+          setError('Using sample questions — configure your API key in Settings for real AI-generated questions.');
+        }
       } else {
         const response = await apiClient.post('/api/ai/generate-questions', {
           material: modalAiMaterial,
@@ -633,6 +636,9 @@ export function CreateExamPageEnhanced() {
           count: totalConfigured,
         });
         addGeneratedQuestions(response.data.questions || []);
+        if (response.data.usingPlaceholder) {
+          setError('Using sample questions — configure your API key in Settings for real AI-generated questions.');
+        }
       }
 
       setModalMode('manual');
@@ -672,6 +678,9 @@ export function CreateExamPageEnhanced() {
           headers: { 'Content-Type': 'multipart/form-data' },
         });
         addGeneratedQuestions(response.data.questions || []);
+        if (response.data.usingPlaceholder) {
+          setAiError('Using sample questions — configure your API key in Settings for real AI-generated questions.');
+        }
         setShowAIPanel(false);
         setAiFile(null);
         setAiMaterial('');
@@ -692,6 +701,9 @@ export function CreateExamPageEnhanced() {
         count: totalConfigured,
       });
       addGeneratedQuestions(response.data.questions || []);
+      if (response.data.usingPlaceholder) {
+        setAiError('Using sample questions — configure your API key in Settings for real AI-generated questions.');
+      }
       setShowAIPanel(false);
       setAiMaterial('');
     } catch (err: any) {

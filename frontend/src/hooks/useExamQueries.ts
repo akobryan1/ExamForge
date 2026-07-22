@@ -140,8 +140,7 @@ export function useCreateQuestion() {
     mutationFn: ({ examId, data }: { examId: string; data: CreateQuestionFormData }) =>
       ExamService.createQuestion(examId, data),
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId) });
-      qc.refetchQueries({ queryKey: examKeys.questions(vars.examId) });
+      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId), refetchType: 'all' });
     },
   });
 }
@@ -152,8 +151,7 @@ export function useUpdateQuestion() {
     mutationFn: ({ questionId, examId, data }: { questionId: string; examId: string; data: Partial<CreateQuestionFormData> }) =>
       ExamService.updateQuestion(questionId, examId, data),
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId) });
-      qc.refetchQueries({ queryKey: examKeys.questions(vars.examId) });
+      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId), refetchType: 'all' });
     },
   });
 }
@@ -164,8 +162,7 @@ export function useDeleteQuestion() {
     mutationFn: ({ questionId, examId }: { questionId: string; examId: string }) =>
       ExamService.deleteQuestion(questionId, examId),
     onSuccess: (_, vars) => {
-      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId) });
-      qc.refetchQueries({ queryKey: examKeys.questions(vars.examId) });
+      qc.invalidateQueries({ queryKey: examKeys.questions(vars.examId), refetchType: 'all' });
     },
   });
 }
