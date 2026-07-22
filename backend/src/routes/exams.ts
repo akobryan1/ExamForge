@@ -357,12 +357,11 @@ router.get(
  */
 router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.userId;
     const isInstructor = req.user?.role === 'instructor' || req.user?.role === 'admin';
     
     // For instructors: try direct path first
-    if (isInstructor && userId) {
-      const exam = await ExamService.getExamByIdForInstructor(req.params.id, userId);
+    if (isInstructor) {
+      const exam = await ExamService.getExamByIdForInstructor(req.params.id, req.user!.userId);
       if (exam) return res.json(exam);
     }
     
@@ -373,33 +372,36 @@ router.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     }
 
     const { exam } = result;
-    
-    // Instructors can view any exam; non-owners can only view published/active
-    if (!isInstructor && exam.instructorId !== userId && !['published', 'active'].includes(exam.status)) {
-      console.log(`[ExamAccess] 403 — status=${exam.status} isInstructor=${isInstructor} userId=${userId} instructorId=${exam.instructorId}`);
-      return res.status(403).json({ error: 'Unauthorized access to exam' });
+
+    // Instructors/admins can always view any exam
+    if (isInstructor) {
+      return res.json(exam);
     }
 
-    // For non-instructors, check date range — with lazy auto-complete
-    if (!isInstructor) {
-      const now = new Date();
-      if (exam.startDate && new Date(exam.startDate) > now) {
-        return res.status(403).json({ error: 'This exam has not started yet' });
-      }
-      if (exam.endDate && new Date(exam.endDate) < now) {
-        // Auto-mark as completed
-        try {
-          const db = (await import('../config/firebase')).getFirestore();
-          await db
-            .collection('examforge_users')
-            .doc(exam.instructorId)
-            .collection('published_exams')
-            .doc(req.params.id)
-            .update({ status: 'completed' });
-          await db.collection('exams').doc(req.params.id).update({ status: 'completed' });
-        } catch { /* best-effort */ }
-        return res.status(403).json({ error: 'This exam has already ended' });
-      }
+    // For students/guests: must be published or active
+    if (!['published', 'active'].includes(exam.status)) {
+      console.log(`[ExamAccess] 403 — exam=${req.params.id} status=${exam.status} not accessible to non-instructor`);
+      return res.status(403).json({ error: 'This exam is not currently available' });
+    }
+
+    // Check date range
+    const now = new Date();
+    if (exam.startDate && new Date(exam.startDate) > now) {
+      return res.status(403).json({ error: 'This exam has not started yet' });
+    }
+    if (exam.endDate && new Date(exam.endDate) < now) {
+      // Auto-mark as completed
+      try {
+        const db = (await import('../config/firebase')).getFirestore();
+        await db
+          .collection('examforge_users')
+          .doc(exam.instructorId)
+          .collection('published_exams')
+          .doc(req.params.id)
+          .update({ status: 'completed' });
+        await db.collection('exams').doc(req.params.id).update({ status: 'completed' });
+      } catch { /* best-effort */ }
+      return res.status(403).json({ error: 'This exam has already ended' });
     }
 
     return res.json(exam);
