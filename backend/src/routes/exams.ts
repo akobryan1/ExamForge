@@ -113,27 +113,40 @@ router.post(
     body('studentAnswer').trim().notEmpty().withMessage('Student answer is required'),
     body('maxPoints').isNumeric().withMessage('Max points is required'),
     body('model').trim().notEmpty().withMessage('AI model is required'),
-    body('apiKey').trim().notEmpty().withMessage('API key is required'),
+    body('keyPoints').optional().isString(),
+    body('modelAnswer').optional().isString(),
   ],
   async (req: Request, res: Response) => {
     try {
-      const { questionText, studentAnswer, maxPoints, model, apiKey, keyPoints, modelAnswer } = req.body;
+      const { questionText, studentAnswer, maxPoints, model, keyPoints, modelAnswer } = req.body;
 
-      // Build system prompt with optional grading criteria
-      let systemPrompt = `You are an expert essay grader. Grade the student's answer based on the question.
-Return ONLY a JSON object with:
+      // Read API key from the instructor's saved settings
+      const { getFirestore } = await import('firebase-admin/firestore');
+      const db = getFirestore();
+      const instructorDoc = await db.collection('examforge_users').doc(req.user!.userId).get();
+      const settings = instructorDoc.data()?.settings;
+      const apiKey = settings?.apiKey;
+      if (!apiKey) {
+        return res.status(400).json({ error: 'No API key configured. Please save your API key in Settings first.' });
+      }
+
+      // Build system prompt with grading criteria
+      let systemPrompt = `You are an expert essay grader. Your role is to evaluate the student's essay based on clarity and content in relevance to the essay question.`;
+      systemPrompt += `\nThe essay has a maximum of ${maxPoints} points. You must assign a score between 0 and ${maxPoints}, without exceeding the maximum.`;
+
+      if (modelAnswer?.trim()) {
+        systemPrompt += `\n\nModel/Reference Answer:\n${modelAnswer}`;
+      }
+      if (keyPoints?.trim()) {
+        systemPrompt += `\n\nKey Points the answer should cover:\n${keyPoints}`;
+      }
+
+      systemPrompt += `\n\nReturn ONLY a JSON object with:
 - "score" (number out of ${maxPoints})
 - "feedback" (string with brief, constructive explanation for the student)
-- "justification" (string explaining WHY you gave this score, referencing specific parts of the answer)
+- "justification" (string explaining WHY you awarded this score, referencing specific parts of the answer in relation to clarity, content, and the model answer/key points)
 
-Be fair and consistent. Score must be between 0 and ${maxPoints}.`;
-
-      if (keyPoints?.trim()) {
-        systemPrompt += `\n\nKey points the answer should cover:\n${keyPoints}`;
-      }
-      if (modelAnswer?.trim()) {
-        systemPrompt += `\n\nModel/reference answer for comparison:\n${modelAnswer}`;
-      }
+Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
 
       const userContent = `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`;
 

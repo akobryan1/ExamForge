@@ -1153,6 +1153,8 @@ export class ExamService {
                   description: questionData.description,
                   type: questionData.type,
                   points: questionData.points,
+                  modelAnswer: questionData.modelAnswer || '',
+                  keyPoints: questionData.keyPoints || '',
                 },
                 answer: answerData.answer,
                 currentGrade: answerData.pointsEarned,

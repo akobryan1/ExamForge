@@ -566,6 +566,60 @@
 }
 
 /* ============================================
+   REFERENCE SECTION (Model Answer & Key Points)
+   ============================================ */
+
+.reference-section {
+  margin-bottom: var(--spacing-6);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--ledger-line);
+}
+
+.reference-section h3 {
+  font-family: var(--font-mono-ledger);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ledger-ink);
+  margin: 0 0 12px;
+}
+
+.reference-section .form-group {
+  margin-bottom: var(--spacing-3);
+}
+
+.reference-section .form-group:last-child {
+  margin-bottom: 0;
+}
+
+.reference-section .form-group label {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.reference-text {
+  background: rgba(44,66,112,0.03);
+  border-color: var(--ledger-line-soft);
+  border-style: dashed;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 12px 16px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.reference-text::before {
+  display: none;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 

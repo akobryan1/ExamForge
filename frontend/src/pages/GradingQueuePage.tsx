@@ -35,15 +35,12 @@ export function GradingQueuePage() {
 
   // AI grading state
   const [aiModel, setAiModel] = useState('deepseek/deepseek-chat');
-  const [aiApiKey, setAiApiKey] = useState('');
   const [aiGrading, setAiGrading] = useState(false);
   const [aiResult, setAiResult] = useState<{ score: number; feedback: string; justification: string } | null>(null);
-  const [keyPoints, setKeyPoints] = useState('');
-  const [modelAnswer, setModelAnswer] = useState('');
   const [manualJustification, setManualJustification] = useState('');
 
   const handleAiGrade = async () => {
-    if (!selectedItem || !aiApiKey) return;
+    if (!selectedItem) return;
     try {
       setAiGrading(true);
       setAiResult(null);
@@ -52,9 +49,8 @@ export function GradingQueuePage() {
         studentAnswer: selectedItem.answer,
         maxPoints: selectedItem.question.points,
         model: aiModel === 'other' ? '' : aiModel,
-        apiKey: aiApiKey,
-        keyPoints: keyPoints || undefined,
-        modelAnswer: modelAnswer || undefined,
+        keyPoints: selectedItem.question.keyPoints || undefined,
+        modelAnswer: selectedItem.question.modelAnswer || undefined,
       });
       setAiResult(data);
       setGradeValue(data.score.toString());
@@ -240,6 +236,29 @@ export function GradingQueuePage() {
                       </div>
                     </div>
 
+                    {/* Model Answer & Key Points (from exam question data) */}
+                    {(selectedItem.question.modelAnswer || selectedItem.question.keyPoints) && (
+                      <div className="reference-section">
+                        <h3>Reference <span className="ai-chip">Exam Data</span></h3>
+                        {selectedItem.question.modelAnswer && (
+                          <div className="form-group">
+                            <label>Model Answer</label>
+                            <div className="answer-content reference-text">
+                              {selectedItem.question.modelAnswer}
+                            </div>
+                          </div>
+                        )}
+                        {selectedItem.question.keyPoints && (
+                          <div className="form-group">
+                            <label>Key Points</label>
+                            <div className="answer-content reference-text">
+                              {selectedItem.question.keyPoints}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* AI Auto-Grading */}
                     <div className="grading-form">
                       <h3>Auto-grade with AI <span className="ai-chip">AI Assist</span></h3>
@@ -251,42 +270,10 @@ export function GradingQueuePage() {
                           ))}
                         </select>
                       </div>
-                      <div className="form-group">
-                        <label>OpenRouter API Key</label>
-                        <input
-                          type="password"
-                          value={aiApiKey}
-                          onChange={(e) => setAiApiKey(e.target.value)}
-                          placeholder="sk-or-v1-..."
-                        />
-                        <p className="form-help">
-                          Get your free key at openrouter.ai/keys
-                        </p>
-                      </div>
-                      <div className="form-group">
-                        <label>Key Points (optional)</label>
-                        <textarea
-                          value={keyPoints}
-                          onChange={(e) => setKeyPoints(e.target.value)}
-                          placeholder="List key points the answer should cover..."
-                          rows={2}
-                        />
-                        <p className="form-help">Helps the AI evaluate more accurately</p>
-                      </div>
-                      <div className="form-group">
-                        <label>Model Answer (optional)</label>
-                        <textarea
-                          value={modelAnswer}
-                          onChange={(e) => setModelAnswer(e.target.value)}
-                          placeholder="Provide a reference answer for comparison..."
-                          rows={3}
-                        />
-                        <p className="form-help">The AI will compare the student's answer to this</p>
-                      </div>
                       <Button
                         variant="accent"
                         onClick={handleAiGrade}
-                        disabled={aiGrading || !aiApiKey}
+                        disabled={aiGrading}
                         style={{ width: '100%', marginBottom: 16 }}
                       >
                         {aiGrading ? 'Grading...' : '🤖 Auto-grade with AI'}
