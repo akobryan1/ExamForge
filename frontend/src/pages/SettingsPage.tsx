@@ -13,7 +13,8 @@ const AI_MODELS = [
 export function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek/deepseek-chat');
-  const [originalKey, setOriginalKey] = useState('');
+  const [hasSavedKey, setHasSavedKey] = useState(false);
+  const [keyModified, setKeyModified] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -21,9 +22,9 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        // Don't pre-fill apiKey with masked value — user must type it fresh
-        setApiKey('');
-        setOriginalKey(data.apiKey || '');
+        // Show the masked key so user knows a key is saved
+        setApiKey(data.apiKey || '');
+        setHasSavedKey(!!data.apiKey);
         setModel(data.model || 'deepseek/deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
@@ -35,11 +36,13 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const payload: Record<string, string> = { model };
-      if (apiKey.trim()) {
+      // Only send apiKey if user actually typed a new value (not the masked placeholder)
+      if (keyModified && apiKey.trim() && !apiKey.includes('••••')) {
         payload.apiKey = apiKey;
       }
       await apiClient.put('/api/settings', payload);
-      setOriginalKey(apiKey || originalKey);
+      setHasSavedKey(!!apiKey);
+      setKeyModified(false);
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch {
       setMessage({ type: 'error', text: 'Failed to save settings' });
@@ -91,11 +94,11 @@ export function SettingsPage() {
                 type="password"
                 id="apiKey"
                 value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder={originalKey ? 'Enter new key to replace masked one' : 'sk-or-v1-...'}
+                onChange={(e) => { setApiKey(e.target.value); setKeyModified(true); }}
+                placeholder={hasSavedKey ? 'Enter new key to replace the saved one' : 'sk-or-v1-...'}
               />
-              {originalKey && (
-                <p className="form-hint">A key is already saved. Enter a new value to replace it.</p>
+              {hasSavedKey && (
+                <p className="form-hint">A key is already saved. Type a new value to change it.</p>
               )}
             </div>
 
