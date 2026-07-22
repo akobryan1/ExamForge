@@ -561,6 +561,7 @@ router.post(
  */
 router.put(
   '/questions/:id',
+  authenticate,
   authorize('instructor', 'admin'),
   [body('examId').notEmpty().withMessage('Exam ID is required')],
   async (req: Request, res: Response) => {
@@ -584,6 +585,7 @@ router.put(
  */
 router.delete(
   '/questions/:id',
+  authenticate,
   authorize('instructor', 'admin'),
   async (req: Request, res: Response) => {
     try {
