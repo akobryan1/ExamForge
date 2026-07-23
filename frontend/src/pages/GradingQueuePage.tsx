@@ -52,9 +52,11 @@ export function GradingQueuePage() {
         keyPoints: selectedItem.question.keyPoints || undefined,
         modelAnswer: selectedItem.question.modelAnswer || undefined,
       });
+      // Auto-fill the grade fields with AI result
       setAiResult(data);
       setGradeValue(data.score.toString());
       setFeedbackText(data.feedback || '');
+      setManualJustification(data.justification || '');
     } catch (err: any) {
       alert('AI grading failed: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -88,8 +90,8 @@ export function GradingQueuePage() {
   };
 
   const filteredItems = items.filter((item: any) => {
-    if (filter === 'pending') return !item.currentGrade;
-    if (filter === 'graded') return item.currentGrade !== undefined;
+    if (filter === 'pending') return !item.isGraded;
+    if (filter === 'graded') return !!item.isGraded;
     return true;
   });
 
@@ -296,18 +298,7 @@ export function GradingQueuePage() {
                               <p className="ai-justification">{aiResult.justification}</p>
                             </div>
                           )}
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => {
-                              setGradeValue(aiResult.score.toString());
-                              setFeedbackText(aiResult.feedback);
-                              setManualJustification(aiResult.justification || '');
-                            }}
-                            style={{ marginTop: 8 }}
-                          >
-                            ✓ Approve AI Grade
-                          </Button>
+
                         </div>
                       )}
                     </div>
