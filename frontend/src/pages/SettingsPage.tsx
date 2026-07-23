@@ -32,7 +32,11 @@ export function SettingsPage() {
     setMessage(null);
     try {
       console.log('[Settings] Sending key:', JSON.stringify(apiKey), 'length:', apiKey.length);
-      await apiClient.put('/api/settings', { apiKey, model });
+      const res = await apiClient.put('/api/settings', { apiKey, model });
+      console.log('[Settings] Backend response:', res.data);
+      if (res.data.savedKeyPrefix && res.data.savedKeyPrefix !== apiKey.slice(0, 8)) {
+        console.warn('[Settings] KEY MISMATCH! Sent prefix:', apiKey.slice(0, 8), 'saved prefix:', res.data.savedKeyPrefix);
+      }
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
       console.error('[Settings] Save error:', err);

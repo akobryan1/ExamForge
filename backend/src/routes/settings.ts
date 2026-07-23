@@ -67,7 +67,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     const savedKey = verify.data()?.settings?.apiKey || '';
     console.log(`[Settings PUT] Verification read: keyLength=${savedKey.length}, first 8: "${savedKey.slice(0, 8)}"`);
 
-    res.json({ success: true });
+    res.json({ success: true, savedKeyPrefix: savedKey.slice(0, 8), savedKeyLength: savedKey.length });
   } catch (error) {
     console.error('[Settings PUT] Error:', error);
     res.status(500).json({ error: 'Failed to save settings' });
