@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
 import { apiClient } from '../services/apiClient';
-import { pageTransition, fadeIn } from '../utils/animations';
+import { pageTransition } from '../utils/animations';
 import '../styles/pages/settings.css';
 
 const AI_MODELS = [
@@ -11,8 +11,9 @@ const AI_MODELS = [
 ];
 
 export function SettingsPage() {
-  const [apiKey, setApiKey] = useState('');
+  const apiKeyRef = useRef<HTMLInputElement>(null);
   const [model, setModel] = useState('deepseek/deepseek-chat');
+  const [hasKey, setHasKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -20,7 +21,7 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        setApiKey(data.apiKey || '');
+        setHasKey(!!data.apiKey);
         setModel(data.model || 'deepseek/deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
@@ -31,8 +32,11 @@ export function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      console.log('[Settings] Sending apiKey length:', apiKey.length, 'first 10:', apiKey.slice(0, 10));
-      await apiClient.put('/api/settings', { apiKey, model });
+      const keyValue = apiKeyRef.current?.value || '';
+      console.log('[Settings] Read from DOM:', { keyValueLength: keyValue.length, first10: keyValue.slice(0, 10) });
+      await apiClient.put('/api/settings', { apiKey: keyValue || undefined, model });
+      if (apiKeyRef.current) apiKeyRef.current.value = '';
+      setHasKey(!!keyValue);
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
       console.error('[Settings] Save error:', err);
@@ -80,12 +84,18 @@ export function SettingsPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="apiKey">API Key</label>
+              <label>API Key</label>
+              <div className="api-key-status" style={{ marginBottom: 6 }}>
+                {hasKey ? (
+                  <span className="key-saved">✓ A key is saved</span>
+                ) : (
+                  <span className="key-missing">✗ No key saved</span>
+                )}
+              </div>
               <input
                 type="text"
                 id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
+                ref={apiKeyRef}
                 placeholder="sk-or-v1-..."
               />
             </div>
