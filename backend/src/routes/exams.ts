@@ -3,6 +3,7 @@ import { body, param } from 'express-validator';
 import { ExamService } from '../services/ExamService';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { getOrSet, invalidatePrefix } from '../utils/cache';
+import { logActivity } from '../utils/activityLogger';
 
 const router: Router = express.Router();
 
@@ -28,6 +29,7 @@ router.post(
         req.body
       );
       invalidatePrefix('exams_list_');
+      await logActivity(req.user!.userId, 'exam.created', `Created exam "${exam.title}"`, { examId: exam.id, title: exam.title });
       return res.status(201).json(exam);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -94,6 +96,7 @@ router.post(
       const { attemptId, questionId, earnedPoints, feedback } = req.body;
       await ExamService.gradeQuestion(attemptId, questionId, earnedPoints, feedback);
       invalidatePrefix('grading_');
+      await logActivity(req.user!.userId, 'grade.submitted', `Graded question ${questionId} (${earnedPoints} pts) for attempt ${attemptId}`, { attemptId, questionId, earnedPoints });
       return res.json({ success: true, message: 'Grade submitted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -199,6 +202,7 @@ Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
         return res.status(502).json({ error: 'AI returned invalid score' });
       }
 
+      await logActivity(req.user!.userId, 'grade.ai_graded', `AI-graded essay for attempt (${Math.round(result.score * 2) / 2}/${maxPoints} pts)`, { model, maxPoints, score: result.score });
       return res.json({
         score: Math.round(result.score * 2) / 2,
         feedback: result.feedback || '',
@@ -259,6 +263,7 @@ router.post(
     try {
       await ExamService.archiveIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
+      await logActivity(req.user!.userId, 'incident.archived', `Archived ${req.body.incidents.length} incident(s)`, { count: req.body.incidents.length });
       return res.json({ success: true, message: 'Incidents archived successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -278,6 +283,7 @@ router.post(
     try {
       await ExamService.unarchiveIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
+      await logActivity(req.user!.userId, 'incident.unarchived', `Unarchived ${req.body.incidents.length} incident(s)`, { count: req.body.incidents.length });
       return res.json({ success: true, message: 'Incidents unarchived successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -297,6 +303,7 @@ router.post(
     try {
       await ExamService.deleteIncidents(req.body.incidents);
       invalidatePrefix('incidents_');
+      await logActivity(req.user!.userId, 'incident.deleted', `Deleted ${req.body.incidents.length} incident(s)`, { count: req.body.incidents.length });
       return res.json({ success: true, message: 'Incidents deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -454,6 +461,7 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const cloned = await ExamService.cloneExam(req.params.id, req.user!.userId);
+      await logActivity(req.user!.userId, 'exam.cloned', `Cloned exam "${cloned.title}"`, { sourceExamId: req.params.id, newExamId: cloned.id });
       return res.status(201).json(cloned);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -472,6 +480,7 @@ router.put(
     try {
       const exam = await ExamService.republishExam(req.params.id, req.user!.userId);
       invalidatePrefix('exams_list_');
+      await logActivity(req.user!.userId, 'exam.republished', `Republished exam "${exam.title}"`, { examId: exam.id });
       return res.json(exam);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -490,6 +499,7 @@ router.put(
     try {
       const exam = await ExamService.completeExam(req.params.id, req.user!.userId);
       invalidatePrefix('exams_list_');
+      await logActivity(req.user!.userId, 'exam.completed', `Completed exam "${exam.title}"`, { examId: exam.id });
       return res.json(exam);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
@@ -512,6 +522,7 @@ router.put(
         req.body
       );
       invalidatePrefix('exams_list_');
+      await logActivity(req.user!.userId, 'exam.updated', `Updated exam "${exam.title}"`, { examId: exam.id });
       return res.json(exam);
     } catch (error: any) {
       console.error('[Exams] PUT /:id error:', error.message, error.stack);
@@ -531,6 +542,7 @@ router.delete(
     try {
       await ExamService.deleteExam(req.params.id, req.user!.userId);
       invalidatePrefix('exams_list_');
+      await logActivity(req.user!.userId, 'exam.deleted', `Deleted exam ${req.params.id}`, { examId: req.params.id });
       return res.json({ message: 'Exam deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });

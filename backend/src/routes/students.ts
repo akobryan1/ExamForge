@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import { StudentService } from '../services/StudentService';
 import { authenticate, authorize } from '../middleware/auth';
 import { getOrSet, invalidatePrefix } from '../utils/cache';
+import { logActivity } from '../utils/activityLogger';
 
 const router = Router();
 
@@ -39,6 +40,7 @@ router.post(
         password: req.body.password,
       });
 
+      await logActivity(req.params.instructorId, 'student.registered', `Student "${req.body.name}" (${req.body.studentId}) registered`, { studentId: req.body.studentId, studentName: req.body.name });
       return res.status(201).json({ message: 'Registration successful', student });
     } catch (error: any) {
       console.error('[Students] Register error:', error);

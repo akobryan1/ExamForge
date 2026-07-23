@@ -18,7 +18,12 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     if (envKey) {
       console.log(`[Settings GET] Using env var key, length=${envKey.length}`);
       const masked = envKey.slice(0, 8) + '••••' + envKey.slice(-4);
-      res.json({ apiKey: masked, model: process.env.AI_MODEL || 'deepseek/deepseek-chat' });
+      res.json({
+        apiKey: masked,
+        model: process.env.AI_MODEL || 'deepseek/deepseek-chat',
+        themeColor: process.env.THEME_COLOR || '#1B2540',
+        fontPreset: process.env.FONT_PRESET || 'editorial',
+      });
       return;
     }
 
@@ -35,7 +40,12 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     const masked = rawKey
       ? rawKey.slice(0, 8) + '••••' + rawKey.slice(-4)
       : '';
-    res.json({ apiKey: masked, model: settings?.model || 'deepseek/deepseek-chat' });
+    res.json({
+      apiKey: masked,
+      model: settings?.model || 'deepseek/deepseek-chat',
+      themeColor: settings?.themeColor || '#1B2540',
+      fontPreset: settings?.fontPreset || 'editorial',
+    });
   } catch (error) {
     console.error('[Settings GET] Error:', error);
     res.status(500).json({ error: 'Failed to load settings' });
@@ -49,12 +59,12 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
   try {
     console.log('[Settings PUT] RAW wire body:', (req as any).rawBody || 'N/A');
     console.log('[Settings PUT] Parsed req.body:', JSON.stringify(req.body));
-    const { apiKey, model } = req.body;
+    const { apiKey, model, themeColor, fontPreset } = req.body;
     const { getFirestore } = await import('firebase-admin/firestore');
     const db = getFirestore();
     const userId = req.user!.userId;
 
-    console.log(`[Settings PUT] userId=${userId} apiKeyReceived=${!!apiKey} apiKeyLength=${apiKey?.length || 0} model=${model}`);
+    console.log(`[Settings PUT] userId=${userId} apiKeyReceived=${!!apiKey} apiKeyLength=${apiKey?.length || 0} model=${model} themeColor=${themeColor} fontPreset=${fontPreset}`);
     if (apiKey) {
       console.log(`[Settings PUT] first 8 chars: "${apiKey.slice(0, 8)}" last 4: "${apiKey.slice(-4)}"`);
     }
@@ -66,6 +76,12 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     if (model !== undefined) {
       settingsData.model = model;
     }
+    if (themeColor !== undefined) {
+      settingsData.themeColor = themeColor;
+    }
+    if (fontPreset !== undefined) {
+      settingsData.fontPreset = fontPreset;
+    }
 
     await db.collection('examforge_users').doc(userId).set(
       { settings: settingsData, updatedAt: new Date() },
@@ -73,6 +89,12 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
     );
 
     console.log('[Settings PUT] Save successful');
+
+    // Log activity
+    const { logActivity } = await import('../utils/activityLogger');
+    const changedFields = Object.keys(settingsData).join(', ');
+    await logActivity(userId, 'settings.updated', `Updated settings: ${changedFields}`, { changedFields: Object.keys(settingsData) });
+
     // Verify by reading back immediately
     const verify = await db.collection('examforge_users').doc(userId).get();
     const savedKey = verify.data()?.settings?.apiKey || '';

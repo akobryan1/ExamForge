@@ -112,6 +112,7 @@ import fileRoutes from './routes/files.js';
 import notificationRoutes from './routes/notifications.js';
 import studentRoutes from './routes/students.js';
 import settingsRoutes from './routes/settings.js';
+import activityRoutes from './routes/activity.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/exams', examRoutes);
@@ -120,6 +121,7 @@ app.use('/api/files', fileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/activity', activityRoutes);
 // app.use('/api/submissions', submissionRoutes);
 // app.use('/api/analytics', analyticsRoutes);
 // app.use('/api/grading', gradingRoutes);
