@@ -134,7 +134,7 @@ router.post(
       }
 
       console.log('[AIGrade] Using saved API key:', apiKey.slice(0, 8) + '...');
-      console.log('[AIGrade] Sending to OpenRouter with model:', model);
+      console.log('[AIGrade] Sending to DeepSeek API with model:', model);
 
       // Build system prompt with grading criteria
       let systemPrompt = `You are an expert essay grader. Your role is to evaluate the student's essay based on clarity and content in relevance to the essay question.`;
@@ -156,14 +156,12 @@ Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
 
       const userContent = `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`;
 
-      // Call OpenRouter API (OpenAI-compatible endpoint)
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      // Call DeepSeek API directly
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://examforge-app.com',
-          'X-Title': 'ExamForge',
         },
         body: JSON.stringify({
           model,
