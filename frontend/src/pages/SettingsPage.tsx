@@ -12,8 +12,8 @@ const AI_MODELS = [
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export function SettingsPage() {
-  const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek-chat');
+  const [hasKey, setHasKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -25,7 +25,7 @@ export function SettingsPage() {
     })
       .then(r => r.json())
       .then((data) => {
-        setApiKey(data.apiKey || '');
+        setHasKey(!!data.apiKey);
         setModel(data.model || 'deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
@@ -36,24 +36,15 @@ export function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      // Use raw fetch instead of axios to avoid transformRequest issues
       const token = localStorage.getItem('accessToken');
-      const bodyStr = JSON.stringify({ apiKey, model });
-      console.log('[Settings] apiKey at fetch:', JSON.stringify(apiKey), 'length:', apiKey.length);
-      console.log('[Settings] Full body string:', bodyStr);
-      const res = await fetch(`${API_BASE}/api/settings`, {
+      await fetch(`${API_BASE}/api/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
-        body: bodyStr,
+        body: JSON.stringify({ model }),
       });
-      const data = await res.json();
-      console.log('[Settings] Backend response:', data);
-      if (data.savedKeyPrefix && data.savedKeyPrefix !== apiKey.slice(0, 8)) {
-        console.warn('[Settings] KEY MISMATCH! Sent prefix:', apiKey.slice(0, 8), 'saved prefix:', data.savedKeyPrefix);
-      }
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
       console.error('[Settings] Save error:', err);
@@ -79,16 +70,16 @@ export function SettingsPage() {
         <div className="page-header">
           <div>
             <h1>Settings</h1>
-            <p className="page-subtitle">Configure your AI and API preferences</p>
+            <p className="page-subtitle">Configure your AI preferences</p>
           </div>
         </div>
 
         <div className="settings-card">
           <div className="settings-section">
-            <h2>AI Question Generation</h2>
+            <h2>AI Configuration</h2>
             <p className="settings-description">
-              Configure the AI model and API key used for generating exam questions and auto-grading.
-              Get a free API key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener noreferrer">openrouter.ai/keys</a>.
+              The API key is configured via the <code>DEEPSEEK_API_KEY</code> environment variable on the server.
+              Only the AI model can be changed here.
             </p>
 
             <div className="form-group">
@@ -100,22 +91,12 @@ export function SettingsPage() {
               </select>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="apiKey">API Key</label>
-              <input
-                type="text"
-                id="apiKey"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="sk-or-v1-..."
-              />
-              <p className="form-hint">
-                {apiKey.includes('••••')
-                  ? 'A key is saved. Edit the field to change it.'
-                  : apiKey
-                    ? 'Key will be saved when you click Save.'
-                    : 'No key saved. Paste your OpenRouter API key above.'}
-              </p>
+            <div className="api-key-status" style={{ margin: '12px 0' }}>
+              {hasKey ? (
+                <span className="key-saved">✓ API key is configured via environment variable</span>
+              ) : (
+                <span className="key-missing">✗ No API key set in environment variables</span>
+              )}
             </div>
 
             {message && (
