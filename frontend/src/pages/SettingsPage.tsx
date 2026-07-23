@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
@@ -11,9 +11,8 @@ const AI_MODELS = [
 ];
 
 export function SettingsPage() {
-  const apiKeyRef = useRef<HTMLInputElement>(null);
+  const [apiKey, setApiKey] = useState('');
   const [model, setModel] = useState('deepseek/deepseek-chat');
-  const [hasKey, setHasKey] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -21,10 +20,8 @@ export function SettingsPage() {
   useEffect(() => {
     apiClient.get('/api/settings')
       .then(({ data }) => {
-        setHasKey(!!data.apiKey);
+        setApiKey(data.apiKey || '');
         setModel(data.model || 'deepseek/deepseek-chat');
-        // Force-clear the input on mount to prevent browser BFCache/autofill
-        if (apiKeyRef.current) apiKeyRef.current.value = '';
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
       .finally(() => setLoading(false));
@@ -34,11 +31,8 @@ export function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      const keyValue = apiKeyRef.current?.value || '';
-      console.log('[Settings] DOM value:', JSON.stringify(keyValue), 'length:', keyValue.length);
-      await apiClient.put('/api/settings', { apiKey: keyValue || undefined, model });
-      if (apiKeyRef.current) apiKeyRef.current.value = '';
-      setHasKey(!!keyValue);
+      console.log('[Settings] Sending key:', JSON.stringify(apiKey), 'length:', apiKey.length);
+      await apiClient.put('/api/settings', { apiKey, model });
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {
       console.error('[Settings] Save error:', err);
@@ -86,21 +80,21 @@ export function SettingsPage() {
             </div>
 
             <div className="form-group">
-              <label>API Key</label>
-              <div className="api-key-status" style={{ marginBottom: 6 }}>
-                {hasKey ? (
-                  <span className="key-saved">✓ A key is saved</span>
-                ) : (
-                  <span className="key-missing">✗ No key saved</span>
-                )}
-              </div>
+              <label htmlFor="apiKey">API Key</label>
               <input
                 type="text"
                 id="apiKey"
-                ref={apiKeyRef}
-                autoComplete="off"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
                 placeholder="sk-or-v1-..."
               />
+              <p className="form-hint">
+                {apiKey.includes('••••')
+                  ? 'A key is saved. Edit the field to change it.'
+                  : apiKey
+                    ? 'Key will be saved when you click Save.'
+                    : 'No key saved. Paste your OpenRouter API key above.'}
+              </p>
             </div>
 
             {message && (
