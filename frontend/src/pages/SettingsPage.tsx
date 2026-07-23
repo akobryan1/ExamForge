@@ -23,6 +23,8 @@ export function SettingsPage() {
       .then(({ data }) => {
         setHasKey(!!data.apiKey);
         setModel(data.model || 'deepseek/deepseek-chat');
+        // Force-clear the input on mount to prevent browser BFCache/autofill
+        if (apiKeyRef.current) apiKeyRef.current.value = '';
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
       .finally(() => setLoading(false));
@@ -33,7 +35,7 @@ export function SettingsPage() {
     setMessage(null);
     try {
       const keyValue = apiKeyRef.current?.value || '';
-      console.log('[Settings] Read from DOM:', { keyValueLength: keyValue.length, first10: keyValue.slice(0, 10) });
+      console.log('[Settings] DOM value:', JSON.stringify(keyValue), 'length:', keyValue.length);
       await apiClient.put('/api/settings', { apiKey: keyValue || undefined, model });
       if (apiKeyRef.current) apiKeyRef.current.value = '';
       setHasKey(!!keyValue);
@@ -96,6 +98,7 @@ export function SettingsPage() {
                 type="text"
                 id="apiKey"
                 ref={apiKeyRef}
+                autoComplete="off"
                 placeholder="sk-or-v1-..."
               />
             </div>
