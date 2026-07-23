@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
-import { apiClient } from '../services/apiClient';
 import { pageTransition } from '../utils/animations';
 import '../styles/pages/settings.css';
 
 const AI_MODELS = [
   { value: 'deepseek/deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
@@ -18,8 +19,12 @@ export function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
-    apiClient.get('/api/settings')
-      .then(({ data }) => {
+    const token = localStorage.getItem('accessToken');
+    fetch(`${API_BASE}/api/settings`, {
+      headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+    })
+      .then(r => r.json())
+      .then((data) => {
         setApiKey(data.apiKey || '');
         setModel(data.model || 'deepseek/deepseek-chat');
       })
@@ -31,11 +36,21 @@ export function SettingsPage() {
     setSaving(true);
     setMessage(null);
     try {
-      console.log('[Settings] Sending key:', JSON.stringify(apiKey), 'length:', apiKey.length);
-      const res = await apiClient.put('/api/settings', { apiKey, model });
-      console.log('[Settings] Backend response:', res.data);
-      if (res.data.savedKeyPrefix && res.data.savedKeyPrefix !== apiKey.slice(0, 8)) {
-        console.warn('[Settings] KEY MISMATCH! Sent prefix:', apiKey.slice(0, 8), 'saved prefix:', res.data.savedKeyPrefix);
+      // Use raw fetch instead of axios to avoid transformRequest issues
+      const token = localStorage.getItem('accessToken');
+      console.log('[Settings] Sending key via fetch:', JSON.stringify(apiKey), 'length:', apiKey.length);
+      const res = await fetch(`${API_BASE}/api/settings`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ apiKey, model }),
+      });
+      const data = await res.json();
+      console.log('[Settings] Backend response:', data);
+      if (data.savedKeyPrefix && data.savedKeyPrefix !== apiKey.slice(0, 8)) {
+        console.warn('[Settings] KEY MISMATCH! Sent prefix:', apiKey.slice(0, 8), 'saved prefix:', data.savedKeyPrefix);
       }
       setMessage({ type: 'success', text: 'Settings saved successfully' });
     } catch (err: any) {

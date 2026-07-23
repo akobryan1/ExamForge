@@ -15,16 +15,12 @@ class ApiClient {
       withCredentials: true, // Send cookies
     });
 
-    // Request interceptor to add auth token and debug settings saves
+    // Request interceptor to add auth token
     this.client.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('accessToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
-        }
-        // Debug: log exact settings PUT body
-        if (config.method === 'put' && config.url === '/api/settings') {
-          console.log('[axios] PUT /api/settings body:', JSON.stringify(config.data), 'type:', typeof config.data);
         }
         return config;
       },
