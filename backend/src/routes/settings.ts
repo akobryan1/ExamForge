@@ -38,6 +38,8 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
  */
 router.put('/', authenticate, async (req: Request, res: Response) => {
   try {
+    console.log('[Settings PUT] RAW wire body:', (req as any).rawBody || 'N/A');
+    console.log('[Settings PUT] Parsed req.body:', JSON.stringify(req.body));
     const { apiKey, model } = req.body;
     const { getFirestore } = await import('firebase-admin/firestore');
     const db = getFirestore();
@@ -45,7 +47,7 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
 
     console.log(`[Settings PUT] userId=${userId} apiKeyReceived=${!!apiKey} apiKeyLength=${apiKey?.length || 0} model=${model}`);
     if (apiKey) {
-      console.log(`[Settings PUT] first 8 chars: "${apiKey.slice(0, 8)}"`);
+      console.log(`[Settings PUT] first 8 chars: "${apiKey.slice(0, 8)}" last 4: "${apiKey.slice(-4)}"`);
     }
 
     const settingsData: Record<string, unknown> = {};

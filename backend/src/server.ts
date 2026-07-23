@@ -62,7 +62,14 @@ app.use((req, _res, next) => {
 });
 
 app.use(morgan('dev')); // Request logging
-app.use(express.json()); // Parse JSON bodies
+app.use(express.json({
+  verify: (req: any, _res: any, buf: Buffer) => {
+    // Save raw body for debugging on settings routes
+    if (req.url === '/api/settings' && req.method === 'PUT') {
+      req.rawBody = buf.toString();
+    }
+  },
+})); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(cookieParser()); // Parse cookies
 
