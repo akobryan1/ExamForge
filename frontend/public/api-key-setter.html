@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html><head><title>Set API Key</title></head><body>
+<h2>Set Your OpenRouter API Key</h2>
+<p id="status">Loading...</p>
+<input id="keyInput" type="text" placeholder="sk-or-v1-..." style="width:400px;padding:8px;font-size:16px">
+<br><br>
+<button id="saveBtn" style="padding:8px 24px;font-size:16px">Save API Key</button>
+<pre id="result" style="margin-top:16px;background:#f5f5f5;padding:12px"></pre>
+<script>
+const API = 'https://examforge-backend-taz3.onrender.com';
+async function init() {
+  const token = localStorage.getItem('accessToken');
+  if (!token) { document.getElementById('status').textContent = '❌ Not logged in. Open this from within the ExamForge app.'; return; }
+  document.getElementById('status').textContent = '✅ Logged in. Enter your key below.';
+  const r = await fetch(API+'/api/settings/debug/api-key', { headers: {'Authorization':'Bearer '+token} });
+  const d = await r.json();
+  document.getElementById('result').textContent = 'Current stored key: ' + JSON.stringify(d);
+}
+document.getElementById('saveBtn').onclick = async () => {
+  const token = localStorage.getItem('accessToken');
+  const key = document.getElementById('keyInput').value;
+  if (!key) { alert('Paste your API key first'); return; }
+  document.getElementById('result').textContent = 'Saving...';
+  const r = await fetch(API+'/api/settings', {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body: JSON.stringify({apiKey: key, model: 'deepseek/deepseek-chat'})
+  });
+  const d = await r.json();
+  document.getElementById('result').textContent = 'Save response: ' + JSON.stringify(d);
+  if (d.success) {
+    const r2 = await fetch(API+'/api/settings/debug/api-key', { headers: {'Authorization':'Bearer '+token} });
+    const d2 = await r2.json();
+    document.getElementById('result').textContent += '\nVerified stored: ' + JSON.stringify(d2);
+  }
+};
+init();
+</script></body></html>
