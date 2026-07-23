@@ -9,7 +9,7 @@ import type { Question } from '../types/exam';
 import '../styles/pages/grading-queue.css';
 
 const AI_MODELS = [
-  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
+  { value: 'deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
 
 interface GradingItem {
@@ -34,7 +34,7 @@ export function GradingQueuePage() {
   const [feedbackText, setFeedbackText] = useState('');
 
   // AI grading state
-  const [aiModel, setAiModel] = useState('deepseek/deepseek-chat');
+  const [aiModel, setAiModel] = useState('deepseek-chat');
   const [aiGrading, setAiGrading] = useState(false);
   const [aiResult, setAiResult] = useState<{ score: number; feedback: string; justification: string } | null>(null);
   const [manualJustification, setManualJustification] = useState('');

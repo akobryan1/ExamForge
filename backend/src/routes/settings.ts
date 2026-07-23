@@ -14,7 +14,7 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     console.log(`[Settings GET] userId=${userId}`);
 
     // Check for env var first (overrides Firestore)
-    const envKey = process.env.OPENROUTER_API_KEY || '';
+    const envKey = process.env.DEEPSEEK_API_KEY || '';
     if (envKey) {
       console.log(`[Settings GET] Using env var key, length=${envKey.length}`);
       const masked = envKey.slice(0, 8) + '••••' + envKey.slice(-4);

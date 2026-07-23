@@ -6,14 +6,14 @@ import { pageTransition } from '../utils/animations';
 import '../styles/pages/settings.css';
 
 const AI_MODELS = [
-  { value: 'deepseek/deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
+  { value: 'deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export function SettingsPage() {
   const [apiKey, setApiKey] = useState('');
-  const [model, setModel] = useState('deepseek/deepseek-chat');
+  const [model, setModel] = useState('deepseek-chat');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -26,7 +26,7 @@ export function SettingsPage() {
       .then(r => r.json())
       .then((data) => {
         setApiKey(data.apiKey || '');
-        setModel(data.model || 'deepseek/deepseek-chat');
+        setModel(data.model || 'deepseek-chat');
       })
       .catch(() => setMessage({ type: 'error', text: 'Failed to load settings' }))
       .finally(() => setLoading(false));

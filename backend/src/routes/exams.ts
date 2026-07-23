@@ -121,7 +121,7 @@ router.post(
       const { questionText, studentAnswer, maxPoints, model, keyPoints, modelAnswer } = req.body;
 
       // Read API key from env var first (set in Render dashboard), fallback to Firestore
-      let apiKey = process.env.OPENROUTER_API_KEY || '';
+      let apiKey = process.env.DEEPSEEK_API_KEY || '';
       if (!apiKey) {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore();
