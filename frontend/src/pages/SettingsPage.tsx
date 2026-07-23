@@ -38,14 +38,16 @@ export function SettingsPage() {
     try {
       // Use raw fetch instead of axios to avoid transformRequest issues
       const token = localStorage.getItem('accessToken');
-      console.log('[Settings] Sending key via fetch:', JSON.stringify(apiKey), 'length:', apiKey.length);
+      const bodyStr = JSON.stringify({ apiKey, model });
+      console.log('[Settings] apiKey at fetch:', JSON.stringify(apiKey), 'length:', apiKey.length);
+      console.log('[Settings] Full body string:', bodyStr);
       const res = await fetch(`${API_BASE}/api/settings`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : '',
         },
-        body: JSON.stringify({ apiKey, model }),
+        body: bodyStr,
       });
       const data = await res.json();
       console.log('[Settings] Backend response:', data);
