@@ -74,4 +74,24 @@ router.put('/', authenticate, async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /debug/api-key — Debug: show current saved API key info
+ */
+router.get('/debug/api-key', authenticate, async (req: Request, res: Response) => {
+  try {
+    const { getFirestore } = await import('firebase-admin/firestore');
+    const db = getFirestore();
+    const doc = await db.collection('examforge_users').doc(req.user!.userId).get();
+    const rawKey = doc.data()?.settings?.apiKey || '';
+    res.json({
+      exists: !!rawKey,
+      length: rawKey.length,
+      prefix: rawKey.slice(0, 10),
+      suffix: rawKey.slice(-6),
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Debug error' });
+  }
+});
+
 export default router;
