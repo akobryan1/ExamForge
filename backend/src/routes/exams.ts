@@ -120,12 +120,15 @@ router.post(
     try {
       const { questionText, studentAnswer, maxPoints, model, keyPoints, modelAnswer } = req.body;
 
-      // Read API key from the instructor's saved settings
-      const { getFirestore } = await import('firebase-admin/firestore');
-      const db = getFirestore();
-      const instructorDoc = await db.collection('examforge_users').doc(req.user!.userId).get();
-      const settings = instructorDoc.data()?.settings;
-      const apiKey = settings?.apiKey;
+      // Read API key from env var first (set in Render dashboard), fallback to Firestore
+      let apiKey = process.env.OPENROUTER_API_KEY || '';
+      if (!apiKey) {
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const db = getFirestore();
+        const instructorDoc = await db.collection('examforge_users').doc(req.user!.userId).get();
+        const settings = instructorDoc.data()?.settings;
+        apiKey = settings?.apiKey || '';
+      }
       if (!apiKey) {
         return res.status(400).json({ error: 'No API key configured. Please save your API key in Settings first.' });
       }

@@ -13,6 +13,15 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     console.log(`[Settings GET] userId=${userId}`);
 
+    // Check for env var first (overrides Firestore)
+    const envKey = process.env.OPENROUTER_API_KEY || '';
+    if (envKey) {
+      console.log(`[Settings GET] Using env var key, length=${envKey.length}`);
+      const masked = envKey.slice(0, 8) + '••••' + envKey.slice(-4);
+      res.json({ apiKey: masked, model: process.env.AI_MODEL || 'deepseek/deepseek-chat' });
+      return;
+    }
+
     // Prevent any caching of settings response
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.set('Pragma', 'no-cache');
