@@ -318,6 +318,16 @@
 .stamp-info    { color: var(--ledger-ink-blue); }
 .stamp-neutral { color: var(--ledger-grey); border-style: dashed; }
 
+.status-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
+  object-fit: contain;
+  position: relative;
+  top: -1px;
+}
+
 .score-pct {
   font-weight: 400;
   opacity: 0.75;

@@ -145,13 +145,13 @@ export function StudentManagementPage() {
               className={`folder-tab ${activeTab === 'registered' ? 'active' : ''}`}
               onClick={() => setActiveTab('registered')}
             >
-              👥 Registered Students
+              <img src="/icons/tabs/registered-students.png" alt="" className="tab-icon" /> Registered Students
             </button>
             <button
               className={`folder-tab ${activeTab === 'papers' ? 'active' : ''}`}
               onClick={() => setActiveTab('papers')}
             >
-              📝 Submitted Papers
+              <img src="/icons/tabs/submitted-papers.png" alt="" className="tab-icon" /> Submitted Papers
             </button>
           </div>
 
@@ -392,12 +392,12 @@ export function StudentManagementPage() {
                           </td>
                           <td>
                             <span className={`stamp stamp-${p.status === 'completed' ? 'pass' : p.status === 'pending' ? 'warn' : p.status === 'incomplete' ? 'neutral' : p.status === 'submitted' ? 'info' : 'neutral'}`}>
-                              {p.status === 'completed' && '✅ Completed'}
-                              {p.status === 'pending' && '⏳ Pending Review'}
+                              {p.status === 'completed' && <><img src="/icons/status/completed.png" alt="" className="status-icon" /> Completed</>}
+                              {p.status === 'pending' && <><img src="/icons/status/pending-review.png" alt="" className="status-icon" /> Pending Review</>}
                               {p.status === 'incomplete' && (
-                                <span title={p.statusDetail || ''}>❓ Incomplete</span>
+                                <span title={p.statusDetail || ''}><img src="/icons/status/incomplete.png" alt="" className="status-icon" /> Incomplete</span>
                               )}
-                              {p.status === 'submitted' && '📥 Submitted'}
+                              {p.status === 'submitted' && <><img src="/icons/status/submitted.png" alt="" className="status-icon" /> Submitted</>}
                               {p.status !== 'completed' && p.status !== 'pending' && p.status !== 'incomplete' && p.status !== 'submitted' && p.status}
                             </span>
                             {p.statusDetail && (
