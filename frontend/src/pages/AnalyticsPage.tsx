@@ -113,7 +113,7 @@ export function AnalyticsPage() {
             {/* Overview Cards */}
             <div className="stats-grid">
               <motion.div className="stat-card" variants={fadeIn}>
-                <div className="stat-icon">📊</div>
+                <div className="stat-icon"><img src="/icons/status/total-attempts.png" alt="" className="stat-icon-img" /></div>
                 <div className="stat-content">
                   <div className="stat-label">Total Attempts</div>
                   <div className="stat-value">{a!.totalAttempts}</div>
@@ -121,7 +121,7 @@ export function AnalyticsPage() {
               </motion.div>
 
               <motion.div className="stat-card" variants={fadeIn}>
-                <div className="stat-icon">📈</div>
+                <div className="stat-icon"><img src="/icons/status/average-score.png" alt="" className="stat-icon-img" /></div>
                 <div className="stat-content">
                   <div className="stat-label">Average Score</div>
                   <div className="stat-value">{a!.averageScore.toFixed(1)}%</div>
@@ -129,7 +129,7 @@ export function AnalyticsPage() {
               </motion.div>
 
               <motion.div className="stat-card" variants={fadeIn}>
-                <div className="stat-icon">✅</div>
+                <div className="stat-icon"><img src="/icons/status/pass-rate.png" alt="" className="stat-icon-img" /></div>
                 <div className="stat-content">
                   <div className="stat-label">Pass Rate</div>
                   <div className="stat-value">{a!.passRate.toFixed(1)}%</div>
@@ -137,7 +137,7 @@ export function AnalyticsPage() {
               </motion.div>
 
               <motion.div className="stat-card" variants={fadeIn}>
-                <div className="stat-icon">⏱️</div>
+                <div className="stat-icon"><img src="/icons/status/avg-time.png" alt="" className="stat-icon-img" /></div>
                 <div className="stat-content">
                   <div className="stat-label">Avg. Time</div>
                   <div className="stat-value">
