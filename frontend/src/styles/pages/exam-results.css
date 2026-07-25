@@ -92,6 +92,22 @@
   color: var(--ledger-green);
 }
 
+.verdict-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.review-icon {
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 4px;
+  object-fit: contain;
+  position: relative;
+  top: -1px;
+}
+
 .verdict-stamp.failed {
   color: var(--ledger-amber);
 }

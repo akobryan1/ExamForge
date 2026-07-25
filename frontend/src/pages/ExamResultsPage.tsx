@@ -91,7 +91,7 @@ export function ExamResultsPage() {
           <div className="grade-circle-big">{percentage.toFixed(1)}%</div>
           <div className="score-details">{score} out of {totalPoints} points</div>
           <div className={`verdict-stamp ${passed ? 'passed' : 'failed'}`}>
-            {passed ? '✓ Passed' : 'Keep Practicing'}
+            {passed ? <><img src="/icons/status/passed-verdict.png" alt="" className="verdict-icon" /> Passed</> : 'Keep Practicing'}
           </div>
           <p className="results-message">
             {isInstructor
@@ -146,7 +146,7 @@ export function ExamResultsPage() {
                 const earnedPoints = studentAnswer?.pointsEarned ?? null;
                 const notAnswered = !studentAnswer;
                 const isUngraded = studentAnswer && earnedPoints === null && studentAnswer?.gradedBy === null;
-                const resultLabel = notAnswered ? '❌ Not Answered' : (isUngraded ? '⏳ Pending' : (isCorrect ? '✓ Correct' : '✗ Incorrect'));
+                const resultLabel = notAnswered ? <><img src="/icons/status/not-answered.png" alt="" className="review-icon" /> Not Answered</> : (isUngraded ? <><img src="/icons/status/pending-review.png" alt="" className="review-icon" /> Pending</> : (isCorrect ? <><img src="/icons/status/correct.png" alt="" className="review-icon" /> Correct</> : <><img src="/icons/status/incorrect.png" alt="" className="review-icon" /> Incorrect</>));
                 const resultClass = notAnswered ? 'incorrect' : (isUngraded ? 'pending' : (isCorrect ? 'correct' : 'incorrect'));
 
                 return (
