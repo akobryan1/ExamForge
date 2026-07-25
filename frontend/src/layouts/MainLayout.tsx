@@ -37,19 +37,19 @@ export function MainLayout({ children }: MainLayoutProps) {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/exams', label: 'Exams', icon: '📝' },
+    { path: '/dashboard', label: 'Dashboard', icon: '/icons/nav/dashboard.png' },
+    { path: '/exams', label: 'Exams', icon: '/icons/nav/exams.png' },
     ...(user?.role === 'instructor' ? [
-      { path: '/exams/create', label: 'Create Exam', icon: '➕' },
-      { path: '/students', label: 'Students', icon: '👥' },
-      { path: '/grading', label: 'Grading Queue', icon: '✓' },
-      { path: '/analytics', label: 'Analytics', icon: '📈' },
-      { path: '/incidents', label: 'Incident Reports', icon: '👁️' },
+      { path: '/exams/create', label: 'Create Exam', icon: '/icons/nav/create-exam.png' },
+      { path: '/students', label: 'Students', icon: '/icons/nav/students.png' },
+      { path: '/grading', label: 'Grading Queue', icon: '/icons/nav/grading-queue.png' },
+      { path: '/analytics', label: 'Analytics', icon: '/icons/nav/analytics.png' },
+      { path: '/incidents', label: 'Incident Reports', icon: '/icons/nav/incidents.png' },
     ] : []),
-    { path: '/settings', label: 'Settings', icon: '⚙️' },
+    { path: '/settings', label: 'Settings', icon: '/icons/nav/settings.png' },
     ...(user?.role === 'student' ? [
-      { path: '/my-exams', label: 'My Exams', icon: '📚' },
-      { path: '/results', label: 'Results', icon: '🎯' },
+      { path: '/my-exams', label: 'My Exams', icon: '/icons/nav/my-exams.png' },
+      { path: '/results', label: 'Results', icon: '/icons/nav/results.png' },
     ] : []),
   ];
 
@@ -93,7 +93,9 @@ export function MainLayout({ children }: MainLayoutProps) {
                 to={item.path}
                 className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
               >
-                <span className="nav-icon">{item.icon}</span>
+                <span className="nav-icon">
+                  <img src={item.icon} alt="" className="nav-icon-img" />
+                </span>
                 <span className="nav-label">{item.label}</span>
               </Link>
             </Fragment>

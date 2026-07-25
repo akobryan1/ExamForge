@@ -192,11 +192,25 @@
 }
 
 .nav-icon {
-  font-size: 15px;
   width: 20px;
-  text-align: center;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  filter: grayscale(0.15);
+}
+
+.nav-icon-img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  filter: brightness(0.85);
+  transition: filter 0.15s;
+}
+
+.nav-item:hover .nav-icon-img,
+.nav-item.active .nav-icon-img {
+  filter: brightness(1.1);
 }
 
 .nav-label {
