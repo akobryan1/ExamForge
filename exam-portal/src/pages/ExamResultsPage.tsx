@@ -35,7 +35,7 @@ export function ExamResultsPage() {
     <div className="auth-container">
       <div className="auth-content" style={{ maxWidth: 520 }}>
         <div className={`results-header ${passed ? 'passed' : 'failed'}`}>
-          <div className="results-icon">{passed ? '🎉' : '📝'}</div>
+          <div className="results-icon">{passed ? <img src="/icons/status/passed-verdict.png" alt="" className="results-icon-img" /> : <img src="/icons/nav/exams.png" alt="" className="results-icon-img" />}</div>
           <h1>{passed ? 'Congratulations!' : 'Exam completed'}</h1>
           <p className="results-message">{passed ? 'You passed the exam!' : 'Review your results below.'}</p>
         </div>

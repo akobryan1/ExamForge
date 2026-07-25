@@ -973,6 +973,15 @@
 .path-icon {
   font-size: 22px;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.path-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
 }
 
 .path-title {

@@ -177,6 +177,8 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
   color: white;
 }
 
+.seal-icon { width: 36px; height: 36px; object-fit: contain; filter: brightness(10); }
+
 .seal-emblem.check {
   background: radial-gradient(circle at 35% 30%, #5C8A63, var(--ledger-green));
   color: white;

@@ -33,7 +33,7 @@ export function ExamResultsPage() {
           </p>
 
           <div className="grade-circle-big">{attempt.percentage?.toFixed(0) || 0}%</div>
-          <div className="verdict-stamp" style={{ marginBottom: 24 }}>{attempt.passed ? '✓ Passed' : 'Keep Practicing'}</div>
+          <div className="verdict-stamp" style={{ marginBottom: 24 }}>{attempt.passed ? <><img src="/icons/status/passed-verdict.png" alt="" className="inline-icon" /> Passed</> : 'Keep Practicing'}</div>
           <p style={{ color: 'var(--ledger-ink-soft)', fontSize: 14, marginBottom: 24 }}>
             {attempt.score} out of {attempt.totalPoints || 100} points
           </p>

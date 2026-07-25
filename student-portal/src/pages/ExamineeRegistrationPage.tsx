@@ -80,7 +80,7 @@ export function ExamineeRegistrationPage() {
   if (success) return (
     <div className="auth-container"><div className="auth-content" style={{ textAlign: 'center' }}>
       <div className="auth-card">
-        <div className="seal-emblem check">✓</div>
+        <div className="seal-emblem check"><img src="/icons/status/completed.png" alt="" className="seal-icon" /></div>
         <h1 className="auth-title" style={{ marginBottom: 8 }}>Registration successful</h1>
         <p className="center-note">Your account has been created. You can now log in.</p>
         <button className="btn btn-primary" onClick={() => navigate('/login')}>Go to login</button>

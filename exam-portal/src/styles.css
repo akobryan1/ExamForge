@@ -249,7 +249,8 @@ textarea.input { resize: vertical; min-height: 120px; line-height: 1.6; }
 
 /* ===== Results page ===== */
 .results-header { text-align: center; padding: 40px 24px; }
-.results-icon { font-size: 56px; margin-bottom: 8px; }
+.results-icon { font-size: 56px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; }
+.results-icon-img { width: 48px; height: 48px; object-fit: contain; }
 .results-header h1 { font-size: 28px; }
 .results-header.passed h1 { color: var(--color-success-600); }
 .results-header.failed h1 { color: var(--color-text-primary); }

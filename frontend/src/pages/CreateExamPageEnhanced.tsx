@@ -752,7 +752,7 @@ export function CreateExamPageEnhanced() {
             if (idx > 0) els.push(<div key={`line-${stepNum}`} className={`step-line${stepNum <= currentStep ? ' active' : ''}`} />);
             els.push(
               <div key={`step-${stepNum}`} className={`step${stepNum === currentStep ? ' active' : ''}${stepNum < currentStep ? ' complete' : ''}`}>
-                <div className="step-number">{stepNum < currentStep ? '✓' : stepNum}</div>
+                <div className="step-number">{stepNum < currentStep ? <img src="/icons/status/completed.png" alt="" className="inline-icon" /> : stepNum}</div>
                 <div className="step-label">{STEP_LABELS[idx]}</div>
               </div>
             );
@@ -1039,7 +1039,7 @@ export function CreateExamPageEnhanced() {
                 <>
                   <div className="path-cards">
                     <div className="path-card" onClick={openAddQuestion}>
-                      <div className="path-icon">📝</div>
+                      <div className="path-icon"><img src="/icons/nav/create-exam.png" alt="" className="path-icon-img" /></div>
                       <div className="path-title">Add manually</div>
                       <div className="path-desc">Write questions one by one with the question editor.</div>
                     </div>

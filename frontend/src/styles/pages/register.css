@@ -125,6 +125,16 @@ select.input {
   line-height: 1;
   position: relative;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seal-icon {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: brightness(10);
 }
 
 .success-label {

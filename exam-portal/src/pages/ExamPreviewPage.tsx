@@ -32,7 +32,7 @@ export function ExamPreviewPage() {
     <div className="auth-container">
       <div className="auth-content" style={{ textAlign: 'center' }}>
         <div className="card" style={{ padding: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
+          <img src="/icons/nav/exams.png" alt="" style={{ width: 48, height: 48, marginBottom: 12 }} />
           <h1 className="auth-title" style={{ marginBottom: 8 }}>Exam not found</h1>
           <p style={{ color: 'var(--color-gray-3)', marginBottom: 24 }}>{error}</p>
         </div>

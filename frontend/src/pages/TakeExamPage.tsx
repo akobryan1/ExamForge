@@ -559,7 +559,7 @@ export function TakeExamPage() {
           <div className="exam-header-right">
             {timeRemaining !== null && (
               <div className={`timer ${timeRemaining < 300 ? 'timer-warning' : ''}`}>
-                ⏱️ {formatTime(timeRemaining)}
+                <img src="/icons/status/avg-time.png" alt="" className="inline-icon" /> {formatTime(timeRemaining)}
               </div>
             )}
             <Button variant="primary" onClick={handleSubmitExam}>

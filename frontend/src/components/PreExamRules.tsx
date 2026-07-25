@@ -45,7 +45,7 @@ export function PreExamRules({ exam, onAccept, onCancel }: PreExamRulesProps) {
 
           {/* Exam Details */}
           <div className="rules-section">
-            <h4>📝 Exam Details</h4>
+            <h4><img src="/icons/nav/exams.png" alt="" className="h4-icon" /> Exam Details</h4>
             <ul className="rules-list">
               <li>
                 <strong>Questions:</strong> {exam.questionCount} question{exam.questionCount !== 1 ? 's' : ''}
@@ -113,7 +113,7 @@ export function PreExamRules({ exam, onAccept, onCancel }: PreExamRulesProps) {
           {/* Retake Policy */}
           {retakesAllowed && (
             <div className="rules-section">
-              <h4>🔄 Retake Policy</h4>
+              <h4><img src="/icons/tabs/clone.png" alt="" className="h4-icon" /> Retake Policy</h4>
               <ul className="rules-list">
                 <li>
                   <strong>Retakes Allowed:</strong>{' '}
@@ -166,7 +166,7 @@ export function PreExamRules({ exam, onAccept, onCancel }: PreExamRulesProps) {
 
           {/* Submission Rules */}
           <div className="rules-section">
-            <h4>✓ After Submission</h4>
+            <h4><img src="/icons/status/correct.png" alt="" className="h4-icon" /> After Submission</h4>
             <ul className="rules-list">
               {exam.showResults ? (
                 <li>You will see your score immediately after submission</li>

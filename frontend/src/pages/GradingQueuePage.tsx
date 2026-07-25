@@ -154,7 +154,7 @@ export function GradingQueuePage() {
                   <div className="queue-item-header">
                     <span className="student-name">{item.studentName}</span>
                     {item.currentGrade !== undefined ? (
-                      <span className="stamp stamp-graded">✓ Graded</span>
+                      <span className="stamp stamp-graded"><img src="/icons/status/correct.png" alt="" className="stamp-icon" /> Graded</span>
                     ) : (
                       <span className="stamp stamp-pending">Pending</span>
                     )}

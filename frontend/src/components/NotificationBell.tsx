@@ -139,7 +139,12 @@ export function NotificationBell() {
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="notification-icon">
-                      {NotificationService.getNotificationIcon(notification.type)}
+                      {(() => {
+                        const icon = NotificationService.getNotificationIcon(notification.type);
+                        return icon.startsWith('/')
+                          ? <img src={icon} alt="" className="inline-icon" />
+                          : icon;
+                      })()}
                     </div>
                     <div className="notification-content">
                       <div className="notification-title">{notification.title}</div>

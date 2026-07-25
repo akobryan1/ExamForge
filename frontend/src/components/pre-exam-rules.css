@@ -70,6 +70,16 @@
   font-size: var(--font-size-lg);
   color: var(--text-primary);
   margin: 0 0 var(--spacing-3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.h4-icon {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .rules-list {

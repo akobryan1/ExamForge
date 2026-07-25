@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '../layouts/MainLayout';
 import { Button } from '../components/Button';
@@ -169,22 +169,22 @@ export function SettingsPage() {
     }
   };
 
-  const actionIcon = (action: string): string => {
-    if (action.startsWith('exam.created')) return '📝';
+  const actionIcon = (action: string): ReactNode => {
+    if (action.startsWith('exam.created')) return <img src="/icons/nav/exams.png" alt="" className="inline-icon" />;
     if (action.startsWith('exam.published')) return '📢';
-    if (action.startsWith('exam.completed')) return '✅';
+    if (action.startsWith('exam.completed')) return <img src="/icons/status/completed.png" alt="" className="inline-icon" />;
     if (action.startsWith('exam.archived')) return '📦';
     if (action.startsWith('exam.deleted')) return '🗑️';
-    if (action.startsWith('exam.cloned')) return '📋';
-    if (action.startsWith('exam.republished')) return '🔄';
+    if (action.startsWith('exam.cloned')) return <img src="/icons/tabs/clone.png" alt="" className="inline-icon" />;
+    if (action.startsWith('exam.republished')) return <img src="/icons/tabs/clone.png" alt="" className="inline-icon" />;
     if (action.startsWith('exam.updated')) return '✏️';
-    if (action.startsWith('question.created')) return '❓';
-    if (action.startsWith('question.deleted')) return '❌';
-    if (action.startsWith('grade.submitted')) return '📊';
+    if (action.startsWith('question.created')) return <img src="/icons/status/not-answered.png" alt="" className="inline-icon" />;
+    if (action.startsWith('question.deleted')) return <img src="/icons/status/incorrect.png" alt="" className="inline-icon" />;
+    if (action.startsWith('grade.submitted')) return <img src="/icons/status/total-attempts.png" alt="" className="inline-icon" />;
     if (action.startsWith('grade.ai_graded')) return '🤖';
     if (action.startsWith('incident')) return '⚠️';
-    if (action.startsWith('student.registered')) return '👤';
-    if (action.startsWith('settings.updated')) return '⚙️';
+    if (action.startsWith('student.registered')) return <img src="/icons/nav/students.png" alt="" className="inline-icon" />;
+    if (action.startsWith('settings.updated')) return <img src="/icons/nav/settings.png" alt="" className="inline-icon" />;
     return '📌';
   };
 
@@ -235,7 +235,7 @@ export function SettingsPage() {
         {/* Message banner */}
         {message && (
           <div className={`settings-message ${message.type}`}>
-            {message.type === 'success' ? '✓' : '✕'} {message.text}
+            <img src={message.type === 'success' ? '/icons/status/correct.png' : '/icons/status/incorrect.png'} alt="" className="inline-icon" /> {message.text}
           </div>
         )}
 
@@ -349,9 +349,9 @@ export function SettingsPage() {
 
               <div className="api-key-status">
                 {settings?.apiKey ? (
-                  <span className="key-saved">✓ API key is configured via environment variable</span>
+                  <span className="key-saved"><img src="/icons/status/correct.png" alt="" className="inline-icon" /> API key is configured via environment variable</span>
                 ) : (
-                  <span className="key-missing">✗ No API key set in environment variables</span>
+                  <span className="key-missing"><img src="/icons/status/incorrect.png" alt="" className="inline-icon" /> No API key set in environment variables</span>
                 )}
               </div>
 

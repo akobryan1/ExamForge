@@ -90,7 +90,7 @@ export function ForgotPasswordPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              ✓ Reset link sent! Check your email (including spam folder).
+              <img src="/icons/status/correct.png" alt="" className="inline-icon" /> Reset link sent! Check your email (including spam folder).
             </motion.div>
           )}
 

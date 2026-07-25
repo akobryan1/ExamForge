@@ -131,7 +131,7 @@ export function ExamineeRegistrationPage() {
       <div className="auth-container">
         <div className="auth-content center-state">
           <div className="auth-card">
-            <div className="success-seal"><span className="success-seal-check">✓</span></div>
+            <div className="success-seal"><span className="success-seal-check"><img src="/icons/status/completed.png" alt="" className="seal-icon" /></span></div>
             <div className="success-label">Enrollment confirmed</div>
             <h1 className="auth-title" style={{ marginBottom: 8 }}>Registration successful</h1>
             <p className="center-text" style={{ marginBottom: 24 }}>

@@ -85,9 +85,9 @@ class NotificationServiceClass {
     const icons: Record<Notification['type'], string> = {
       retake_request: '🔄',
       retake_approved: '✅',
-      retake_denied: '❌',
-      grade_released: '📊',
-      exam_available: '📝',
+      retake_denied: '/icons/status/incorrect.png',
+      grade_released: '/icons/status/total-attempts.png',
+      exam_available: '/icons/nav/exams.png',
       system: 'ℹ️',
     };
     return icons[type] || 'ℹ️';

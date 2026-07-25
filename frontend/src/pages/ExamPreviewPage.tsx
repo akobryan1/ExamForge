@@ -152,7 +152,7 @@ export function ExamPreviewPage() {
             )}
             {!exam.timeLimit && (
               <div className="warning-banner">
-                ⏱️ <strong>No time limit set.</strong> Students will have unlimited time to complete this exam.
+                <img src="/icons/status/avg-time.png" alt="" className="inline-icon" /> <strong>No time limit set.</strong> Students will have unlimited time to complete this exam.
               </div>
             )}
           </div>
@@ -193,7 +193,7 @@ export function ExamPreviewPage() {
                 </Button>
               )}
               <Button variant="outline" onClick={handleClone}>
-                🔄 Clone
+                <img src="/icons/tabs/clone.png" alt="" className="inline-icon" /> Clone
               </Button>
               <Button variant="outline" onClick={handleDelete} className="danger">
                 Delete
@@ -277,25 +277,25 @@ export function ExamPreviewPage() {
           <div className="options-list">
             <div className="option-item">
               <span className={`opt-mark ${exam.shuffleQuestions ? 'enabled' : 'disabled'}`}>
-                {exam.shuffleQuestions ? '✓' : '✗'}
+                {exam.shuffleQuestions ? <img src="/icons/status/correct.png" alt="" className="opt-mark-img" /> : <img src="/icons/status/incorrect.png" alt="" className="opt-mark-img" />}
               </span>
               Shuffle Questions
             </div>
             <div className="option-item">
               <span className={`opt-mark ${exam.shuffleAnswers ? 'enabled' : 'disabled'}`}>
-                {exam.shuffleAnswers ? '✓' : '✗'}
+                {exam.shuffleAnswers ? <img src="/icons/status/correct.png" alt="" className="opt-mark-img" /> : <img src="/icons/status/incorrect.png" alt="" className="opt-mark-img" />}
               </span>
               Shuffle Answer Choices
             </div>
             <div className="option-item">
               <span className={`opt-mark ${exam.showResults ? 'enabled' : 'disabled'}`}>
-                {exam.showResults ? '✓' : '✗'}
+                {exam.showResults ? <img src="/icons/status/correct.png" alt="" className="opt-mark-img" /> : <img src="/icons/status/incorrect.png" alt="" className="opt-mark-img" />}
               </span>
               Show Results to Students
             </div>
             <div className="option-item">
               <span className={`opt-mark ${exam.allowReview ? 'enabled' : 'disabled'}`}>
-                {exam.allowReview ? '✓' : '✗'}
+                {exam.allowReview ? <img src="/icons/status/correct.png" alt="" className="opt-mark-img" /> : <img src="/icons/status/incorrect.png" alt="" className="opt-mark-img" />}
               </span>
               Allow Review After Submission
             </div>
