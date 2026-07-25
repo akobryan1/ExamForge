@@ -140,13 +140,13 @@ export function ExamsPage() {
               className={`folder-tab ${activeTab === 'active' ? 'active' : ''}`}
               onClick={() => setActiveTab('active')}
             >
-              📋 Active Exams ({activeExams.length})
+              <img src="/icons/tabs/active-exams.png" alt="" className="tab-icon" /> Active Exams ({activeExams.length})
             </button>
             <button
               className={`folder-tab ${activeTab === 'past' ? 'active' : ''}`}
               onClick={() => setActiveTab('past')}
             >
-              🏛️ Past Exams ({pastExams.length})
+              <img src="/icons/tabs/past-exams.png" alt="" className="tab-icon" /> Past Exams ({pastExams.length})
             </button>
           </div>
         )}
@@ -226,7 +226,7 @@ export function ExamsPage() {
                 </div>
                 <div className="exam-card-actions" style={{ flexWrap: 'wrap' }}>
                   <Button variant="secondary" size="sm" onClick={() => handleClone(exam.id)} style={{ flex: 1, minWidth: 80 }}>
-                    🔄 Clone
+                    <img src="/icons/tabs/clone.png" alt="" className="btn-icon" /> Clone
                   </Button>
                   {exam.status === 'completed' && (
                     <Button variant="primary" size="sm" onClick={() => handleRepublish(exam.id)} style={{ flex: 1, minWidth: 80 }}>
