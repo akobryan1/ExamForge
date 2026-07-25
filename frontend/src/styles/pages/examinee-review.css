@@ -1,0 +1,212 @@
+/* Examinee Review Page — Ledger Theme */
+
+.examinee-review-page {
+  padding-bottom: var(--spacing-12);
+}
+
+/* Summary card */
+.review-summary {
+  margin-bottom: var(--spacing-6);
+}
+
+.summary-card {
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 2px 8px 8px 8px;
+  padding: var(--spacing-5);
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--spacing-3);
+}
+
+.summary-grid div {
+  padding: var(--spacing-2);
+  background: var(--ledger-card-lift);
+  border: 1px solid var(--ledger-line-soft);
+  border-radius: 4px;
+}
+
+.summary-grid strong {
+  display: block;
+  font-family: var(--font-mono-ledger);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+  margin-bottom: 2px;
+}
+
+.summary-grid span {
+  color: var(--ledger-ink);
+  font-weight: 500;
+  font-size: var(--text-sm);
+}
+
+.score-pass {
+  color: var(--ledger-green) !important;
+  font-weight: 700 !important;
+}
+
+.score-fail {
+  color: var(--ledger-red) !important;
+  font-weight: 700 !important;
+}
+
+/* Answer breakdown */
+.review-answers {
+  margin-bottom: var(--spacing-6);
+}
+
+.review-answers h2 {
+  font-family: var(--font-display-ledger);
+  font-size: var(--text-2xl);
+  margin-bottom: var(--spacing-4);
+  color: var(--ledger-ink-blue);
+  border-bottom: 2px solid var(--ledger-ink-blue);
+  padding-bottom: var(--spacing-2);
+}
+
+.answers-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.answer-card {
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-line);
+  border-radius: 2px 8px 8px 8px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+.answer-card.card-correct {
+  border-left: 4px solid var(--ledger-green);
+}
+
+.answer-card.card-incorrect {
+  border-left: 4px solid var(--ledger-red);
+}
+
+.answer-card.card-pending {
+  border-left: 4px solid var(--ledger-amber);
+}
+
+.answer-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--ledger-kraft-tint);
+  border-bottom: 1px solid var(--ledger-line);
+}
+
+.question-num {
+  font-family: var(--font-mono-ledger);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--ledger-ink);
+}
+
+.points-badge {
+  margin-left: auto;
+  font-family: var(--font-mono-ledger);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--ledger-ink-blue);
+}
+
+.answer-body {
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.answer-body strong {
+  font-family: var(--font-mono-ledger);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ledger-ink-soft);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.q-text,
+.a-text,
+.correct-text {
+  font-size: var(--text-sm);
+  color: var(--ledger-ink);
+  line-height: 1.6;
+}
+
+.answer-content-box,
+.correct-content-box {
+  background: var(--ledger-card-lift);
+  border: 1px solid var(--ledger-line-soft);
+  border-radius: 4px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  margin-top: 2px;
+}
+
+.correct-content-box {
+  background: rgba(62, 107, 71, 0.05);
+  border-color: rgba(62, 107, 71, 0.2);
+}
+
+.verdict {
+  font-family: var(--font-mono-ledger);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-radius: 3px;
+  display: inline-block;
+  align-self: flex-start;
+}
+
+.verdict-pass {
+  color: var(--ledger-green);
+  background: rgba(62, 107, 71, 0.08);
+}
+
+.verdict-fail {
+  color: var(--ledger-red);
+  background: rgba(165, 52, 42, 0.07);
+}
+
+.verdict-pending {
+  color: var(--ledger-amber);
+  background: rgba(185, 142, 46, 0.08);
+}
+
+.feedback-box {
+  background: var(--ledger-kraft-tint);
+  border: 1px dashed var(--ledger-line);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  color: var(--ledger-ink);
+  line-height: 1.5;
+}
+
+.feedback-box strong {
+  margin-bottom: 4px;
+}
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+}

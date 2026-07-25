@@ -413,7 +413,7 @@ export function StudentManagementPage() {
                             <button
                               className="btn-view-paper"
                               onClick={() => {
-                                navigate(`/attempts/${p.attemptId}/results?studentId=${p.studentId}`);
+                                navigate(`/grading/review/${p.attemptId}?studentId=${p.studentId}`);
                               }}
                             >
                               Review

@@ -12,6 +12,7 @@ import { ExamPreviewPage } from './pages/ExamPreviewPage'
 import { TakeExamPage } from './pages/TakeExamPage'
 import { ExamResultsPage } from './pages/ExamResultsPage'
 import { GradingQueuePage } from './pages/GradingQueuePage'
+import { ExamineeReviewPage } from './pages/ExamineeReviewPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { IncidentReportsPage } from './pages/IncidentReportsPage'
 import { StudentRegistrationPage } from './pages/StudentRegistrationPage';
@@ -107,14 +108,24 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/grading"
-              element={
-                <ProtectedRoute>
-                  <GradingQueuePage />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/grading">
+              <Route
+                index
+                element={
+                  <ProtectedRoute>
+                    <GradingQueuePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="review/:attemptId"
+                element={
+                  <ProtectedRoute>
+                    <ExamineeReviewPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
             <Route
               path="/analytics"
               element={

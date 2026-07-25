@@ -221,6 +221,34 @@ export function TakeExamPage() {
             ))}
           </div>
         );
+      case 'modified_true_false':
+        return (
+          <div>
+            <div className="answer-options">
+              {['true', 'false'].map(val => (
+                <label key={val} className="option-label">
+                  <input
+                    type="radio"
+                    name={`q_${question.id}`}
+                    checked={answer === val || answer?.startsWith(val + '__')}
+                    onChange={() => handleAnswerChange(question.id, val)}
+                  />
+                  <span className="option-text">{val === 'true' ? 'True' : 'False'}</span>
+                </label>
+              ))}
+            </div>
+            {answer === 'false' || answer?.startsWith('false__') ? (
+              <textarea
+                className="answer-textarea"
+                value={answer?.startsWith('false__') ? answer.split('__').slice(1).join('__') : ''}
+                onChange={e => handleAnswerChange(question.id, 'false__' + e.target.value)}
+                placeholder="Write the correct statement here..."
+                rows={3}
+                style={{ marginTop: 12 }}
+              />
+            ) : null}
+          </div>
+        );
       case 'identification':
         return (
           <input

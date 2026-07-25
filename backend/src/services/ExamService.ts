@@ -781,7 +781,7 @@ export class ExamService {
     let isCorrect: boolean | null = null;
     let pointsEarned: number | null = null;
 
-    if (['multiple_choice', 'true_false'].includes(questionData.type)) {
+    if (['multiple_choice', 'true_false', 'modified_true_false', 'identification', 'enumeration', 'short_answer'].includes(questionData.type)) {
       // Multiple choice: correctAnswer is stored as the index (number), answer is the choice text
       if (questionData.type === 'multiple_choice' && questionData.choices) {
         const correctIndex = questionData.correctAnswer;
@@ -794,6 +794,26 @@ export class ExamService {
       } else if (questionData.type === 'true_false') {
         // True/False: correctAnswer is stored as boolean, answer comes as string
         isCorrect = String(data.answer).toLowerCase() === String(questionData.correctAnswer).toLowerCase();
+      } else if (questionData.type === 'modified_true_false') {
+        // Modified T/F: answer format is "true" or "false__correction text"
+        // correctAnswer is stored as a string like "True" or "False. The correct answer is XYZ"
+        const answerStr = String(data.answer || '');
+        const correctStr = String(questionData.correctAnswer || '');
+        const answerTf = answerStr.split('__')[0].toLowerCase();
+        const correctTf = correctStr.toLowerCase().startsWith('true') ? 'true' : 'false';
+        isCorrect = answerTf === correctTf;
+      } else if (questionData.type === 'identification') {
+        // Identification: case-insensitive exact match
+        isCorrect = String(data.answer).trim().toLowerCase() === String(questionData.correctAnswer).trim().toLowerCase();
+      } else if (questionData.type === 'enumeration' && Array.isArray(questionData.correctAnswer)) {
+        // Enumeration: compare sorted arrays of trimmed lowercase items
+        const studentItems = (String(data.answer) || '').split('\n').map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+        const correctItems = questionData.correctAnswer.map((s: string) => s.trim().toLowerCase()).filter(Boolean);
+        if (studentItems.length !== correctItems.length) {
+          isCorrect = false;
+        } else {
+          isCorrect = studentItems.every((item: string) => correctItems.includes(item));
+        }
       } else {
         isCorrect = JSON.stringify(data.answer) === JSON.stringify(questionData.correctAnswer);
       }
@@ -903,6 +923,43 @@ export class ExamService {
 
     const status = hasUngradedAnswers ? 'submitted' : 'graded';
 
+    // Apply retake scoring method (best/latest/average) if enabled
+    let finalScore = totalScore;
+    let finalPercentage = percentage;
+    const retakeConfig = examData.retakeConfig;
+    if (retakeConfig?.enabled && retakeConfig.scoringMethod && retakeConfig.scoringMethod !== 'latest') {
+      try {
+        // Look up all previous attempts for this student + exam (excluding in_progress)
+        const allSessions = await db
+          .collection('examforge_users')
+          .doc(effectiveStudentId)
+          .collection('exam_sessions')
+          .where('examId', '==', examId)
+          .where('status', 'in', ['submitted', 'graded', 'completed'])
+          .get();
+
+        const allScores: number[] = [];
+        allSessions.docs.forEach(doc => {
+          const sData = doc.data();
+          if (sData.score !== null && sData.score !== undefined) {
+            allScores.push(sData.score);
+          }
+        });
+        // Include current attempt's score
+        allScores.push(totalScore);
+
+        if (retakeConfig.scoringMethod === 'best') {
+          finalScore = Math.max(...allScores);
+        } else if (retakeConfig.scoringMethod === 'average') {
+          finalScore = allScores.reduce((sum, s) => sum + s, 0) / allScores.length;
+        }
+        // 'latest' = just use current attempt's score (default)
+        finalPercentage = examData.totalPoints > 0 ? (finalScore / examData.totalPoints) * 100 : 0;
+      } catch (err) {
+        console.warn('[submitExam] Retake scoring lookup failed, using current score:', err);
+      }
+    }
+
     // Calculate time spent
     const startedAt = sessionData.startedAt?.toDate() || new Date();
     const timeSpent = Math.floor((Date.now() - startedAt.getTime()) / 1000);
@@ -910,8 +967,8 @@ export class ExamService {
     // Update session
     await sessionRef.update({
       status,
-      score: totalScore,
-      percentage,
+      score: finalScore,
+      percentage: finalPercentage,
       passed,
       submittedAt: FieldValue.serverTimestamp(),
       timeSpent,
@@ -949,10 +1006,48 @@ export class ExamService {
       this.mapAnswerFromDb(doc.id, doc.data())
     );
 
+    // Get the exam's questions to include question text + correct answer with each answer
+    const instructorId = sessionData.instructorId;
+    const examId = sessionData.examId;
+    let questionsMap: Map<string, { text: string; type: string; correctAnswer: any; points: number; choices?: any[] }> = new Map();
+
+    if (instructorId && examId) {
+      try {
+        const questionsSnapshot = await db
+          .collection('examforge_users')
+          .doc(instructorId)
+          .collection('published_exams')
+          .doc(examId)
+          .collection('questions')
+          .get();
+        questionsSnapshot.docs.forEach(doc => {
+          const qData = doc.data();
+          questionsMap.set(doc.id, {
+            text: qData.text,
+            type: qData.type,
+            correctAnswer: qData.correctAnswer,
+            points: qData.points || 0,
+            choices: qData.choices,
+          });
+        });
+      } catch (err) {
+        console.warn('[getExamAttempt] Could not load questions:', err);
+      }
+    }
+
+    // Attach question data to each answer
+    const answersWithQuestions = answers.map(a => ({
+      ...a,
+      questionText: questionsMap.get(a.questionId)?.text || '',
+      questionType: questionsMap.get(a.questionId)?.type || '',
+      correctAnswer: questionsMap.get(a.questionId)?.correctAnswer ?? null,
+      maxPoints: questionsMap.get(a.questionId)?.points || 0,
+    }));
+
     return {
       ...this.mapAttemptFromDb(attemptId, sessionData),
-      answers,
-    };
+      answers: answersWithQuestions,
+    } as any;
   }
 
 
