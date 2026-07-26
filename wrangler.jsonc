@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "examforge-guard",
+  "compatibility_date": "2026-07-26",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "exam-portal"
+  },
+  "compatibility_flags": [
+    "nodejs_compat"
+  ]
+}
