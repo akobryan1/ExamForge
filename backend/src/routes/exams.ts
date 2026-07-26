@@ -4,6 +4,13 @@ import { ExamService } from '../services/ExamService';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { getOrSet, invalidatePrefix } from '../utils/cache';
 import { logActivity } from '../utils/activityLogger';
+import {
+  validateStructure,
+  buildRetryPrompt,
+  validateKeypoints,
+  verifyWithSecondPass,
+  circuitBreak,
+} from '../services/AntiDriftGuard';
 
 const router: Router = express.Router();
 
@@ -122,13 +129,14 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { questionText, studentAnswer, maxPoints, model, keyPoints, modelAnswer } = req.body;
+      const userId = req.user!.userId;
 
       // Read API key from env var first (set in Render dashboard), fallback to Firestore
       let apiKey = process.env.DEEPSEEK_API_KEY || '';
       if (!apiKey) {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore();
-        const instructorDoc = await db.collection('examforge_users').doc(req.user!.userId).get();
+        const instructorDoc = await db.collection('examforge_users').doc(userId).get();
         const settings = instructorDoc.data()?.settings;
         apiKey = settings?.apiKey || '';
       }
@@ -139,7 +147,11 @@ router.post(
       console.log('[AIGrade] Using saved API key:', apiKey.slice(0, 8) + '...');
       console.log('[AIGrade] Sending to DeepSeek API with model:', model);
 
-      // Build system prompt with grading criteria
+      /* ------------------------------------------------------------------ */
+      /*  Constrained LLM Invocation (Pre-Generation)                       */
+      /* ------------------------------------------------------------------ */
+
+      // Build system prompt with strict output structuring
       let systemPrompt = `You are an expert essay grader. Your role is to evaluate the student's essay based on clarity and content in relevance to the essay question.`;
       systemPrompt += `\nThe essay has a maximum of ${maxPoints} points. You must assign a score between 0 and ${maxPoints}, without exceeding the maximum.`;
 
@@ -150,66 +162,168 @@ router.post(
         systemPrompt += `\n\nKey Points the answer should cover:\n${keyPoints}`;
       }
 
-      systemPrompt += `\n\nReturn ONLY a JSON object with:
-- "score" (number out of ${maxPoints})
+      systemPrompt += `\n\nYou MUST return ONLY a valid JSON object with exactly these keys:
+- "score" (integer, 0-100 — use the full 0-100 scale, then scale to maxPoints later)
 - "feedback" (string with brief, constructive explanation for the student)
-- "justification" (string explaining WHY you awarded this score, referencing specific parts of the answer in relation to clarity, content, and the model answer/key points)
+- "justification" (string explaining WHY you awarded this score, referencing specific parts of the answer)
+- "matched_keypoints" (array of strings listing which key points the student addressed)
 
-Be fair, consistent, and thorough. Score must be between 0 and ${maxPoints}.`;
+CRITICAL RULES:
+- You are forbidden from using any external knowledge not present in the provided model answer or key points.
+- If a key point is absent from the student's essay, assign it a score of 0 and explicitly mark it as 'Missing' in the feedback.
+- Do not infer, assume, or create new criteria.
+- Be fair, consistent, and thorough. Score must be between 0 and 100.`;
 
       const userContent = `Question: ${questionText}\n\nStudent Answer: ${studentAnswer}`;
 
-      // Call DeepSeek API directly
-      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userContent },
-          ],
-          temperature: 0.3,
-          max_tokens: 800,
-        }),
-      });
+      // Helper function to call DeepSeek
+      async function callDeepSeek(prompt: string, userMsg: string): Promise<string> {
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: prompt },
+              { role: 'user', content: userMsg },
+            ],
+            temperature: 0.0,
+            max_tokens: 800,
+          }),
+        });
 
-      if (!response.ok) {
-        const errBody = await response.text();
-        console.error('[AIGrade] API error:', response.status, errBody);
-        let detail = response.statusText;
-        try {
-          const parsed = JSON.parse(errBody);
-          detail = parsed.error?.message || parsed.error || detail;
-        } catch { /* use statusText */ }
-        return res.status(502).json({ error: `AI grading failed: ${detail}` });
+        if (!response.ok) {
+          const errBody = await response.text();
+          console.error('[AIGrade] API error:', response.status, errBody);
+          let detail = response.statusText;
+          try {
+            const parsed = JSON.parse(errBody);
+            detail = parsed.error?.message || parsed.error || detail;
+          } catch { /* use statusText */ }
+          throw new Error(`AI grading failed: ${detail}`);
+        }
+
+        const data = await response.json() as { choices?: { message?: { content?: string } }[] };
+        return data.choices?.[0]?.message?.content || '{}';
       }
 
-      const data = await response.json() as { choices?: { message?: { content?: string } }[] };
-      const content = data.choices?.[0]?.message?.content || '{}';
-      
-      let result: { score: number; feedback: string; justification?: string };
-      try {
-        result = JSON.parse(content);
-      } catch {
-        return res.status(502).json({ error: 'AI returned invalid JSON response' });
+      // Primary call
+      let rawContent = await callDeepSeek(systemPrompt, userContent);
+
+      /* ------------------------------------------------------------------ */
+      /*  Layer 1 — Structural & Range Validation (with single retry)       */
+      /* ------------------------------------------------------------------ */
+
+      let validation = validateStructure(rawContent);
+
+      if (!validation.valid) {
+        console.warn('[AIGrade] First response failed validation:', validation.message);
+        const retryPrompt = buildRetryPrompt(systemPrompt);
+        rawContent = await callDeepSeek(retryPrompt, userContent);
+        validation = validateStructure(rawContent);
+
+        if (!validation.valid) {
+          console.error('[AIGrade] Retry also failed validation:', validation.message);
+          await circuitBreak({
+            userId,
+            rawInput: { questionText, studentAnswer, maxPoints: Number(maxPoints), modelAnswer, keyPoints },
+            rawLLMOutput: rawContent,
+            failureReason: `structural: ${validation.message}`,
+          });
+          return res.status(422).json({
+            error: 'AI grading failed — response could not be validated.',
+          });
+        }
       }
 
-      if (typeof result.score !== 'number' || result.score < 0 || result.score > maxPoints) {
-        return res.status(502).json({ error: 'AI returned invalid score' });
+      let evaluation = validation.result!;
+
+      /* ------------------------------------------------------------------ */
+      /*  Layer 2 — Key-Point Matching (TF-IDF Override)                    */
+      /* ------------------------------------------------------------------ */
+
+      if (keyPoints?.trim()) {
+        const kpOverride = validateKeypoints(
+          studentAnswer,
+          keyPoints,
+          evaluation.matched_keypoints,
+          evaluation.score,
+          Number(maxPoints)
+        );
+
+        if (kpOverride.overrides.length > 0) {
+          console.log('[AIGrade] TF-IDF overrides applied:', kpOverride.overrides.length);
+          evaluation.score = kpOverride.score;
+          evaluation.feedback = evaluation.feedback
+            ? `${kpOverride.feedback}\n\n${evaluation.feedback}`
+            : kpOverride.feedback;
+        }
       }
 
-      await logActivity(req.user!.userId, 'grade.ai_graded', `AI-graded essay for attempt (${Math.round(result.score * 2) / 2}/${maxPoints} pts)`, { model, maxPoints, score: result.score });
+      /* ------------------------------------------------------------------ */
+      /*  Layer 3 — Chain-of-Verification (10% Sampling)                    */
+      /* ------------------------------------------------------------------ */
+
+      const rubricContext = [
+        modelAnswer ? `Model Answer: ${modelAnswer}` : '',
+        keyPoints ? `Key Points: ${keyPoints}` : '',
+        `Max Points: ${maxPoints}`,
+      ].filter(Boolean).join('\n');
+
+      const verification = await verifyWithSecondPass(
+        studentAnswer,
+        rubricContext,
+        evaluation,
+        apiKey,
+        model
+      );
+
+      if (verification.discrepancyDetected && verification.verifiedResult) {
+        evaluation = verification.verifiedResult;
+        console.log('[AIGrade] Using verified secondary result due to drift detection');
+      } else if (verification.verificationNote) {
+        evaluation.feedback = `${evaluation.feedback}\n\n${verification.verificationNote}`;
+      }
+
+      /* ------------------------------------------------------------------ */
+      /*  Success — Return validated evaluation                             */
+      /* ------------------------------------------------------------------ */
+
+      await logActivity(userId, 'grade.ai_graded',
+        `AI-graded essay for attempt (${Math.round(evaluation.score * 2) / 2}/${maxPoints} pts)`,
+        { model, maxPoints, score: evaluation.score }
+      );
+
       return res.json({
-        score: Math.round(result.score * 2) / 2,
-        feedback: result.feedback || '',
-        justification: result.justification || '',
+        score: Math.round(evaluation.score * 2) / 2,
+        feedback: evaluation.feedback || '',
+        justification: evaluation.justification || '',
+        matched_keypoints: evaluation.matched_keypoints || [],
       });
+
     } catch (error: any) {
       console.error('[AIGrade] Error:', error.message);
+
+      // Circuit breaker: store the failure if we have enough info
+      const userId = req.user?.userId;
+      if (userId && req.body?.studentAnswer) {
+        await circuitBreak({
+          userId,
+          rawInput: {
+            questionText: req.body.questionText || '',
+            studentAnswer: req.body.studentAnswer || '',
+            maxPoints: Number(req.body.maxPoints) || 0,
+            modelAnswer: req.body.modelAnswer,
+            keyPoints: req.body.keyPoints,
+          },
+          rawLLMOutput: error.message,
+          failureReason: `exception: ${error.message}`,
+        }).catch(() => {});
+      }
+
       return res.status(502).json({ error: error.message || 'AI grading failed' });
     }
   }

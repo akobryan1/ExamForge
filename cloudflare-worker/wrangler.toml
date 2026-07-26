@@ -1,0 +1,18 @@
+name = "examforge-guard"
+main = "src/index.ts"
+compatibility_date = "2024-12-30"
+
+# Rate limiting binding: 5 requests per 60 seconds per userId
+[[unsafe_metadata.rate_limits]]
+name = "examforge-rate-limit"
+period = 60
+max_requests = 5
+
+# Cron trigger to keep Render backend warm (every 10 minutes)
+[triggers]
+crons = ["*/10 * * * *"]
+
+# Environment variables (set via `wrangler secret put`)
+[vars]
+RENDER_BACKEND_URL = ""
+JWT_SECRET = ""

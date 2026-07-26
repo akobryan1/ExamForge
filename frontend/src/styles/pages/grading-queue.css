@@ -126,6 +126,12 @@
   background: rgba(44,66,112,0.045);
 }
 
+.queue-item-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
 /* Active ribbon */
 .queue-item.active::before {
   content: '';
@@ -627,6 +633,143 @@
 
 .reference-text::before {
   display: none;
+}
+
+/* ============================================
+   GRADE ALL — Progress & Summary Banners
+   ============================================ */
+
+.grade-all-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  background: var(--ledger-card);
+  border: 1px solid var(--ledger-ink-blue);
+  border-radius: var(--radius-md);
+}
+
+.grade-all-banner-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.grade-all-progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--ledger-line-soft);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.grade-all-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ledger-ink-blue), var(--ledger-gold));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Pulsing shimmer while grading is active */
+.grade-all-progress-active {
+  animation: grade-all-pulse 1.5s ease-in-out infinite;
+  background-size: 200% 100%;
+  background-image: linear-gradient(
+    90deg,
+    var(--ledger-ink-blue) 0%,
+    var(--ledger-gold) 40%,
+    var(--ledger-ink-blue) 80%
+  );
+}
+
+@keyframes grade-all-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+/* Spinner */
+.grade-all-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(44,66,112,0.2);
+  border-top-color: var(--ledger-ink-blue);
+  border-radius: 50%;
+  animation: grade-all-spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.grade-all-spinner-sm {
+  width: 12px;
+  height: 12px;
+  border-width: 1.5px;
+  margin-right: 4px;
+}
+
+@keyframes grade-all-spin {
+  to { transform: rotate(360deg); }
+}
+
+.grade-all-progress-text {
+  font-family: var(--font-mono-ledger);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ledger-ink-blue);
+  letter-spacing: 0.04em;
+}
+
+.grade-all-cancel-btn {
+  flex-shrink: 0;
+  padding: 4px 12px !important;
+  font-size: 0.75rem !important;
+}
+
+.grade-all-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3) var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono-ledger);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.grade-all-summary-ok {
+  background: rgba(61,148,102,0.08);
+  border: 1px solid var(--ledger-green);
+  color: var(--ledger-green);
+}
+
+.grade-all-summary-err {
+  background: rgba(200,80,50,0.06);
+  border: 1px solid var(--ledger-amber);
+  color: var(--ledger-amber);
+}
+
+.grade-all-dismiss {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.grade-all-dismiss:hover {
+  background: rgba(0,0,0,0.08);
 }
 
 /* ============================================
