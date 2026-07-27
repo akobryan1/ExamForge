@@ -17,6 +17,9 @@ const AI_MODELS = [
   { value: 'deepseek-chat', label: 'DeepSeek — deepseek-chat (Flash)' },
 ];
 
+// TEMPORARILY DISABLED for beta testing — flip to true to re-enable
+const AI_GRADING_ENABLED = false;
+
 interface GradingItem {
   attemptId: string;
   studentName: string;
@@ -213,7 +216,7 @@ export function GradingQueuePage() {
               <option value="graded">Graded</option>
               <option value="all">All</option>
             </select>
-            {items.some((i: any) => !i.isGraded) && (
+            {items.some((i: any) => !i.isGraded) && AI_GRADING_ENABLED && (
               <Button
                 variant="accent"
                 onClick={handleGradeAll}
@@ -407,6 +410,7 @@ export function GradingQueuePage() {
                     )}
 
                     {/* AI Auto-Grading */}
+                    {AI_GRADING_ENABLED && (
                     <div className="grading-form">
                       <h3>Auto-grade with AI <span className="ai-chip">AI Assist</span></h3>
                       <div className="form-group">
@@ -459,6 +463,7 @@ export function GradingQueuePage() {
                         </div>
                       )}
                     </div>
+                    )}
 
                     {/* Manual Grading Form */}
                     <div className="grading-form">
