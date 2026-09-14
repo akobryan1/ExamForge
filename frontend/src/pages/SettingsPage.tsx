@@ -36,7 +36,7 @@ const FONT_VARS: Record<string, { display: string; body: string; mono: string }>
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-type Tab = 'appearance' | 'ai' | 'activity';
+type Tab = 'appearance' | 'ai' | 'activity' | 'invites';
 
 export function SettingsPage() {
   const { query, mutation } = useSettings();
@@ -58,6 +58,12 @@ export function SettingsPage() {
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityCursor, setActivityCursor] = useState<string | null>(null);
   const [activityHasMore, setActivityHasMore] = useState(false);
+
+  // Invites state
+  const [invites, setInvites] = useState<any[]>([]);
+  const [invitesLoading, setInvitesLoading] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'instructor' | 'student' | 'admin'>('instructor');
 
   // Message state
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -81,6 +87,13 @@ export function SettingsPage() {
   useEffect(() => {
     if (activeTab === 'activity') {
       loadActivity(true);
+    }
+  }, [activeTab]);
+
+  // Load invites when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'invites') {
+      loadInvites();
     }
   }, [activeTab]);
 
@@ -128,6 +141,66 @@ export function SettingsPage() {
       console.error('[Settings] Activity load error:', err);
     } finally {
       setActivityLoading(false);
+    }
+  };
+
+  const authHeaders = (): Record<string, string> => {
+    const token = localStorage.getItem('accessToken');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  const loadInvites = async () => {
+    setInvitesLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/invites`, { headers: authHeaders() });
+      if (!res.ok) throw new Error('Failed to load invites');
+      const data = await res.json();
+      setInvites(data.invites || []);
+    } catch (err: any) {
+      console.error('[Settings] Invites load error:', err);
+      setMessage({ type: 'error', text: 'Failed to load invites' });
+    } finally {
+      setInvitesLoading(false);
+    }
+  };
+
+  const handleCreateInvite = async () => {
+    setMessage(null);
+    const email = inviteEmail.trim();
+    if (!email) {
+      setMessage({ type: 'error', text: 'Enter an email address to invite' });
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ email, role: inviteRole }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.message || data?.errors?.[0]?.msg || 'Failed to create invite');
+      }
+      setInviteEmail('');
+      setMessage({ type: 'success', text: `Invite created for ${email}` });
+      loadInvites();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to create invite' });
+    }
+  };
+
+  const handleRevokeInvite = async (email: string) => {
+    setMessage(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/invites/${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error('Failed to revoke invite');
+      setMessage({ type: 'success', text: `Invite revoked for ${email}` });
+      loadInvites();
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message || 'Failed to revoke invite' });
     }
   };
 
@@ -229,6 +302,12 @@ export function SettingsPage() {
             onClick={() => setActiveTab('activity')}
           >
             📋 Activity Log
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'invites' ? 'active' : ''}`}
+            onClick={() => setActiveTab('invites')}
+          >
+            ✉️ Invites
           </button>
         </div>
 
@@ -410,6 +489,74 @@ export function SettingsPage() {
                   )}
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Invites Tab ── */}
+        {activeTab === 'invites' && (
+          <div className="settings-card">
+            <div className="settings-section">
+              <h2>Invite a User</h2>
+              <p className="settings-description">
+                Invited emails can sign in with Google and will be given the selected role.
+                Anyone not invited must sign up with email and password first.
+              </p>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div className="form-group" style={{ flex: '1 1 240px', marginBottom: 0 }}>
+                  <label htmlFor="inviteEmail">Email Address</label>
+                  <input
+                    id="inviteEmail"
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    placeholder="name@example.com"
+                  />
+                </div>
+                <div className="form-group" style={{ flex: '0 0 160px', marginBottom: 0 }}>
+                  <label htmlFor="inviteRole">Role</label>
+                  <select
+                    id="inviteRole"
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value as 'instructor' | 'student' | 'admin')}
+                  >
+                    <option value="instructor">Instructor</option>
+                    <option value="student">Student</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
+                <Button variant="primary" onClick={handleCreateInvite}>Send Invite</Button>
+              </div>
+
+              <div style={{ marginTop: 32 }}>
+                {invitesLoading && invites.length === 0 ? (
+                  <div className="activity-loading">Loading invites...</div>
+                ) : invites.length === 0 ? (
+                  <div className="activity-empty">
+                    <p>No invites yet. Invite an email above to pre-register a user.</p>
+                  </div>
+                ) : (
+                  <div className="activity-list">
+                    {invites.map((invite: any) => (
+                      <div key={invite.id} className="activity-item">
+                        <span className="activity-icon">{invite.status === 'accepted' ? '✅' : '✉️'}</span>
+                        <div className="activity-body">
+                          <div className="activity-description">{invite.email}</div>
+                          <div className="activity-meta">
+                            <span className="activity-action-tag">{invite.role}</span>
+                            <span className="activity-action-tag">{invite.status}</span>
+                            <span className="activity-time">{formatTime(invite.createdAt)}</span>
+                          </div>
+                        </div>
+                        <Button variant="secondary" size="sm" onClick={() => handleRevokeInvite(invite.email)}>
+                          Revoke
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -1,10 +1,20 @@
 import jwt from 'jsonwebtoken';
 import { JwtPayload, AuthTokens } from '../types';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'development-secret-key';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'development-refresh-secret';
+const isProduction = process.env.NODE_ENV === 'production';
+
+const JWT_SECRET = process.env.JWT_SECRET || (isProduction ? '' : 'development-secret-key');
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (isProduction ? '' : 'development-refresh-secret');
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+
+// Fail fast rather than silently signing tokens with well-known development secrets.
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  throw new Error(
+    'JWT_SECRET and JWT_REFRESH_SECRET must be set in production. ' +
+    'Refusing to start with insecure development defaults.'
+  );
+}
 
 /**
  * Generate JWT access and refresh tokens

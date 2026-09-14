@@ -154,8 +154,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       setUser(loggedInUser);
     } catch (err: any) {
+      const code = err.response?.data?.code;
       const errorMessage = err.response?.data?.message || err.message || 'Google login failed';
-      console.error('[AuthContext] Google login ERROR:', errorMessage, err);
+      console.error('[AuthContext] Google login ERROR:', code ? `[${code}]` : '', errorMessage, err);
       setError(errorMessage);
       throw new Error(errorMessage);
     } finally {

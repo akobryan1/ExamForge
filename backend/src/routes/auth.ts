@@ -1,10 +1,30 @@
 import { Router, Request, Response } from 'express';
 import { body, validationResult } from 'express-validator';
-import { AuthService } from '../services/AuthService';
-import { authenticate } from '../middleware/auth';
+import { AuthService, AuthError } from '../services/AuthService';
+import { authenticate, authorize } from '../middleware/auth';
 
 const router = Router();
 const authService = new AuthService();
+
+/**
+ * Send an authentication failure without leaking internals.
+ * `AuthError` carries a stable code/status/message; anything else is logged in full
+ * server-side and returned to the client as a generic, sanitized message.
+ */
+function sendAuthError(
+  res: Response,
+  context: string,
+  error: unknown,
+  fallback: { status: number; code: string; message: string }
+): void {
+  if (error instanceof AuthError) {
+    console.warn(`[AuthRoute] ${context} failed:`, error.code, error.message);
+    res.status(error.status).json({ error: error.code, code: error.code, message: error.message });
+    return;
+  }
+  console.error(`[AuthRoute] ${context} failed:`, error);
+  res.status(fallback.status).json({ error: fallback.code, code: fallback.code, message: fallback.message });
+}
 
 /**
  * POST /api/auth/signup
@@ -40,10 +60,10 @@ router.post(
 
       res.status(201).json({ user, accessToken: tokens.accessToken, expiresIn: tokens.expiresIn });
     } catch (error) {
-      console.error('[AuthRoute] Signup error:', error);
-      res.status(400).json({
-        error: 'Signup failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+      sendAuthError(res, 'Signup', error, {
+        status: 400,
+        code: 'AUTH_SIGNUP_FAILED',
+        message: 'Signup failed. Please try again.',
       });
     }
   }
@@ -79,10 +99,10 @@ router.post(
 
       res.json({ user, accessToken: tokens.accessToken, expiresIn: tokens.expiresIn });
     } catch (error) {
-      console.error('[AuthRoute] Login error:', error);
-      res.status(401).json({
-        error: 'Login failed',
-        message: error instanceof Error ? error.message : 'Invalid credentials',
+      sendAuthError(res, 'Login', error, {
+        status: 401,
+        code: 'AUTH_LOGIN_FAILED',
+        message: 'Login failed. Please try again.',
       });
     }
   }
@@ -122,10 +142,10 @@ router.post(
         expiresIn: tokens.expiresIn,
       });
     } catch (error) {
-      console.error('Google auth error:', error);
-      res.status(401).json({
-        error: 'Google authentication failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+      sendAuthError(res, 'Google auth', error, {
+        status: 401,
+        code: 'AUTH_GOOGLE_FAILED',
+        message: 'Google authentication failed. Please try again.',
       });
     }
   }
@@ -162,10 +182,10 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
       expiresIn: tokens.expiresIn,
     });
   } catch (error) {
-    console.error('Token refresh error:', error);
-    res.status(401).json({
-      error: 'Token refresh failed',
-      message: error instanceof Error ? error.message : 'Invalid refresh token',
+    sendAuthError(res, 'Token refresh', error, {
+      status: 401,
+      code: 'AUTH_REFRESH_FAILED',
+      message: 'Session expired. Please sign in again.',
     });
   }
 });
@@ -275,10 +295,92 @@ router.post(
         message: 'Student account created successfully',
       });
     } catch (error) {
-      console.error('Student registration error:', error);
-      res.status(500).json({
-        error: 'Registration failed',
-        message: error instanceof Error ? error.message : 'Unknown error',
+      sendAuthError(res, 'Student registration', error, {
+        status: 500,
+        code: 'AUTH_STUDENT_REGISTER_FAILED',
+        message: 'Registration failed. Please try again.',
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/auth/invites
+ * Pre-register (invite) an email address so it can sign in with Google. Instructor/admin only.
+ */
+router.post(
+  '/invites',
+  authenticate,
+  authorize('instructor', 'admin'),
+  [
+    body('email').isEmail().withMessage('Valid email is required'),
+    body('role').optional().isIn(['instructor', 'student', 'admin']).withMessage('Invalid role'),
+    body('username')
+      .optional()
+      .isLength({ min: 3 })
+      .withMessage('Username must be at least 3 characters')
+      .matches(/^[a-zA-Z0-9_]+$/)
+      .withMessage('Username can only contain letters, numbers, and underscores'),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        res.status(400).json({ errors: errors.array() });
+        return;
+      }
+
+      const invite = await authService.createInvite(req.body, req.user!.userId);
+      res.status(201).json({ invite });
+    } catch (error) {
+      sendAuthError(res, 'Create invite', error, {
+        status: 400,
+        code: 'AUTH_INVITE_FAILED',
+        message: 'Could not create invite. Please try again.',
+      });
+    }
+  }
+);
+
+/**
+ * GET /api/auth/invites
+ * List invites. Instructor/admin only.
+ */
+router.get(
+  '/invites',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const invites = await authService.listInvites();
+      res.json({ invites });
+    } catch (error) {
+      sendAuthError(res, 'List invites', error, {
+        status: 500,
+        code: 'AUTH_INVITE_LIST_FAILED',
+        message: 'Could not load invites. Please try again.',
+      });
+    }
+  }
+);
+
+/**
+ * DELETE /api/auth/invites/:email
+ * Revoke an invite. Instructor/admin only.
+ */
+router.delete(
+  '/invites/:email',
+  authenticate,
+  authorize('instructor', 'admin'),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      await authService.revokeInvite(req.params.email);
+      res.json({ message: 'Invite revoked' });
+    } catch (error) {
+      sendAuthError(res, 'Revoke invite', error, {
+        status: 500,
+        code: 'AUTH_INVITE_REVOKE_FAILED',
+        message: 'Could not revoke invite. Please try again.',
       });
     }
   }
