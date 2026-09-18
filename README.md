@@ -4,6 +4,8 @@ A modern, web-based exam management platform: instructors author exams and quest
 
 > **Status:** beta — under active development.
 
+> **Academic project.** ExamForge is a student capstone project. It is public for review, learning, and non-commercial use only — **commercial use requires my permission**. See [License](#-license).
+
 ## 🏗️ Architecture
 
 | Layer | Technology |
@@ -283,7 +285,7 @@ ExamForge is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE
 
 In short, you may read, run, modify, and share this code for **noncommercial purposes** — including personal study, research, hobby projects, and use by educational, charitable, public-research, public-safety/health, environmental, or government organizations. **Commercial use is not permitted**, and the license does not allow you to sublicense or transfer your rights. This paragraph is a summary, not a substitute for the [full license text](./LICENSE).
 
-Want to use ExamForge commercially? Get in touch to arrange a separate license.
+**Commercial use requires permission.** This is a capstone project, not a product — so if you want to use ExamForge commercially, or you're unsure whether your intended use counts as noncommercial, open an issue or contact me at [@akobryan1](https://github.com/akobryan1) first. I'm happy to talk.
 
 ## 🛠️ Tech Stack
 
