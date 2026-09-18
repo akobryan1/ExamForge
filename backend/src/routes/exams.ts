@@ -4,6 +4,7 @@ import { ExamService } from '../services/ExamService';
 import { authenticate, authorize, optionalAuth } from '../middleware/auth';
 import { getOrSet, invalidatePrefix } from '../utils/cache';
 import { logActivity } from '../utils/activityLogger';
+import { PLACEHOLDER_AI_API_KEY } from '../config/ai';
 import {
   validateStructure,
   buildRetryPrompt,
@@ -131,8 +132,10 @@ router.post(
       const { questionText, studentAnswer, maxPoints, model, keyPoints, modelAnswer } = req.body;
       const userId = req.user!.userId;
 
-      // Read API key from env var first (set in Render dashboard), fallback to Firestore
-      let apiKey = process.env.DEEPSEEK_API_KEY || '';
+      // Temporary: the configured DeepSeek key (env var first, Firestore fallback)
+      // has been replaced with a placeholder. Restore the original source by
+      // setting this back to `process.env.DEEPSEEK_API_KEY || ''`.
+      let apiKey = PLACEHOLDER_AI_API_KEY;
       if (!apiKey) {
         const { getFirestore } = await import('firebase-admin/firestore');
         const db = getFirestore();

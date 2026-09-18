@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth';
+import { PLACEHOLDER_AI_API_KEY } from '../config/ai';
 
 const router = Router();
 
@@ -13,8 +14,9 @@ router.get('/', authenticate, async (req: Request, res: Response) => {
     const userId = req.user!.userId;
     console.log(`[Settings GET] userId=${userId}`);
 
-    // Check for env var first (overrides Firestore)
-    const envKey = process.env.DEEPSEEK_API_KEY || '';
+    // Temporary: the configured DeepSeek key has been replaced with a
+    // placeholder. Restore by reading `process.env.DEEPSEEK_API_KEY` again.
+    const envKey = PLACEHOLDER_AI_API_KEY;
     if (envKey) {
       console.log(`[Settings GET] Using env var key, length=${envKey.length}`);
       const masked = envKey.slice(0, 8) + '••••' + envKey.slice(-4);
