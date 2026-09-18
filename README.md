@@ -279,7 +279,11 @@ Everything currently lives in this README: setup, environment variables, API rou
 
 ## 📄 License
 
-No license has been selected, so all rights are reserved by default. Add a `LICENSE` file before distributing the project or accepting outside contributions.
+ExamForge is licensed under the [PolyForm Noncommercial License 1.0.0](./LICENSE) — Copyright (c) 2026 Bryan May. All rights not expressly granted are reserved.
+
+In short, you may read, run, modify, and share this code for **noncommercial purposes** — including personal study, research, hobby projects, and use by educational, charitable, public-research, public-safety/health, environmental, or government organizations. **Commercial use is not permitted**, and the license does not allow you to sublicense or transfer your rights. This paragraph is a summary, not a substitute for the [full license text](./LICENSE).
+
+Want to use ExamForge commercially? Get in touch to arrange a separate license.
 
 ## 🛠️ Tech Stack
 
@@ -296,7 +300,7 @@ No license has been selected, so all rights are reserved by default. Add a `LICE
 
 Implemented: authentication (email/password + Google OAuth, refresh tokens), instructor dashboard, exam builder (access control, timing, proctoring, retakes, instructions), question bank, examinee registration, exam preview and delivery, auto-grading for objective question types, grading queue with AI-assisted essay grading and review, analytics, incident reports, notifications, and per-user settings.
 
-Not yet in place: an automated test suite, published API documentation, and a chosen license.
+Not yet in place: an automated test suite and published API documentation.
 
 ## 📜 History
 
