@@ -1,0 +1,41 @@
+# Dependencies (install with npm install)
+node_modules/
+
+# Build output (regenerate with npm run build)
+dist/
+build/
+dist-ssr/
+
+# Environment files — never commit real credentials
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# Firebase / GCP credentials
+firebase-adminsdk*.json
+*-service-account*.json
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Editor and OS noise
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Local-only files and folders: kept on disk for the maintainer, intentionally
+# not part of the published project. Remove a line to version the file again.
+.vscode/settings.json
+BETA_TESTER_CHECKLIST.md
+IMPLEMENTATION_SUMMARY.md
+agents/
+.github/skills/
+frontend/public/api-key-setter.html

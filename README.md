@@ -2,7 +2,7 @@
 
 A modern, web-based exam management platform: instructors author exams and question banks, students take them under proctoring rules, and submitted work flows into an automated and AI-assisted grading queue.
 
-> **Status:** beta. [`BETA_TESTER_CHECKLIST.md`](./BETA_TESTER_CHECKLIST.md) tracks the manual test pass and [`IMPLEMENTATION_SUMMARY.md`](./IMPLEMENTATION_SUMMARY.md) records what has shipped.
+> **Status:** beta — under active development.
 
 ## 🏗️ Architecture
 
@@ -223,7 +223,6 @@ Exam Forge/
 ├── exam-portal/              # Exam preview/taking portal (port 3002)
 ├── student-portal/           # Public examinee portal (port 3001)
 ├── cloudflare-worker/        # Edge guard for the AI grading route
-├── agents/                   # Design/agent documentation
 └── render.yaml               # Render Blueprint
 ```
 
@@ -258,14 +257,11 @@ Everything is mounted under `/api` in `backend/src/server.ts`:
 
 ### Tests
 
-There is no automated test suite in the repository yet — `npm test` is not implemented for the front end, and the backend's `jest` script has no specs to run. Verification is currently manual: follow [`BETA_TESTER_CHECKLIST.md`](./BETA_TESTER_CHECKLIST.md).
+There is no automated test suite yet — the front end has no `test` script and the backend's `jest` script has no specs to run. Verify changes by running the affected app locally and exercising the flow you touched.
 
 ## 📖 Documentation
 
-- [Frontend design guidelines](./agents/FRONTEND_DESIGN.md)
-- [Implementation summary](./IMPLEMENTATION_SUMMARY.md)
-- [Beta tester checklist](./BETA_TESTER_CHECKLIST.md)
-- API reference (OpenAPI/Postman): not yet published
+Everything currently lives in this README: setup, environment variables, API routes, and deployment. An API reference (OpenAPI/Postman) is not published yet.
 
 ## 🔐 Security
 
@@ -280,7 +276,6 @@ There is no automated test suite in the repository yet — `npm test` is not imp
 1. Branch off `main` (`git checkout -b feature/your-feature`).
 2. Keep changes focused, and type check before pushing: `npx tsc --noEmit` in `backend/` and `frontend/`.
 3. Open a pull request explaining the change and how you verified it.
-4. Update [`BETA_TESTER_CHECKLIST.md`](./BETA_TESTER_CHECKLIST.md) when you touch user-facing flows.
 
 ## 📄 License
 
